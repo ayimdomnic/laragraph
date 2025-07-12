@@ -1,32 +1,38 @@
 {
-    "name": "ayimdomnic/graph-ql-l5.3",
-    "description": "Facebook GraphQl for Laravel developers",
-    "type": "project",
+    "name": "ayimdomnic/laragraph",
+    "description": "GraphQl for Laravel developers",
+    "type": "library",
     "require": {
-        "php": "^7.0",
-        "illuminate/support": "^5.3",
-        "webonyx/graphql-php": "^0.6.4",
-        "shavy/qcache": "^1.0"
+        "php": ">=8.4",
+        "ext-json": "*",
+        "illuminate/contracts": "^12.20",
+        "illuminate/support": "^12.20"
     },
     "license": "MIT",
     "authors": [
         {
-            "name": "Ayimdomnic",
-            "email": "Ayimdomnic@statuscreative.co.ke"
+            "name": "Odhiambo Dormnic",
+            "email": "ayimdomnic@gmail.com"
         }
     ],
-    "require-dev": {
-        "orchestra/testbench": "~3.1",
-        "phpunit/phpunit": "5.5.*"
-    },
     "autoload": {
-        "psr-0": {
+        "psr-4": {
             "Ayimdomnic\\GraphQl\\": "src/"
         }
     },
     "autoload-dev": {
+        "psr-4": {
+            "Ayimdomnic\\GraphQl\\Tests\\": "tests/"
+        },
         "classmap": [
             "tests/TestCase.php"
         ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "preferred-install": "dist"
     }
 }
