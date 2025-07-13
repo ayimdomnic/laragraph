@@ -28,12 +28,11 @@ class Helpers
         }
 
         if ($valueOrValues instanceof \Traversable) {
-            return iterator_to_array(
-                new \CallbackFilterIterator(
-                    new \ArrayIterator($valueOrValues),
-                    $callback
-                )
-            );
+            return iterator_to_array((function () use ($callback, $valueOrValues) {
+                foreach ($valueOrValues as $key => $value) {
+                    yield $key => $callback($value);
+                }
+            })());
         }
 
         return $callback($valueOrValues);
