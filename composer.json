@@ -17,12 +17,12 @@
     ],
     "autoload": {
         "psr-4": {
-            "Ayimdomnic\\GraphQl\\": "src/"
+            "Ayimdomnic\\Laragraph\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Ayimdomnic\\GraphQl\\Tests\\": "tests/"
+            "Ayimdomnic\\Laragraph\\Tests\\": "tests/"
         },
         "classmap": [
             "tests/TestCase.php"
