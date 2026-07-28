@@ -1,0 +1,24 @@
+# Normalize line endings
+* text=auto
+
+# ============================================================
+# Packagist export exclusions
+# These paths are NOT included in `composer create-project` or
+# `composer install` installs — only src/ and config/ ship.
+# ============================================================
+/workbench            export-ignore
+/tests                export-ignore
+/laragraph            export-ignore
+/bin                  export-ignore
+/.github              export-ignore
+/.travis.yaml         export-ignore
+/phpunit.xml          export-ignore
+/phpunit.xml.bak      export-ignore
+/build.xml            export-ignore
+/build                export-ignore
+/composer.lock        export-ignore
+/CONTRIBUTING.md      export-ignore
+/.gitattributes       export-ignore
+/.gitignore           export-ignore
+/workbench.json       export-ignore
+/src/config           export-ignore
