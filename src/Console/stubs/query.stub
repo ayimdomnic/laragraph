@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DummyNamespace;
+
+use Ayimdomnic\Laragraph\Support\Query;
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class DummyClass extends Query
+{
+    public function type(): Type
+    {
+        // Return the GraphQL type this query resolves to, e.g.:
+        // return app('laragraph')->type('User');
+        // return Type::listOf(app('laragraph')->type('User'));
+        return Type::string();
+    }
+
+    public function args(): array
+    {
+        return [
+            // 'id' => ['type' => Type::nonNull(Type::id())],
+        ];
+    }
+
+    public function description(): ?string
+    {
+        return null;
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        // Your resolver logic here...
+        return null;
+    }
+}

@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ NAMESPACE }};
+
+use Ayimdomnic\Laragraph\Pagination\ConnectionType;
+use Ayimdomnic\Laragraph\Support\Query;
+use App\Models\{{ MODEL }};
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class {{ CLASS }} extends Query
+{
+    public function type(): Type
+    {
+        return new ConnectionType('{{ CONNECTION_TYPE }}', app('laragraph')->type('{{ MODEL }}'));
+    }
+
+    public function args(): array
+    {
+        return ConnectionType::args();
+    }
+
+    public function description(): ?string
+    {
+        return 'Paginated list of {{ MODEL_LOWER }} records.';
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return ConnectionType::paginate({{ MODEL }}::query(), $args);
+    }
+}

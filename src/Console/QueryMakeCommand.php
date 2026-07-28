@@ -13,27 +13,27 @@ use Symfony\Component\Console\Input\InputOption;
  *
  * (c) Odhiambo Dormnic <ayimdomnic@gmail.com>
  */
-#[AsCommand(name: 'laragraph:make:type', description: 'Create a new GraphQL Object Type class')]
-class TypeMakeCommand extends GeneratorCommand
+#[AsCommand(name: 'laragraph:make:query', description: 'Create a new GraphQL Query class')]
+class QueryMakeCommand extends GeneratorCommand
 {
-    protected $name        = 'laragraph:make:type';
-    protected $description = 'Create a new GraphQL Object Type class';
-    protected $type        = 'Type';
+    protected $name        = 'laragraph:make:query';
+    protected $description = 'Create a new GraphQL Query class';
+    protected $type        = 'Query';
 
     protected function getStub(): string
     {
-        return __DIR__ . '/stubs/type.stub';
+        return __DIR__ . '/stubs/query.stub';
     }
 
     protected function getDefaultNamespace($rootNamespace): string
     {
-        return $rootNamespace . '\\GraphQL\\Types';
+        return $rootNamespace . '\\GraphQL\\Queries';
     }
 
     protected function getOptions(): array
     {
         return [
-            ['force', 'f', InputOption::VALUE_NONE, 'Overwrite the type if it already exists'],
+            ['force', 'f', InputOption::VALUE_NONE, 'Overwrite the query if it already exists'],
         ];
     }
 }

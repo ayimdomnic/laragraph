@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ NAMESPACE }};
+
+use Ayimdomnic\Laragraph\Support\Type;
+use GraphQL\Type\Definition\Type as GType;
+
+class {{ MODEL }}Type extends Type
+{
+    protected array $attributes = [
+        'name'        => '{{ MODEL }}',
+        'description' => 'A {{ MODEL_LOWER }} resource.',
+    ];
+
+    public function fields(): array
+    {
+        return [
+{{ FIELDS }}
+        ];
+    }
+}
