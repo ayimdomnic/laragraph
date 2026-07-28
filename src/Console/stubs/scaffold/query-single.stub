@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ NAMESPACE }};
+
+use Ayimdomnic\Laragraph\Support\Query;
+use App\Models\{{ MODEL }};
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class {{ CLASS }} extends Query
+{
+    public function type(): Type
+    {
+        return app('laragraph')->type('{{ MODEL }}');
+    }
+
+    public function args(): array
+    {
+        return [
+            'id' => ['type' => Type::nonNull(Type::id()), 'description' => 'The {{ MODEL_LOWER }} ID.'],
+        ];
+    }
+
+    public function description(): ?string
+    {
+        return 'Fetch a single {{ MODEL_LOWER }} by ID.';
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return {{ MODEL }}::findOrFail($args['id']);
+    }
+}

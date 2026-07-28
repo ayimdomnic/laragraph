@@ -1,0 +1,124 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// ---------------------------------------------------------------------------
+// Bootstrap — locate the Composer autoloader whether invoked from the project
+// root ("php laragraph test") or from a bin directory.
+// ---------------------------------------------------------------------------
+
+$autoloadCandidates = [
+    __DIR__ . '/vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+foreach ($autoloadCandidates as $autoload) {
+    if (file_exists($autoload)) {
+        require $autoload;
+        $root = dirname($autoload, is_file($autoload . '/../../composer.json') ? 4 : 1);
+        break;
+    }
+}
+
+$root ??= __DIR__;
+
+// ---------------------------------------------------------------------------
+// Symfony Console Application
+// ---------------------------------------------------------------------------
+
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+$app = new Application('Laragraph Dev CLI', '2.0');
+$app->setCatchExceptions(true);
+
+// ---------------------------------------------------------------------------
+// test — run the full PHPUnit suite
+// ---------------------------------------------------------------------------
+$app->register('test')
+    ->setDescription('Run the PHPUnit test suite')
+    ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, 'Run only matching tests')
+    ->addOption('suite', 's', InputOption::VALUE_OPTIONAL, 'Run a specific test suite (Unit|Feature)')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($root): int {
+        $bin  = escapeshellarg("{$root}/vendor/bin/phpunit");
+        $args = '';
+
+        if ($suite = $input->getOption('suite')) {
+            $args .= ' --testsuite=' . escapeshellarg($suite);
+        }
+
+        if ($filter = $input->getOption('filter')) {
+            $args .= ' --filter=' . escapeshellarg($filter);
+        }
+
+        passthru("php {$bin}{$args}", $code);
+        return (int) $code;
+    });
+
+// ---------------------------------------------------------------------------
+// coverage — HTML + Clover report (requires Xdebug or PCov)
+// ---------------------------------------------------------------------------
+$app->register('coverage')
+    ->setDescription('Run tests with HTML and Clover coverage reports')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($root): int {
+        putenv('XDEBUG_MODE=coverage');
+
+        $bin  = escapeshellarg("{$root}/vendor/bin/phpunit");
+        $html = escapeshellarg("{$root}/build/coverage");
+        $xml  = escapeshellarg("{$root}/build/coverage.xml");
+
+        passthru("php {$bin} --coverage-html {$html} --coverage-clover {$xml}", $code);
+
+        if ((int) $code === 0) {
+            $output->writeln('');
+            $output->writeln('<info>Coverage report  →  build/coverage/index.html</info>');
+        }
+
+        return (int) $code;
+    });
+
+// ---------------------------------------------------------------------------
+// serve — boot the Workbench dev server
+// ---------------------------------------------------------------------------
+$app->register('serve')
+    ->setDescription('Boot the Workbench Laravel dev server')
+    ->addOption('port', 'p', InputOption::VALUE_OPTIONAL, 'HTTP port', '8000')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($root): int {
+        $bin  = escapeshellarg("{$root}/vendor/bin/testbench");
+        $port = (int) $input->getOption('port');
+        passthru("php {$bin} serve --port={$port}", $code);
+        return (int) $code;
+    });
+
+// ---------------------------------------------------------------------------
+// tinker — interactive REPL in the Workbench context
+// ---------------------------------------------------------------------------
+$app->register('tinker')
+    ->setDescription('Open a REPL inside the Workbench app')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($root): int {
+        passthru('php ' . escapeshellarg("{$root}/vendor/bin/testbench") . ' tinker', $code);
+        return (int) $code;
+    });
+
+// ---------------------------------------------------------------------------
+// generate — scaffold GraphQL from an Eloquent model
+// ---------------------------------------------------------------------------
+$app->register('generate')
+    ->setDescription('Scaffold GraphQL type, queries, and CRUD mutations for an Eloquent model')
+    ->addArgument('model', InputArgument::REQUIRED, 'Model class name (e.g. User)')
+    ->addOption('with-crud', null, InputOption::VALUE_NONE, 'Also generate create / update / delete mutations')
+    ->addOption('all', null, InputOption::VALUE_NONE, 'Scaffold every model found in app/Models')
+    ->setCode(function (InputInterface $input, OutputInterface $output) use ($root): int {
+        $bin   = escapeshellarg("{$root}/vendor/bin/testbench");
+        $model = escapeshellarg($input->getArgument('model'));
+        $extra = ($input->getOption('with-crud') ? ' --with-crud' : '')
+               . ($input->getOption('all')       ? ' --all'       : '');
+        passthru("php {$bin} laragraph:scaffold {$model}{$extra}", $code);
+        return (int) $code;
+    });
+
+$app->run();

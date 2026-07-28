@@ -1,20 +1,32 @@
 {
     "name": "ayimdomnic/laragraph",
-    "description": "GraphQl for Laravel developers",
+    "description": "A modern, feature-rich GraphQL package for Laravel — types, queries, mutations, subscriptions, pagination, and more.",
+    "keywords": ["laravel", "graphql", "api", "schema", "php"],
     "type": "library",
-    "require": {
-        "php": ">=8.4",
-        "ext-json": "*",
-        "illuminate/contracts": "^12.20",
-        "illuminate/support": "^12.20"
-    },
     "license": "MIT",
     "authors": [
         {
             "name": "Odhiambo Dormnic",
-            "email": "ayimdomnic@gmail.com"
+            "email": "ayimdomnic@gmail.com",
+            "homepage": "https://github.com/ayimdomnic"
         }
     ],
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "illuminate/contracts": "^10.0|^11.0|^12.0",
+        "illuminate/http": "^10.0|^11.0|^12.0",
+        "illuminate/routing": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "illuminate/validation": "^10.0|^11.0|^12.0",
+        "overblog/dataloader-php": "^1.0",
+        "webonyx/graphql-php": "^15.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "orchestra/workbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0|^12.0"
+    },
     "autoload": {
         "psr-4": {
             "Ayimdomnic\\Laragraph\\": "src/"
@@ -22,14 +34,32 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Ayimdomnic\\Laragraph\\Tests\\": "tests/"
-        },
-        "classmap": [
-            "tests/TestCase.php"
-        ]
+            "Ayimdomnic\\Laragraph\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ayimdomnic\\Laragraph\\LaragraphServiceProvider"
+            ],
+            "aliases": {
+                "Laragraph": "Ayimdomnic\\Laragraph\\Facades\\Laragraph"
+            }
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test:unit": "vendor/bin/phpunit --testsuite Unit",
+        "test:feature": "vendor/bin/phpunit --testsuite Feature",
+        "test:filter": "vendor/bin/phpunit --filter",
+        "test:coverage": "@php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-html build/coverage --coverage-clover build/coverage.xml",
+        "serve": "vendor/bin/testbench serve",
+        "tinker": "vendor/bin/testbench tinker",
+        "workbench:build": "vendor/bin/testbench workbench:build --ansi"
+    },
     "config": {
         "optimize-autoloader": true,
         "sort-packages": true,

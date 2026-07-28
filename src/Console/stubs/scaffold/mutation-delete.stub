@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ NAMESPACE }};
+
+use Ayimdomnic\Laragraph\Support\Mutation;
+use App\Models\{{ MODEL }};
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class {{ CLASS }} extends Mutation
+{
+    public function type(): Type
+    {
+        return Type::nonNull(Type::boolean());
+    }
+
+    public function args(): array
+    {
+        return [
+            'id' => ['type' => Type::nonNull(Type::id()), 'description' => 'The ID of the {{ MODEL_LOWER }} to delete.'],
+        ];
+    }
+
+    public function rules(array $args = []): array
+    {
+        return [
+            'id' => ['required'],
+        ];
+    }
+
+    public function description(): ?string
+    {
+        return 'Permanently delete a {{ MODEL_LOWER }}.';
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return (bool) {{ MODEL }}::findOrFail($args['id'])->delete();
+    }
+}

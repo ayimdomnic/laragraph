@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ NAMESPACE }};
+
+use Ayimdomnic\Laragraph\Support\Mutation;
+use App\Models\{{ MODEL }};
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class {{ CLASS }} extends Mutation
+{
+    public function type(): Type
+    {
+        return app('laragraph')->type('{{ MODEL }}');
+    }
+
+    public function args(): array
+    {
+        return [
+{{ FILLABLE }}
+        ];
+    }
+
+    public function rules(array $args = []): array
+    {
+        return [
+            // Add validation rules here
+        ];
+    }
+
+    public function description(): ?string
+    {
+        return 'Create a new {{ MODEL_LOWER }}.';
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return {{ MODEL }}::create($args);
+    }
+}

@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DummyNamespace;
+
+use Ayimdomnic\Laragraph\Support\InputType;
+use GraphQL\Type\Definition\Type;
+
+class DummyClass extends InputType
+{
+    protected array $attributes = [
+        'name'        => 'DummyGraphqlName',
+        'description' => 'Input for DummyGraphqlName.',
+    ];
+
+    public function fields(): array
+    {
+        return [
+            // 'name'  => ['type' => Type::nonNull(Type::string())],
+            // 'email' => ['type' => Type::nonNull(Type::string())],
+        ];
+    }
+}

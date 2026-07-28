@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DummyNamespace;
+
+use Ayimdomnic\Laragraph\Support\Mutation;
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class DummyClass extends Mutation
+{
+    public function type(): Type
+    {
+        // Return the GraphQL type this mutation resolves to, e.g.:
+        // return app('laragraph')->type('User');
+        return Type::boolean();
+    }
+
+    public function args(): array
+    {
+        return [
+            // 'name'  => ['type' => Type::nonNull(Type::string())],
+            // 'email' => ['type' => Type::nonNull(Type::string())],
+        ];
+    }
+
+    public function rules(array $args = []): array
+    {
+        return [
+            // 'name'  => ['required', 'string', 'max:255'],
+            // 'email' => ['required', 'email'],
+        ];
+    }
+
+    public function description(): ?string
+    {
+        return null;
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        // Your mutation logic here...
+        return true;
+    }
+}

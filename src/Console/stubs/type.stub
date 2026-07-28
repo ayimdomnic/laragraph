@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace DummyNamespace;
 
-use Rebing\GraphQL\Support\Type as GraphQLType;
+use Ayimdomnic\Laragraph\Support\Type;
+use GraphQL\Type\Definition\Type as GType;
 
-class DummyClass extends GraphQLType
+class DummyClass extends Type
 {
-    protected $attributes = [
-        'name' => 'DummyGraphqlName',
-        'description' => 'A type'
+    protected array $attributes = [
+        'name'        => 'DummyGraphqlName',
+        'description' => 'A description of this type.',
     ];
 
     public function fields(): array
     {
         return [
-
+            'id' => [
+                'type'        => GType::nonNull(GType::id()),
+                'description' => 'The unique identifier.',
+            ],
+            // Add more fields here...
         ];
     }
 }

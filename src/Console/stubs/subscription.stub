@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DummyNamespace;
+
+use Ayimdomnic\Laragraph\Support\Subscription;
+use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\Type;
+
+class DummyClass extends Subscription
+{
+    public function type(): Type
+    {
+        // Return the GraphQL type emitted by this subscription, e.g.:
+        // return app('laragraph')->type('User');
+        return Type::string();
+    }
+
+    public function args(): array
+    {
+        return [];
+    }
+
+    public function description(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Return the broadcast channel name(s) the client should listen to.
+     */
+    public function subscribe(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'channel-name';
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        // $root is the event payload received from the broadcast channel.
+        return $root;
+    }
+}

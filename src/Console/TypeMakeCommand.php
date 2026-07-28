@@ -1,26 +1,24 @@
 <?php
 
-/**
- * This file is part of the Laragraph package.
- *
- * (c) Odhiambo Dormnic <ayimdomnic@gmail.com>
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Console;
 
 use Illuminate\Console\GeneratorCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Input\InputOption;
 
-#[AsCommand(name: 'laragraph:type:make', description: 'Create a new GraphQL type class')]
+/**
+ * This file is part of the Laragraph package.
+ *
+ * (c) Odhiambo Dormnic <ayimdomnic@gmail.com>
+ */
+#[AsCommand(name: 'laragraph:make:type', description: 'Create a new GraphQL Object Type class')]
 class TypeMakeCommand extends GeneratorCommand
 {
-    protected $name = 'laragraph:type:make';
-    protected $description = 'Create a new GraphQL type class';
-    protected $type = 'Type';
+    protected $name        = 'laragraph:make:type';
+    protected $description = 'Create a new GraphQL Object Type class';
+    protected $type        = 'Type';
 
     protected function getStub(): string
     {
@@ -29,6 +27,13 @@ class TypeMakeCommand extends GeneratorCommand
 
     protected function getDefaultNamespace($rootNamespace): string
     {
-        return $rootNamespace . '\GraphQL\Types';
+        return $rootNamespace . '\\GraphQL\\Types';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            ['force', 'f', InputOption::VALUE_NONE, 'Overwrite the type if it already exists'],
+        ];
     }
 }
