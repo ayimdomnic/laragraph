@@ -122,6 +122,10 @@ class LaragraphController extends BaseController
             return $this->parseMultipartRequest($request);
         }
 
+        if (str_contains($contentType, 'application/graphql')) {
+            return ['query' => (string) $request->getContent()];
+        }
+
         // application/json or form-urlencoded
         $body = $request->json()->all();
 
@@ -129,7 +133,11 @@ class LaragraphController extends BaseController
             $body = $request->all();
         }
 
-        return $body;
+        if (is_string($body) && trim($body) !== '') {
+            return ['query' => $body];
+        }
+
+        return is_array($body) ? $body : [];
     }
 
     /**
