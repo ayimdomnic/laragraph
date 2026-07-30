@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\GraphQL\Mutations;
 
-use App\Models\User;
 use Ayimdomnic\Laragraph\Support\Mutation;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type as GType;

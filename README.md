@@ -2,7 +2,7 @@
 
 **A modern, feature-rich GraphQL package for Laravel.**
 
-[![Latest Version](https://img.shields.io/packagist/v/ayimdomnic/laragraph.svg)](https://packagist.org/packages/ayimdomnic/laragraph)
+[![Latest Version](https://img.shields.io/packagist/v/ayimdomnic/graph-ql-l5.3.svg)](https://packagist.org/packages/ayimdomnic/graph-ql-l5.3)
 [![PHP Version](https://img.shields.io/badge/php-%5E8.2-blue)](https://www.php.net)
 [![Laravel Version](https://img.shields.io/badge/laravel-10%20|%2011%20|%2012-orange)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)

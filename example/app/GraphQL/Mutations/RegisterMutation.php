@@ -14,7 +14,7 @@ class RegisterMutation extends Mutation
 {
     public function type(): GType
     {
-        return app('laragraph')->type('User');
+        return app('laragraph')->type('LoginPayload');
     }
 
     public function args(): array
