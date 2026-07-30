@@ -60,7 +60,7 @@ class ConnectionType extends ObjectType
     /**
      * Standard cursor-pagination arguments to add to a query's args().
      *
-     * @return array<string, mixed>
+     * @return array<string, array{type: \GraphQL\Type\Definition\Type, description: string}>
      */
     public static function args(): array
     {
@@ -76,9 +76,11 @@ class ConnectionType extends ObjectType
      * Paginate an Eloquent builder using cursor (offset-encoded) pagination
      * and return a Connection-shaped array.
      *
-     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
+     * @param  object  $query
+     * @param  array<string, mixed>  $args
+     * @return array{edges: array<int, array{node: mixed, cursor: string}>, pageInfo: array<string, mixed>}
      */
-    public static function paginate(mixed $query, array $args): array
+    public static function paginate(object $query, array $args): array
     {
         $perPage = (int) ($args['first'] ?? $args['last'] ?? config('laragraph.pagination.per_page', 15));
         $page    = 1;
@@ -119,8 +121,12 @@ class ConnectionType extends ObjectType
      * Offset-based pagination helper for simpler use-cases.
      *
      * Returns the standard simple paginator format.
+     *
+     * @param  object  $query
+     * @param  array<string, mixed>  $args
+     * @return array{data: array<mixed>, total: int, per_page: int, current_page: int, last_page: int, has_more_pages: bool}
      */
-    public static function simplePaginate(mixed $query, array $args): array
+    public static function simplePaginate(object $query, array $args): array
     {
         $perPage = (int) ($args['per_page'] ?? config('laragraph.pagination.per_page', 15));
         $page    = (int) ($args['page'] ?? 1);

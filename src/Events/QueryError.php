@@ -18,13 +18,13 @@ final class QueryError
     public function __construct(
         /** The raw GraphQL query string. */
         public readonly string $query,
-        /** Resolved variable values. */
+        /** @var array<string, mixed> Resolved variable values. */
         public readonly array $variables,
         /** The operation name, or `null` when not specified. */
         public readonly ?string $operationName,
         /** The resolved schema name. */
         public readonly string $schemaName,
-        /** The serialised errors array from the GraphQL response. */
+        /** @var array<int, array<string, mixed>> The serialised errors array from the GraphQL response. */
         public readonly array $errors,
     ) {}
 }

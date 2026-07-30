@@ -16,11 +16,11 @@ final class QueryExecuting
     public function __construct(
         /** The raw GraphQL query string. */
         public readonly string $query,
-        /** Resolved variable values (empty array when none supplied). */
+        /** @var array<string, mixed> Resolved variable values (empty array when none supplied). */
         public readonly array $variables,
         /** The operation name, or `null` when not specified. */
         public readonly ?string $operationName,
-        /** The resolved schema name (never null — defaults to the configured default). */
+        /** The resolved schema name (never null -- defaults to the configured default). */
         public readonly string $schemaName,
     ) {}
 }

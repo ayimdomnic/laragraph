@@ -334,7 +334,10 @@ class Laragraph
         return $type;
     }
 
-    /** Return all registered type class aliases. */
+    /** Return all registered type class aliases.
+     *
+     * @return array<string, string>
+     */
     public function getTypes(): array
     {
         return $this->types;
@@ -393,6 +396,10 @@ class Laragraph
 
     /**
      * Default errors handler — called once with the full errors array.
+     *
+     * @param  array<int, \GraphQL\Error\Error>  $errors
+     * @param  callable(\GraphQL\Error\Error): array<string, mixed>  $formatter
+     * @return array<int, array<string, mixed>>
      */
     public static function handleErrors(array $errors, callable $formatter): array
     {

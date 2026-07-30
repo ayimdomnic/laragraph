@@ -40,6 +40,10 @@ class SchemaBuilder
     // Schema config assembly
     // -------------------------------------------------------------------------
 
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
     protected function buildSchemaConfig(array $config): array
     {
         $schemaConfig = [];
@@ -122,6 +126,9 @@ class SchemaBuilder
     // Type registration
     // -------------------------------------------------------------------------
 
+    /**
+     * @param  array<string|int, string>  $typeClasses
+     */
     protected function registerTypes(array $typeClasses): void
     {
         // Auto-discover types first, then merge with explicit config (explicit wins)

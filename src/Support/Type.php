@@ -74,6 +74,9 @@ abstract class Type extends ObjectType
     // Internals
     // -------------------------------------------------------------------------
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function buildFields(): array
     {
         $fields = $this->fields();

@@ -17,13 +17,13 @@ final class QueryExecuted
     public function __construct(
         /** The raw GraphQL query string. */
         public readonly string $query,
-        /** Resolved variable values. */
+        /** @var array<string, mixed> Resolved variable values. */
         public readonly array $variables,
         /** The operation name, or `null` when not specified. */
         public readonly ?string $operationName,
         /** The resolved schema name. */
         public readonly string $schemaName,
-        /** The full serialised response array sent to the client. */
+        /** @var array<string, mixed> The full serialised response array sent to the client. */
         public readonly array $result,
         /** Total `execute()` wall-clock time in milliseconds. */
         public readonly float $executionMs,

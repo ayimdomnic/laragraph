@@ -50,7 +50,10 @@ class ValidationRuleRegistry
         ));
     }
 
-    /** Return all registered entries (unresolved). */
+    /** Return all registered entries (unresolved).
+     *
+     * @return array<int, string|ValidationRule>
+     */
     public function all(): array
     {
         return $this->rules;
