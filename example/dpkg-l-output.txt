@@ -1,0 +1,14 @@
+ii  libapache2-mod-php8.2                 8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        server-side, HTML-embedded scripting language (Apache 2 module)
+ii  php-common                            2:101~+ubuntu24.04.1+deb.sury.org+1              all          Common files for PHP packages
+ii  php8.2                                8.2.32-1+ubuntu24.04.1+deb.sury.org+1            all          server-side, HTML-embedded scripting language (metapackage)
+ii  php8.2-bcmath                         8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        Bcmath module for PHP
+ii  php8.2-cli                            8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        command-line interpreter for the PHP scripting language
+ii  php8.2-common                         8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        documentation, examples and common module for PHP
+ii  php8.2-curl                           8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        CURL module for PHP
+ii  php8.2-mbstring                       8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        MBSTRING module for PHP
+ii  php8.2-mysql                          8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        MySQL module for PHP
+ii  php8.2-opcache                        8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        Zend OpCache module for PHP
+ii  php8.2-readline                       8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        readline module for PHP
+ii  php8.2-xdebug                         3.5.3-1+ubuntu24.04.1+deb.sury.org+1             amd64        Xdebug Module for PHP
+ii  php8.2-xml                            8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        DOM, SimpleXML, XML, and XSL module for PHP
+ii  php8.2-zip                            8.2.32-1+ubuntu24.04.1+deb.sury.org+1            amd64        Zip module for PHP

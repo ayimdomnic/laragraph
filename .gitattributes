@@ -22,3 +22,4 @@
 /.gitignore           export-ignore
 /workbench.json       export-ignore
 /src/config           export-ignore
+/example              export-ignore

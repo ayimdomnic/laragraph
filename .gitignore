@@ -3,7 +3,6 @@ vendor
 build
 coverage/
 node_modules/
-example/
 .npmrc
 
 .phpunit.result.cache
