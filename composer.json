@@ -14,6 +14,7 @@
     "require": {
         "php": "^8.2 | ^8.3 | ^8.4 | ^8.5",
         "ext-json": "*",
+        "illuminate/broadcasting": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
@@ -23,8 +24,10 @@
         "webonyx/graphql-php": "^15.0"
     },
     "require-dev": {
+        "larastan/larastan": "^3.10",
         "orchestra/testbench": "^8.0|^9.0|^10.0",
         "orchestra/workbench": "^8.0|^9.0|^10.0",
+        "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^10.0|^11.0|^12.0"
     },
     "autoload": {
@@ -56,6 +59,7 @@
         "test:feature": "vendor/bin/phpunit --testsuite Feature",
         "test:filter": "vendor/bin/phpunit --filter",
         "test:coverage": "@php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-html build/coverage --coverage-clover build/coverage.xml",
+        "phpstan": "vendor/bin/phpstan analyse --memory-limit=1G",
         "serve": "vendor/bin/testbench serve",
         "tinker": "vendor/bin/testbench tinker",
         "workbench:build": "vendor/bin/testbench workbench:build --ansi"
