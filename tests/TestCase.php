@@ -34,6 +34,13 @@ abstract class TestCase extends OrchestraTestCase
      */
     protected function defineEnvironment($app): void
     {
+        // Laravel's real skeleton config (vendor/laravel/framework/config/cache.php,
+        // which testbench sources by default) defaults the cache store to
+        // 'database', but this package's test workbench has no `cache` table
+        // migration. Use the in-memory array store unless a test explicitly
+        // opts into a different one.
+        $app['config']->set('cache.default', 'array');
+
         $app['config']->set('laragraph.default_schema', 'default');
         $app['config']->set('laragraph.schemas.default', [
             'query'        => [],
