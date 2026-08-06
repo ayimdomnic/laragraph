@@ -6,6 +6,7 @@ namespace Ayimdomnic\Laragraph\Schema;
 
 use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema;
 use Illuminate\Contracts\Container\Container;
@@ -115,6 +116,10 @@ class SchemaBuilder
             $cost = $instance->complexity();
             if ($cost !== null) {
                 $field['complexity'] = fn (int $childrenComplexity) => $childrenComplexity + $cost;
+            }
+
+            if (config('laragraph.tracing.enabled')) {
+                $field['resolve'] = TracingCollector::wrap($field['resolve']);
             }
 
             $fields[$name] = $field;

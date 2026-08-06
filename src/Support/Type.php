@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Support;
 
+use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
 use Illuminate\Database\Eloquent\Model;
 
@@ -101,6 +102,10 @@ abstract class Type extends ObjectType
                 if (method_exists($this, $method)) {
                     $field['resolve'] = $this->{$method}(...);
                 }
+            }
+
+            if (isset($field['resolve']) && config('laragraph.tracing.enabled')) {
+                $field['resolve'] = TracingCollector::wrap($field['resolve']);
             }
         }
 

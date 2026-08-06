@@ -384,4 +384,21 @@ return [
         'title'      => 'Laragraph — GraphiQL',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tracing
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, every field resolution (root Query/Mutation/Subscription
+    | fields and nested Type fields alike) is timed and reported under
+    | `extensions.tracing`, following the Apollo Tracing format. Disabled by
+    | default — enabling it adds a small wrapping cost to every resolver call,
+    | so it's best turned on selectively (e.g. behind a debug/admin guard)
+    | rather than left on for a public production API.
+    |
+    */
+    'tracing' => [
+        'enabled' => false,
+    ],
+
 ];

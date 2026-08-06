@@ -16,6 +16,7 @@ use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
+use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -40,6 +41,8 @@ class LaragraphServiceProvider extends ServiceProvider
         $this->app->alias('laragraph', Laragraph::class);
 
         $this->app->singleton(ExtensionRegistry::class, fn () => new ExtensionRegistry());
+
+        $this->app->singleton(TracingCollector::class, fn () => new TracingCollector());
 
         $this->app->singleton(ValidationRuleRegistry::class, function ($app) {
             $registry = new ValidationRuleRegistry();

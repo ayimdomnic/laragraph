@@ -19,11 +19,14 @@ use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Tracing\TracingCollector;
+use Ayimdomnic\Laragraph\Tracing\TracingExtension;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use GraphQL\Error\DebugFlag;
 use GraphQL\Error\Error;
 use GraphQL\Executor\ExecutionResult;
+use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
 use GraphQL\Type\Definition\NamedType;
 use GraphQL\Type\Definition\Type;
@@ -127,6 +130,10 @@ class Laragraph
         $startMs            = microtime(true) * 1000;
         $resolvedSchemaName = $schemaName ?? config('laragraph.default_schema', 'default');
 
+        if (config('laragraph.tracing.enabled')) {
+            $this->container->make(TracingCollector::class)->reset();
+        }
+
         // Response cache — only for read-only queries
         if (ResponseCache::enabled() && ResponseCache::isCacheable($query)) {
             $cacheKey = ResponseCache::key($query, $variables, $operationName);
@@ -200,6 +207,11 @@ class Laragraph
             $extensions[$ext->key()] = $ext->get($context);
         }
 
+        if (config('laragraph.tracing.enabled')) {
+            $ext = new TracingExtension($this->container->make(TracingCollector::class));
+            $extensions[$ext->key()] = $ext->get($context);
+        }
+
         // User-registered custom extensions
         foreach ($this->container->make(ExtensionRegistry::class)->collect($context) as $key => $data) {
             $extensions[$key] = $data;
@@ -230,6 +242,15 @@ class Laragraph
         // DataLoaderPromiseAdapter for why this is necessary.
         $promiseAdapter = new DataLoaderPromiseAdapter();
 
+        // Only fields with no explicit resolver reach this fallback (fields
+        // with one — root Query/Mutation/Subscription fields, and Type
+        // fields with a custom or convention-bound resolver — are already
+        // wrapped for tracing where they're compiled; see SchemaBuilder and
+        // Support\Type).
+        $fieldResolver = config('laragraph.tracing.enabled')
+            ? TracingCollector::wrap(Executor::defaultFieldResolver(...))
+            : null;
+
         $promise = GraphQL::promiseToExecute(
             promiseAdapter:  $promiseAdapter,
             schema:          $schema,
@@ -237,7 +258,7 @@ class Laragraph
             context:         $context,
             variableValues:  $variables ?: null,
             operationName:   $operationName,
-            fieldResolver:   null,
+            fieldResolver:   $fieldResolver,
             validationRules: $this->buildValidationRules(),
         );
 
