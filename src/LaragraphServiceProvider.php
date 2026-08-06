@@ -16,6 +16,8 @@ use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
+use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Illuminate\Support\ServiceProvider;
@@ -66,6 +68,13 @@ class LaragraphServiceProvider extends ServiceProvider
             return new CachePersistedQueryStore(
                 $app['cache']->store(),
                 (int) config('laragraph.persisted_queries.ttl', 3600) ?: null,
+            );
+        });
+
+        $this->app->singleton(SubscriberStoreInterface::class, function ($app) {
+            return new CacheSubscriberStore(
+                $app['cache']->store(config('laragraph.subscriptions.cache_store')),
+                (int) config('laragraph.subscriptions.ttl', 3600) ?: null,
             );
         });
     }

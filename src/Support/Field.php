@@ -329,12 +329,23 @@ abstract class Field
 
             if (!empty($middleware)) {
                 return (new FieldMiddlewarePipeline($middleware))
-                    ->run($root, $args, $context, $info, fn ($r, $a, $c, $i) => $this->resolve($r, $a, $c, $i));
+                    ->run($root, $args, $context, $info, fn ($r, $a, $c, $i) => $this->handleField($r, $a, $c, $i));
             }
 
             // 6. Resolve (no middleware)
-            return $this->resolve($root, $args, $context, $info);
+            return $this->handleField($root, $args, $context, $info);
         };
+    }
+
+    /**
+     * The final step of the resolver pipeline, after auth/validation/middleware
+     * have all passed. Defaults to calling {@see resolve()} — overridden by
+     * {@see Subscription} to branch between registering a subscriber and
+     * resolving a live update, without duplicating the pipeline above.
+     */
+    protected function handleField(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return $this->resolve($root, $args, $context, $info);
     }
 
     /**

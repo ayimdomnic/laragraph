@@ -19,6 +19,7 @@ use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
@@ -126,6 +127,7 @@ class Laragraph
         array $variables = [],
         ?string $operationName = null,
         ?string $schemaName = null,
+        mixed $rootValue = null,
     ): array {
         $startMs            = microtime(true) * 1000;
         $resolvedSchemaName = $schemaName ?? config('laragraph.default_schema', 'default');
@@ -146,7 +148,7 @@ class Laragraph
 
         event(new QueryExecuting($query, $variables, $operationName, $resolvedSchemaName));
 
-        $result = $this->executeQuery($query, $context, $variables, $operationName, $schemaName);
+        $result = $this->executeQuery($query, $context, $variables, $operationName, $schemaName, $rootValue);
 
         $debug = DebugFlag::NONE;
         if (config('app.debug')) {
@@ -232,6 +234,7 @@ class Laragraph
         array $variables = [],
         ?string $operationName = null,
         ?string $schemaName = null,
+        mixed $rootValue = null,
     ): ExecutionResult {
         $schema  = $this->schema($schemaName);
         $context = $this->wrapContext($context ?? request());
@@ -255,6 +258,7 @@ class Laragraph
             promiseAdapter:  $promiseAdapter,
             schema:          $schema,
             source:          $query,
+            rootValue:       $rootValue,
             context:         $context,
             variableValues:  $variables ?: null,
             operationName:   $operationName,
@@ -308,6 +312,18 @@ class Laragraph
         }
 
         return array_values($rules);
+    }
+
+    /**
+     * Re-execute every subscriber's original query on a channel with
+     * $payload as the root value, and push each result to that subscriber.
+     *
+     * @see SubscriptionManager::broadcast()
+     * @return int  The number of subscribers notified.
+     */
+    public function broadcast(string $channel, mixed $payload = null): int
+    {
+        return $this->container->make(SubscriptionManager::class)->broadcast($channel, $payload);
     }
 
     /**

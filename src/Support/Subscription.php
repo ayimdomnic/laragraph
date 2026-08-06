@@ -61,4 +61,35 @@ abstract class Subscription extends Field
                 => $this->subscribe($root, $args, $context, $info),
         ]);
     }
+
+    /**
+     * Branches between registering a subscriber and resolving a live update.
+     *
+     * webonyx/graphql-php has no dedicated subscription-execution entrypoint
+     * of its own — {@see \Ayimdomnic\Laragraph\Controllers\LaragraphController}
+     * drives this by flagging the execution context (`$context->subscribing`)
+     * for the initial HTTP request that registers a subscriber. On that pass,
+     * this calls {@see subscribe()} to resolve the channel and hands it to the
+     * {@see \Ayimdomnic\Laragraph\Subscriptions\SubscriptionRegistrar} attached
+     * to the context, instead of running the field's normal resolver. Later,
+     * when {@see \Ayimdomnic\Laragraph\Laragraph::broadcast()} re-executes this
+     * subscriber's original query with the event payload as $root, `subscribing`
+     * is absent/false and {@see resolve()} runs as usual.
+     */
+    protected function handleField(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        $subscribing = is_object($context) && ($context->subscribing ?? false);
+
+        if ($subscribing) {
+            $channel = $this->subscribe($root, $args, $context, $info);
+
+            if (isset($context->subscriptionRegistrar)) {
+                $context->subscriptionRegistrar->capture($channel);
+            }
+
+            return null;
+        }
+
+        return $this->resolve($root, $args, $context, $info);
+    }
 }

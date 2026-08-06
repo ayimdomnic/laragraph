@@ -401,4 +401,39 @@ return [
         'enabled' => false,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Subscriptions
+    |--------------------------------------------------------------------------
+    |
+    | webonyx/graphql-php has no built-in subscription transport, so Laragraph
+    | provides one: the initial subscription request registers a subscriber
+    | (query + variables + the channel returned by the field's subscribe())
+    | and returns a channel/subscriberId pair instead of data. Application
+    | code then calls Laragraph::broadcast($channel, $payload) — typically
+    | from inside a mutation or a model event listener — to re-execute every
+    | registered subscriber's original query with $payload as the root value
+    | and push the result to that subscriber's own private channel via
+    | Laravel Broadcasting.
+    |
+    | enabled       — Set to true to accept subscription operations. When
+    |                 false (default) they're rejected with a client error.
+    | driver        — 'broadcast' pushes via Laravel Broadcasting (Reverb,
+    |                 Pusher, ...); 'log' writes updates to the log instead,
+    |                 useful for local development without a broadcast server.
+    | cache_store   — Laravel cache store used to persist subscriber
+    |                 registrations; null uses the application's default.
+    | ttl           — Subscriber registration lifetime in seconds.
+    | channel_prefix — Prefix for the private channel each subscriber is
+    |                 pushed to: "{prefix}.{subscriberId}".
+    |
+    */
+    'subscriptions' => [
+        'enabled'        => false,
+        'driver'         => 'broadcast',
+        'cache_store'    => null,
+        'ttl'            => 3600,
+        'channel_prefix' => 'graphql-subscriber',
+    ],
+
 ];
