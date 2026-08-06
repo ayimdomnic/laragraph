@@ -57,11 +57,26 @@ final class DataLoaderRegistry
      */
     public function get(string $class): DataLoader
     {
-        if (!isset($this->loaders[$class])) {
-            $resolver = app($class);
+        return $this->getOrRegister($class, fn () => app($class));
+    }
+
+    /**
+     * Retrieve (or lazily create) a DataLoader for an arbitrary cache key.
+     *
+     * Unlike {@see get()}, the resolver instance is built by an explicit
+     * factory rather than resolved from the container with no arguments — use
+     * this for parameterized loaders (e.g. one loader per model+relation
+     * combination) that {@see get()} cannot construct on its own.
+     *
+     * @param  \Closure(): BatchResolver  $factory
+     */
+    public function getOrRegister(string $key, \Closure $factory): DataLoader
+    {
+        if (!isset($this->loaders[$key])) {
+            $resolver = $factory();
             $adapter  = new WebonyxGraphQLSyncPromiseAdapter();
 
-            $this->loaders[$class] = new DataLoader(
+            $this->loaders[$key] = new DataLoader(
                 function (array $keys) use ($resolver, $adapter) {
                     return $adapter->createAll($resolver->batch($keys));
                 },
@@ -69,7 +84,22 @@ final class DataLoaderRegistry
             );
         }
 
-        return $this->loaders[$class];
+        return $this->loaders[$key];
+    }
+
+    /**
+     * Retrieve (or lazily create) a DataLoader that batches an Eloquent
+     * relation via the model's own eager-loading machinery, keyed by parent
+     * primary key. See {@see EloquentRelationLoader}.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     */
+    public function relation(string $modelClass, string $relation): DataLoader
+    {
+        return $this->getOrRegister(
+            "relation::{$modelClass}::{$relation}",
+            fn () => new EloquentRelationLoader($modelClass, $relation),
+        );
     }
 
     /**

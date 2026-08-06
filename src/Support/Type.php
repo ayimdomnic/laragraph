@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Support;
 
 use GraphQL\Type\Definition\ObjectType;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Base class for GraphQL Object Types.
@@ -88,14 +89,50 @@ abstract class Type extends ObjectType
             }
 
             // Auto-attach per-field resolver methods: resolveEmailField, etc.
+            //
+            // Bound via first-class callable syntax (not a raw [$this, $method]
+            // array) so the resulting Closure captures this class's visibility
+            // scope. That matters because these methods are conventionally
+            // `protected` — a bare array callable is re-checked for visibility
+            // by whichever code invokes it later (webonyx's executor, which has
+            // no access to a protected method), and would fail at call time.
             if (!isset($field['resolve'])) {
                 $method = 'resolve' . ucfirst($name) . 'Field';
                 if (method_exists($this, $method)) {
-                    $field['resolve'] = [$this, $method];
+                    $field['resolve'] = $this->{$method}(...);
                 }
             }
         }
 
         return $fields;
+    }
+
+    /**
+     * Resolve an Eloquent relation for $root through the request's
+     * DataLoaderRegistry, collapsing what would otherwise be an N+1 query
+     * per parent into a single batched query per relation.
+     *
+     * ```php
+     * protected function resolveCommentsField(mixed $root, array $args, mixed $context): mixed
+     * {
+     *     return $this->batchRelation(Post::class, 'comments', $root, $context);
+     * }
+     * ```
+     *
+     * @param  class-string<Model>  $modelClass
+     */
+    protected function batchRelation(string $modelClass, string $relation, Model $root, mixed $context): mixed
+    {
+        $dataLoaders = is_array($context) ? ($context['dataLoaders'] ?? null) : ($context->dataLoaders ?? null);
+
+        if (!$dataLoaders instanceof \Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry) {
+            throw new \RuntimeException(
+                'batchRelation() requires a DataLoaderRegistry on the execution context. '
+                . 'This is attached automatically by Laragraph::executeQuery() — '
+                . 'make sure $context is the value passed into resolve().'
+            );
+        }
+
+        return $dataLoaders->relation($modelClass, $relation)->load($root->getKey());
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph;
 
+use Ayimdomnic\Laragraph\DataLoader\DataLoaderPromiseAdapter;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Events\QueryError;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
@@ -223,15 +224,24 @@ class Laragraph
         $schema  = $this->schema($schemaName);
         $context = $this->wrapContext($context ?? request());
 
-        $result = GraphQL::executeQuery(
+        // A custom promise adapter is required (rather than GraphQL::executeQuery(),
+        // which always builds its own plain SyncPromiseAdapter internally) so that
+        // resolvers returning DataLoader promises actually settle — see
+        // DataLoaderPromiseAdapter for why this is necessary.
+        $promiseAdapter = new DataLoaderPromiseAdapter();
+
+        $promise = GraphQL::promiseToExecute(
+            promiseAdapter:  $promiseAdapter,
             schema:          $schema,
             source:          $query,
-            contextValue:    $context,
+            context:         $context,
             variableValues:  $variables ?: null,
             operationName:   $operationName,
             fieldResolver:   null,
             validationRules: $this->buildValidationRules(),
         );
+
+        $result = $promiseAdapter->wait($promise);
 
         $errorFormatter = config('laragraph.error_formatter', [static::class, 'formatError']);
         $result->setErrorFormatter($errorFormatter);
