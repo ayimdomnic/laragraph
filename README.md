@@ -16,20 +16,23 @@ Laragraph gives Laravel developers a clean, expressive, **code-first** API for b
 | Capability | Status |
 |---|---|
 | Queries & Mutations | ✅ |
-| Subscriptions | ✅ |
+| Real-time Subscriptions (Laravel Broadcasting) | ✅ |
 | Object / Input / Enum / Interface / Union types | ✅ |
 | Custom scalars (DateTime, Date, JSON, Upload) | ✅ |
 | Built-in argument validation (Laravel rules) | ✅ |
 | Per-field authorization | ✅ |
+| N+1-safe Eloquent relation batching | ✅ |
 | Relay cursor pagination + simple paginator | ✅ |
 | Batched queries | ✅ |
 | File uploads (multipart spec) | ✅ |
 | Multiple named schemas | ✅ |
 | Query complexity & depth limiting | ✅ |
 | Introspection toggle | ✅ |
+| Per-field tracing (Apollo Tracing format) | ✅ |
 | GraphiQL browser IDE | ✅ |
 | Artisan generators | ✅ |
 | Auto-discovery (no manual registration) | ✅ |
+| Static analysis (PHPStan / Larastan) | ✅ |
 
 ---
 
@@ -252,6 +255,49 @@ return ConnectionType::simplePaginate(\App\Models\User::query(), $args);
 
 ---
 
+## N+1-Safe Eloquent Relations
+
+Every GraphQL request gets a fresh `DataLoaderRegistry` attached to `$context`. For hand-written batch loaders, extend `BatchResolver`:
+
+```php
+use Ayimdomnic\Laragraph\DataLoader\BatchResolver;
+
+class UserLoader extends BatchResolver
+{
+    public function batch(array $keys): array
+    {
+        return User::whereIn('id', $keys)->get()->keyBy('id')->toArray();
+    }
+}
+
+// In a resolver:
+return $context->dataLoaders->get(UserLoader::class)->load($root->user_id);
+```
+
+For a plain Eloquent relation, skip the hand-written loader entirely — `Type::batchRelation()` batches it through the relation's own eager-loading machinery (the same code path `Model::with()` uses), so it works for `belongsTo`, `hasOne`, `hasMany`, `belongsToMany`, and morph relations alike:
+
+```php
+class PostType extends Type
+{
+    public function fields(): array
+    {
+        return [
+            'id'       => GType::nonNull(GType::id()),
+            'comments' => GType::listOf(app('laragraph')->type('Comment')),
+        ];
+    }
+
+    protected function resolveCommentsField(mixed $root, array $args, mixed $context): mixed
+    {
+        return $this->batchRelation(Post::class, 'comments', $root, $context);
+    }
+}
+```
+
+Regardless of how many `Post` parents are in the result set, `comments` resolves in a fixed, small number of queries per request instead of one query per post.
+
+---
+
 ## Authorization
 
 ```php
@@ -363,6 +409,115 @@ use Ayimdomnic\Laragraph\Facades\Laragraph;
 $result = Laragraph::execute('{ users { id name } }');
 $schema = Laragraph::schema('admin');
 $type   = Laragraph::type('User');
+```
+
+---
+
+## Subscriptions
+
+webonyx/graphql-php has no subscription transport of its own, so Laragraph provides one on top of Laravel Broadcasting: the initial subscription request registers a subscriber and returns a channel; your app code later calls `Laragraph::broadcast()` to push a live update to every subscriber on that channel.
+
+```php
+'subscriptions' => ['enabled' => true],
+```
+
+```php
+// app/GraphQL/Subscriptions/UserCreatedSubscription.php
+use Ayimdomnic\Laragraph\Support\Subscription;
+
+class UserCreatedSubscription extends Subscription
+{
+    public function type(): Type
+    {
+        return app('laragraph')->type('User');
+    }
+
+    public function subscribe(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'users'; // the channel clients subscribe to
+    }
+
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return $root; // $root is the payload passed to Laragraph::broadcast()
+    }
+}
+```
+
+Trigger an update from anywhere — typically at the end of a mutation:
+
+```php
+class CreateUserMutation extends Mutation
+{
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        $user = \App\Models\User::create($args);
+
+        Laragraph::broadcast('users', $user);
+
+        return $user;
+    }
+}
+```
+
+**Client flow:**
+
+1. POST the subscription operation like any other query:
+   ```json
+   { "query": "subscription { userCreated { id name } }" }
+   ```
+   The response carries no data yet — instead:
+   ```json
+   { "data": { "userCreated": null }, "extensions": { "subscription": { "channel": "users", "subscriberId": "…" } } }
+   ```
+2. Listen for updates on that subscriber's private channel with [Laravel Echo](https://laravel.com/docs/broadcasting#client-side-installation):
+   ```js
+   Echo.private(`graphql-subscriber.${subscriberId}`)
+       .listen('.GraphQLSubscriptionUpdate', (payload) => {
+           console.log(payload.data.userCreated);
+       });
+   ```
+
+Delivery uses whichever broadcast driver your app has configured (Reverb, Pusher, …) — Laragraph only decides the channel and payload shape. Set `'subscriptions' => ['driver' => 'log']` to write updates to the log instead, useful for local development without a broadcast server.
+
+---
+
+## Tracing
+
+Enable per-field resolver timing in the [Apollo Tracing](https://github.com/apollographql/apollo-tracing) format, understood out of the box by existing GraphQL tooling:
+
+```php
+'tracing' => ['enabled' => true],
+```
+
+```json
+{
+  "extensions": {
+    "tracing": {
+      "version": 1,
+      "startTime": "2026-08-06T12:00:00.000Z",
+      "endTime": "2026-08-06T12:00:00.004Z",
+      "duration": 4200000,
+      "execution": {
+        "resolvers": [
+          { "path": ["users", 0, "posts"], "parentType": "User", "fieldName": "posts", "returnType": "[Post]", "startOffset": 120000, "duration": 80000 }
+        ]
+      }
+    }
+  }
+}
+```
+
+Every resolved field is recorded — root Query/Mutation/Subscription fields and nested Type fields alike. Leave this off in production unless you're actively debugging performance; it adds a small wrapping cost to every resolver call.
+
+---
+
+## Static Analysis
+
+Larastan/PHPStan ships configured out of the box:
+
+```bash
+composer phpstan
 ```
 
 ---
