@@ -133,11 +133,7 @@ class LaragraphController extends BaseController
             $body = $request->all();
         }
 
-        if (is_string($body) && trim($body) !== '') {
-            return ['query' => $body];
-        }
-
-        return is_array($body) ? $body : [];
+        return $body;
     }
 
     /**

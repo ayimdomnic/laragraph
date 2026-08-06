@@ -112,7 +112,8 @@ class SchemaBuilder
             $instance = $this->container->make($class);
             $field    = $instance->toArray();
 
-            if (method_exists($instance, 'complexity') && ($cost = $instance->complexity()) !== null) {
+            $cost = $instance->complexity();
+            if ($cost !== null) {
                 $field['complexity'] = fn (int $childrenComplexity) => $childrenComplexity + $cost;
             }
 

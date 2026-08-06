@@ -24,6 +24,7 @@ use GraphQL\Error\DebugFlag;
 use GraphQL\Error\Error;
 use GraphQL\Executor\ExecutionResult;
 use GraphQL\GraphQL;
+use GraphQL\Type\Definition\NamedType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Validator\DocumentValidator;
@@ -301,7 +302,14 @@ class Laragraph
     public function addType(string|Type $class, ?string $alias = null): void
     {
         if ($class instanceof Type) {
-            $alias ??= $class->name;
+            if ($alias === null) {
+                if (!$class instanceof NamedType) {
+                    throw new \InvalidArgumentException('An alias is required when registering a type that is not a NamedType.');
+                }
+
+                $alias = $class->name();
+            }
+
             $this->typesInstances[$alias] = $class;
             return;
         }

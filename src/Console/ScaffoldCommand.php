@@ -139,6 +139,9 @@ class ScaffoldCommand extends Command
         ]));
     }
 
+    /**
+     * @param  'create'|'update'|'delete'  $variant
+     */
     protected function generateMutation(string $model, string $variant, array $fields = []): void
     {
         $className = match ($variant) {
