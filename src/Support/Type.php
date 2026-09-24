@@ -137,6 +137,6 @@ abstract class Type extends ObjectType
             );
         }
 
-        return $dataLoaders->relation($modelClass, $relation)->load($root->getKey());
+        return $dataLoaders->relation($modelClass, $relation, $root)->load($root->getKey());
     }
 }

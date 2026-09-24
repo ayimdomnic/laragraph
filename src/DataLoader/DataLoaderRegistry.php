@@ -55,6 +55,9 @@ final class DataLoaderRegistry
     /** @var array<string, DataLoader> */
     private array $loaders = [];
 
+    /** @var array<string, EloquentRelationLoader> */
+    private array $relationResolvers = [];
+
     /** @var \WeakMap<object, self>|null Registries attached to object contexts. */
     private static ?\WeakMap $attached = null;
 
@@ -164,12 +167,16 @@ final class DataLoaderRegistry
      *
      * @param class-string<Model> $modelClass
      */
-    public function relation(string $modelClass, string $relation): DataLoader
+    public function relation(string $modelClass, string $relation, ?Model $parent = null): DataLoader
     {
-        return $this->getOrRegister(
-            "relation::{$modelClass}::{$relation}",
-            fn(): EloquentRelationLoader => new EloquentRelationLoader($modelClass, $relation),
-        );
+        $key      = "relation::{$modelClass}::{$relation}";
+        $resolver = $this->relationResolvers[$key] ??= new EloquentRelationLoader($modelClass, $relation);
+
+        if ($parent instanceof Model) {
+            $resolver->remember($parent);
+        }
+
+        return $this->getOrRegister($key, static fn(): EloquentRelationLoader => $resolver);
     }
 
     /**
@@ -189,6 +196,7 @@ final class DataLoaderRegistry
             $loader->__destruct();
         }
 
-        $this->loaders = [];
+        $this->loaders           = [];
+        $this->relationResolvers = [];
     }
 }

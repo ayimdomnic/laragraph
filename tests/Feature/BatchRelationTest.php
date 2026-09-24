@@ -135,9 +135,8 @@ class BatchRelationTest extends TestCase
             $this->assertCount(2, $user['posts']);
         }
 
-        // 1 query for the users list + at most 2 for the batched relation
-        // (parent refetch + eager relation query), regardless of user count.
-        $this->assertLessThanOrEqual(3, $queryCount);
+        // 1 query for the users list + 1 batched relation query, regardless of user count.
+        $this->assertSame(2, $queryCount);
     }
 
     public function test_batch_relation_throws_when_context_has_no_dataloader_registry(): void

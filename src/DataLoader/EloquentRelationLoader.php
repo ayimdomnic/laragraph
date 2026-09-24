@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\DataLoader;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * Batches an Eloquent relation for a set of parent keys into a single query,
@@ -26,31 +26,54 @@ final class EloquentRelationLoader extends BatchResolver
         private readonly string $relation,
     ) {}
 
+    /** @var array<string, Model> Parent models supplied by resolvers, keyed by primary key. */
+    private array $parents = [];
+
+    /**
+     * Supply a parent model the resolver already holds, so batch() neither
+     * re-queries it nor misses it when a global scope (e.g. soft deletes)
+     * would hide it from a fresh query.
+     */
+    public function remember(Model $parent): void
+    {
+        $this->parents[(string) $parent->getKey()] = $parent;
+    }
+
     /**
      * @param  array<int|string>  $keys  Parent model primary key values.
      * @return array<int|string, mixed>  Relation result per key, in $keys order.
      */
     public function batch(array $keys): array
     {
-        /** @var Model $instance */
-        $instance = new $this->modelClass();
-        $keyName  = $instance->getKeyName();
+        $parents = [];
+        $missing = [];
 
-        $parents = $this->modelClass::query()->whereIn($keyName, $keys)->get();
-
-        /** @var Relation<Model, Model, mixed> $relation */
-        $relation = Relation::noConstraints(fn() => $instance->{$this->relation}());
-        $relation->addEagerConstraints($parents->all());
-        $results = $relation->getEager();
-        $parents = $relation->match($parents->all(), $results, $this->relation);
-
-        $byKey = [];
-        foreach ($parents as $parent) {
-            $byKey[(string) $parent->getKey()] = $parent->getRelation($this->relation);
+        foreach ($keys as $key) {
+            if (isset($this->parents[(string) $key])) {
+                $parents[(string) $key] = $this->parents[(string) $key];
+            } else {
+                $missing[] = $key;
+            }
         }
 
+        if ($missing !== []) {
+            /** @var Model $instance */
+            $instance = new $this->modelClass();
+
+            foreach ($this->modelClass::query()->whereIn($instance->getKeyName(), $missing)->get() as $parent) {
+                $parents[(string) $parent->getKey()] = $parent;
+            }
+        }
+
+        // One query for every parent that does not already have the relation loaded.
+        (new Collection(array_values($parents)))->loadMissing($this->relation);
+
+        $relation = $this->relation;
+
         return array_map(
-            static fn(int|string $key): mixed => $byKey[(string) $key] ?? null,
+            static fn(int|string $key): mixed => isset($parents[(string) $key])
+                ? $parents[(string) $key]->getRelation($relation)
+                : null,
             $keys,
         );
     }
