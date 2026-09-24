@@ -19,6 +19,7 @@ use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
 use Ayimdomnic\Laragraph\Http\BatchProcessor;
+use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
@@ -40,6 +41,7 @@ use GraphQL\Validator\Rules\QueryComplexity;
 use GraphQL\Validator\Rules\QueryDepth;
 use GraphQL\Validator\Rules\ValidationRule;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
 /**
@@ -476,23 +478,29 @@ class Laragraph
     }
 
     /**
-     * Attach a DataLoaderRegistry to the execution context.
+     * Prepare the execution context and attach a fresh DataLoaderRegistry.
      *
-     * If $context is a plain object, the `dataLoaders` property is added
-     * directly. If it is an array, the key is added. Otherwise a lightweight
-     * anonymous object carrying both the original context and the registry is
-     * returned.
+     * - An HTTP {@see Request} is wrapped in a {@see GraphQLContext}, which
+     *   declares `dataLoaders` (and the subscription slots) instead of adding
+     *   dynamic properties to the framework's Request.
+     * - An array gets a `dataLoaders` key.
+     * - Any other object is registered via {@see DataLoaderRegistry::attach()}.
+     * - Scalars pass through untouched.
      */
     protected function wrapContext(mixed $context): mixed
     {
-        if (is_object($context)) {
-            $context->dataLoaders = new DataLoaderRegistry();
-            return $context;
+        if ($context instanceof Request) {
+            $context = GraphQLContext::fromRequest($context);
         }
 
         if (is_array($context)) {
             $context['dataLoaders'] = new DataLoaderRegistry();
+
             return $context;
+        }
+
+        if (is_object($context)) {
+            DataLoaderRegistry::attach($context, new DataLoaderRegistry());
         }
 
         return $context;

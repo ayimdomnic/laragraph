@@ -41,12 +41,82 @@ use Overblog\PromiseAdapter\Adapter\WebonyxGraphQLSyncPromiseAdapter;
  * }
  * ```
  *
+ * Or, for any kind of context (including custom objects that forbid dynamic
+ * properties), look the registry up explicitly:
+ *
+ * ```php
+ * DataLoaderRegistry::for($context)?->get(UserLoader::class)->load($root->user_id);
+ * ```
+ *
  * @see BatchResolver
  */
 final class DataLoaderRegistry
 {
     /** @var array<string, DataLoader> */
     private array $loaders = [];
+
+    /** @var \WeakMap<object, self>|null Registries attached to object contexts. */
+    private static ?\WeakMap $attached = null;
+
+    /** @var array<class-string, bool> Memoised "may this class take a dataLoaders property?" checks. */
+    private static array $writable = [];
+
+    /**
+     * Attach $registry to an object execution context.
+     *
+     * The registry is always retrievable through {@see for()}. It is also
+     * exposed as `$context->dataLoaders` when the context declares that
+     * property or permits dynamic properties (stdClass, #[AllowDynamicProperties]);
+     * other objects are never given a dynamic property, which PHP 8.2+ deprecates.
+     */
+    public static function attach(object $context, self $registry): void
+    {
+        self::$attached ??= new \WeakMap();
+        self::$attached[$context] = $registry;
+
+        if (self::acceptsProperty($context)) {
+            $context->dataLoaders = $registry;
+        }
+    }
+
+    /**
+     * The registry attached to an execution context, or null when there is none.
+     */
+    public static function for(mixed $context): ?self
+    {
+        if (is_array($context)) {
+            $registry = $context['dataLoaders'] ?? null;
+
+            return $registry instanceof self ? $registry : null;
+        }
+
+        if (!is_object($context)) {
+            return null;
+        }
+
+        return self::$attached[$context] ?? null;
+    }
+
+    private static function acceptsProperty(object $context): bool
+    {
+        $class = $context::class;
+
+        if (isset(self::$writable[$class])) {
+            return self::$writable[$class];
+        }
+
+        if (property_exists($context, 'dataLoaders')) {
+            return self::$writable[$class] = true;
+        }
+
+        for ($reflection = new \ReflectionClass($context); $reflection !== false; $reflection = $reflection->getParentClass()) {
+            if ($reflection->getName() === \stdClass::class || $reflection->getAttributes(\AllowDynamicProperties::class) !== []) {
+                return self::$writable[$class] = true;
+            }
+        }
+
+        return self::$writable[$class] = false;
+    }
 
     /**
      * Retrieve (or lazily create) a named DataLoader.

@@ -6,6 +6,7 @@ namespace Ayimdomnic\Laragraph\Controllers;
 
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
+use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
@@ -163,10 +164,11 @@ class LaragraphController extends BaseController
 
         $registrar = new SubscriptionRegistrar();
 
-        $request->subscribing            = true;
-        $request->subscriptionRegistrar  = $registrar;
+        $context                        = GraphQLContext::fromRequest($request);
+        $context->subscribing           = true;
+        $context->subscriptionRegistrar = $registrar;
 
-        $result = $this->laragraph->execute($query, $request, $variables, $operationName, $schemaName);
+        $result = $this->laragraph->execute($query, $context, $variables, $operationName, $schemaName);
 
         if (!empty($result['errors'])) {
             return $result;

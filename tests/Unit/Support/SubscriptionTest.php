@@ -51,7 +51,7 @@ class SubscriptionTest extends TestCase
         $sub   = new SubscriptionWithChannel();
         $field = $sub->toArray();
 
-        $result = ($field['subscribe'])(null, [], null, $this->createMock(ResolveInfo::class));
+        $result = ($field['subscribe'])(null, [], null, $this->createStub(ResolveInfo::class));
         $this->assertSame('my-channel', $result);
     }
 
@@ -60,7 +60,7 @@ class SubscriptionTest extends TestCase
         $sub   = new ConcreteSubscription();
         $field = $sub->toArray();
 
-        $result = ($field['subscribe'])(null, [], null, $this->createMock(ResolveInfo::class));
+        $result = ($field['subscribe'])(null, [], null, $this->createStub(ResolveInfo::class));
         $this->assertNull($result);
     }
 }

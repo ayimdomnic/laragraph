@@ -158,13 +158,13 @@ class TypeSystemTest extends TestCase
     public function test_interface_type_resolve_type_returns_null_by_default(): void
     {
         $iface = new NodeInterface();
-        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
+        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createStub(ResolveInfo::class)));
     }
 
     public function test_interface_type_parent_resolve_type_returns_null(): void
     {
         $iface = new NodeInterfaceDefault();
-        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
+        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createStub(ResolveInfo::class)));
     }
 
     // UnionType
@@ -177,13 +177,13 @@ class TypeSystemTest extends TestCase
     public function test_union_type_resolve_type_returns_null_by_default(): void
     {
         $union = new MediaUnion();
-        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
+        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createStub(ResolveInfo::class)));
     }
 
     public function test_union_type_parent_resolve_type_returns_null(): void
     {
         $union = new MediaUnionDefault();
-        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
+        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createStub(ResolveInfo::class)));
     }
 
     // Type — shorthand field registration

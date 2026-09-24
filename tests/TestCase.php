@@ -10,6 +10,16 @@ use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Laravel normally routes PHP deprecations to a log channel; surface
+        // them as exceptions so the suite fails on e.g. dynamic properties
+        // (deprecated since PHP 8.2) instead of silently passing.
+        $this->withoutDeprecationHandling();
+    }
+
     /**
      * Load the Laragraph service provider.
      */

@@ -127,9 +127,9 @@ abstract class Type extends ObjectType
      */
     protected function batchRelation(string $modelClass, string $relation, Model $root, mixed $context): mixed
     {
-        $dataLoaders = is_array($context) ? ($context['dataLoaders'] ?? null) : ($context->dataLoaders ?? null);
+        $dataLoaders = DataLoaderRegistry::for($context);
 
-        if (!$dataLoaders instanceof DataLoaderRegistry) {
+        if ($dataLoaders === null) {
             throw new \RuntimeException(
                 'batchRelation() requires a DataLoaderRegistry on the execution context. '
                 . 'This is attached automatically by Laragraph::executeQuery() — '
