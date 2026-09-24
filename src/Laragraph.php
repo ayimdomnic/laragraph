@@ -513,8 +513,13 @@ class Laragraph
      */
     public static function formatError(Error $error): array
     {
+        // Only client-safe errors keep their message: anything else (a failed
+        // query, a missing file…) could leak SQL, paths or secrets. In debug
+        // mode the real message is still available as extensions.debugMessage.
+        $message = $error->isClientSafe() ? $error->getMessage() : 'Internal server error';
+
         $formatted = [
-            'message'   => $error->getMessage() ?: 'An unexpected error occurred.',
+            'message'   => $message ?: 'An unexpected error occurred.',
             'locations' => $error->getLocations()
                 ? array_map(
                     fn($loc): array => ['line' => $loc->line, 'column' => $loc->column],
