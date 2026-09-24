@@ -90,6 +90,7 @@ class LaragraphServiceProvider extends ServiceProvider
     {
         $this->mergePresetTypes();
         $this->authorizeSubscriberChannels();
+        $this->warmUnderOctane();
 
         $this->loadRoutesFrom(__DIR__ . '/routes.php');
         $this->loadViewsFrom(__DIR__ . '/views', 'laragraph');
@@ -141,6 +142,30 @@ class LaragraphServiceProvider extends ServiceProvider
 
             $broadcast->channel($prefix . '.{subscriberId}', SubscriberChannel::class);
         });
+    }
+
+    /**
+     * Keep Laragraph alive across requests under Laravel Octane.
+     *
+     * Octane handles every request in a fresh clone of the application, and
+     * a singleton first resolved during a request is discarded with that
+     * clone — so the compiled schema and the validation cache would be
+     * rebuilt on every request. Services in `octane.warm` are resolved once
+     * per worker, before the first request, and shared by all of them.
+     *
+     * This runs at boot, after every provider has registered, so Octane's own
+     * default `warm` list is already in the config (Octane reads it after
+     * boot). Set `laragraph.octane.warm` to false to opt out.
+     */
+    protected function warmUnderOctane(): void
+    {
+        $warm = config('octane.warm');
+
+        if (!is_array($warm) || !config('laragraph.octane.warm', true) || in_array('laragraph', $warm, true)) {
+            return;
+        }
+
+        config(['octane.warm' => [...$warm, 'laragraph']]);
     }
 
     /**

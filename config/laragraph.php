@@ -433,6 +433,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Laravel Octane
+    |--------------------------------------------------------------------------
+    |
+    | warm — Under Octane, keep Laragraph alive across requests so each worker
+    |   compiles the schema and validates each document once. Octane
+    |   otherwise discards Laragraph with every request's copy of the
+    |   application. Type and field classes are then shared by all requests
+    |   of a worker: keep per-request state out of them (use $context).
+    |
+    */
+    'octane' => [
+        'warm' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Subscriptions
     |--------------------------------------------------------------------------
     |
