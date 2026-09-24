@@ -31,6 +31,10 @@ Route::group($routeConfig, function (): void {
             ->name('laragraph.graphiql');
     }
 
+    // Cancel a subscription: DELETE /graphql/subscriptions/{subscriberId}
+    Route::delete('/subscriptions/{subscriberId}', [LaragraphController::class, 'unsubscribe'])
+        ->name('laragraph.unsubscribe');
+
     // Named-schema endpoints: /graphql/{schemaName}
     Route::match($methods, '/{schemaName}', [LaragraphController::class, 'query'])
         ->name('laragraph.query.schema')

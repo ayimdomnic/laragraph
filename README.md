@@ -657,6 +657,14 @@ class CreateUserMutation extends Mutation
 
 Delivery uses whichever broadcast driver your app has configured (Reverb, Pusher, …) — Laragraph only decides the channel and payload shape.
 
+**Queued fan-out.** `Laragraph::broadcast()` re-runs every subscriber's query before returning.
+Use `Laragraph::broadcastLater('users', $user)` to do that on the queue instead
+(`subscriptions.queue.connection` / `subscriptions.queue.queue`).
+
+**Unsubscribing.** Clients cancel with `DELETE /graphql/subscriptions/{subscriberId}` (only the
+subscription's owner may; anything else answers `404`), and server code can call
+`Laragraph::unsubscribe($subscriberId)`. Subscriptions also expire after `subscriptions.ttl`.
+
 **Security.** Each update is resolved *as the subscriber*: the subscriber's identity is stored when
 they subscribe, and `Laragraph::broadcast()` re-runs their query authenticated as them — never as
 whoever triggered the broadcast — so `authorize()`, policies and `auth()` behave exactly as on the

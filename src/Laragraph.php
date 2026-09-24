@@ -22,6 +22,7 @@ use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Subscriptions\BroadcastSubscriptionUpdates;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
@@ -347,6 +348,28 @@ class Laragraph
     public function broadcast(string $channel, mixed $payload = null): int
     {
         return $this->container->make(SubscriptionManager::class)->broadcast($channel, $payload);
+    }
+
+    /**
+     * Like {@see broadcast()}, but runs the fan-out on the queue so the
+     * request that triggered the event does not wait for every subscriber's
+     * query. Uses `laragraph.subscriptions.queue.{connection,queue}`.
+     */
+    public function broadcastLater(string $channel, mixed $payload = null): void
+    {
+        BroadcastSubscriptionUpdates::dispatch($channel, $payload)
+            ->onConnection(config('laragraph.subscriptions.queue.connection'))
+            ->onQueue(config('laragraph.subscriptions.queue.queue'));
+    }
+
+    /**
+     * Remove a subscriber from every channel it subscribed to.
+     *
+     * @return bool False when the subscriber is unknown.
+     */
+    public function unsubscribe(string $subscriberId): bool
+    {
+        return $this->container->make(SubscriptionManager::class)->unsubscribe($subscriberId);
     }
 
     /**
