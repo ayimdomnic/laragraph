@@ -72,6 +72,30 @@ class OperationTest extends TestCase
         $this->assertSame($first, DocumentCache::parse('{ first }'));
     }
 
+    public function test_the_document_cache_is_bounded_by_source_size(): void
+    {
+        DocumentCache::flush();
+        $large = fn(int $i): string => '{ ' . str_repeat("f{$i} ", intdiv(DocumentCache::MAX_BYTES, 8)) . '}';
+
+        for ($i = 0; $i < 10; $i++) {
+            DocumentCache::parse($large($i));
+        }
+
+        $documents = (new \ReflectionProperty(DocumentCache::class, 'documents'))->getValue();
+        $bytes     = (new \ReflectionProperty(DocumentCache::class, 'bytes'))->getValue();
+
+        $this->assertLessThanOrEqual(DocumentCache::MAX_BYTES, $bytes);
+        $this->assertLessThan(10, count($documents));
+    }
+
+    public function test_the_latest_document_is_kept_however_large(): void
+    {
+        DocumentCache::flush();
+        $huge = '{ ' . str_repeat('field ', DocumentCache::MAX_BYTES) . '}';
+
+        $this->assertSame(DocumentCache::parse($huge), DocumentCache::parse($huge));
+    }
+
     public function test_syntax_errors_are_remembered_as_unparseable(): void
     {
         $this->assertNull(DocumentCache::parse('{ broken'));

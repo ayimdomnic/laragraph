@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
 use Ayimdomnic\Laragraph\Facades\Laragraph;
-use Ayimdomnic\Laragraph\Support\DocumentCache;
+use Ayimdomnic\Laragraph\Laragraph as LaragraphManager;
 use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Type\Definition\ResolveInfo;
@@ -77,11 +77,11 @@ class ValidationCacheTest extends TestCase
 
     public function test_the_validation_cache_is_bounded(): void
     {
-        for ($i = 0; $i < DocumentCache::SIZE + 10; $i++) {
+        for ($i = 0; $i < LaragraphManager::VALIDATED_DOCUMENTS + 10; $i++) {
             Laragraph::execute("{ cheap alias{$i}: second }");
         }
 
-        $this->assertSame(DocumentCache::SIZE, $this->validatedCount());
+        $this->assertSame(LaragraphManager::VALIDATED_DOCUMENTS, $this->validatedCount());
     }
 
     public function test_invalid_documents_are_rejected_every_time(): void
