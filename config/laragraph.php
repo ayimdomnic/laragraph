@@ -160,15 +160,23 @@ return [
     | Security
     |--------------------------------------------------------------------------
     |
-    | Set limits on query complexity and depth to protect your API from
-    | overly expensive queries. null disables the limit.
+    | Limits that protect the API from overly expensive or abusive queries.
+    | Set a limit to null to disable it.
+    |
+    | query_max_depth       — deepest allowed selection nesting. The standard
+    |                         introspection query (GraphiQL, codegen) needs 11.
+    | query_max_complexity  — total field cost (see Field::complexity()).
+    | max_aliases           — aliases per document; blocks alias flooding.
+    | disable_introspection — null (default) disables introspection whenever
+    |                         app.debug is off, i.e. in production. Set true or
+    |                         false to force it either way.
     |
     */
     'security' => [
-        'query_max_complexity'  => null,
-        'query_max_depth'       => null,
-        'disable_introspection' => false,
-        'max_aliases'           => null,
+        'query_max_complexity'  => 500,
+        'query_max_depth'       => 15,
+        'disable_introspection' => null,
+        'max_aliases'           => 30,
     ],
 
     /*
@@ -396,11 +404,15 @@ return [
     | GraphiQL
     |--------------------------------------------------------------------------
     |
-    | Enable the built-in GraphiQL browser IDE at /graphql/graphiql.
+    | The built-in GraphiQL browser IDE at /graphql/graphiql.
+    |
+    | enabled — null (default) serves it only while app.debug is on, i.e. not
+    |   in production. Set true to always serve it (then protect it with
+    |   'middleware', e.g. ['auth', 'can:viewGraphiql']) or false to never.
     |
     */
     'graphiql' => [
-        'enabled'    => true,
+        'enabled'    => null,
         'middleware' => [],
         'title'      => 'Laragraph — GraphiQL',
     ],

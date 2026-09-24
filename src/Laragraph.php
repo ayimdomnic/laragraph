@@ -312,7 +312,8 @@ class Laragraph
             $rules['queryDepth'] = new QueryDepth((int) $security['query_max_depth']);
         }
 
-        if (!empty($security['disable_introspection'])) {
+        // null = automatic: introspection is only available while app.debug is on.
+        if ($security['disable_introspection'] ?? !config('app.debug')) {
             $rules['disableIntrospection'] = new DisableIntrospection(DisableIntrospection::ENABLED);
         }
 
