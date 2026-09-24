@@ -22,6 +22,7 @@ final readonly class FieldMiddlewarePipeline
      * Run the middleware stack and ultimately invoke `$resolver`.
      *
      * @param callable(mixed, array<string,mixed>, mixed, ResolveInfo): mixed $resolver
+     * @param array<string, mixed> $args
      */
     public function run(
         mixed $root,

@@ -29,6 +29,9 @@ final readonly class ThrottleMiddleware implements FieldMiddlewareInterface
         private int $decaySeconds = 60,
     ) {}
 
+    /**
+     * @param array<string, mixed> $args
+     */
     public function handle(
         mixed $root,
         array $args,

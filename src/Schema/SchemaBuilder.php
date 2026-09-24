@@ -34,6 +34,8 @@ class SchemaBuilder
      *   'mutation'     => ['fieldName' => FQCN, ...]
      *   'subscription' => ['fieldName' => FQCN, ...]
      *   'types'        => ['Alias' => FQCN, ...]
+     *
+     * @param array<string, mixed> $config
      */
     public function build(array $config): Schema
     {
@@ -114,6 +116,7 @@ class SchemaBuilder
      * Build a GraphQL field map from a [fieldName => FQCN] config array.
      *
      * @return array<string, mixed>
+     * @param array<string, class-string<Field>> $fieldClasses
      */
     protected function buildFields(array $fieldClasses): array
     {

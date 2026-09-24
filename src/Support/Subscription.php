@@ -47,6 +47,8 @@ abstract class Subscription extends Field
     /**
      * Return the channel or topic name the client should subscribe to.
      * By default returns null (no subscription channel wiring).
+     *
+     * @param array<string, mixed> $args
      */
     public function subscribe(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -77,6 +79,8 @@ abstract class Subscription extends Field
      * when {@see Laragraph::broadcast()} re-executes this
      * subscriber's original query with the event payload as $root, `subscribing`
      * is absent/false and {@see resolve()} runs as usual.
+     *
+     * @param array<string, mixed> $args
      */
     protected function handleField(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {

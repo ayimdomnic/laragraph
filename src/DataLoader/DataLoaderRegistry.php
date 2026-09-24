@@ -75,7 +75,8 @@ final class DataLoaderRegistry
         self::$attached[$context] = $registry;
 
         if (self::acceptsProperty($context)) {
-            $context->dataLoaders = $registry;
+            // acceptsProperty() guarantees the property is declared or dynamic properties are allowed.
+            $context->dataLoaders = $registry; // @phpstan-ignore property.notFound
         }
     }
 

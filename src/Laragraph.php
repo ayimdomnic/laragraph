@@ -108,7 +108,7 @@ class Laragraph
      * @param  array<int, array{query?: string, variables?: mixed, operationName?: string|null}> $operations
      * @param  mixed  $context    Passed through to each individual execute() call.
      * @param  string $schemaName Schema to run all operations against.
-     * @return array<int, array>  One result per input operation, preserving order.
+     * @return array<int, array<string, mixed>> One result per input operation, preserving order.
      *
      * @throws BatchingDisabledException
      * @throws BatchLimitExceededException
@@ -126,6 +126,9 @@ class Laragraph
      *
      * Response caching (configurable via `laragraph.cache.response`) is applied
      * to read-only query operations. Mutations and subscriptions bypass the cache.
+     *
+     * @param array<string, mixed> $variables
+     * @return array<string, mixed>
      */
     public function execute(
         string $query,
@@ -239,6 +242,8 @@ class Laragraph
      *
      * A fresh {@see DataLoaderRegistry} is attached to the context for each
      * execution so resolvers can batch N+1 database calls.
+     *
+     * @param array<string, mixed> $variables
      */
     public function executeQuery(
         string $query,
@@ -454,6 +459,8 @@ class Laragraph
 
     /**
      * Default error formatter — exposed via config('laragraph.error_formatter').
+     *
+     * @return array<string, mixed>
      */
     public static function formatError(Error $error): array
     {

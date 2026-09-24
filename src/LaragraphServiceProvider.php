@@ -162,6 +162,8 @@ class LaragraphServiceProvider extends ServiceProvider
 
     /**
      * Get the services provided by the provider.
+     *
+     * @return list<string>
      */
     public function provides(): array
     {

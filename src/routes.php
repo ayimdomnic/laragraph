@@ -26,7 +26,7 @@ Route::group($routeConfig, function (): void {
     // GraphiQL browser IDE
     if (config('laragraph.graphiql.enabled', true)) {
         Route::get('/graphiql', [LaragraphController::class, 'graphiql'])
-            ->middleware(config('laragraph.graphiql.middleware', []))
+            ->middleware((array) config('laragraph.graphiql.middleware', []))
             ->name('laragraph.graphiql');
     }
 

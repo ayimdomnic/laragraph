@@ -25,7 +25,7 @@ class BatchProcessor
      * @param  array<int, array{query?: string, variables?: mixed, operationName?: string|null}> $operations
      * @param  mixed  $context    Passed through to every individual execute() call.
      * @param  string $schemaName Schema to run all operations against.
-     * @return array<int, array>  One result per input operation, preserving order.
+     * @return array<int, array<string, mixed>> One result per input operation, preserving order.
      *
      * @throws BatchingDisabledException   When `laragraph.batching.enabled` is false.
      * @throws BatchLimitExceededException When the operation count exceeds the configured maximum.

@@ -83,6 +83,8 @@ abstract class Field
     /**
      * Resolver — receives the parent value, arguments, shared context, and
      * resolve info.
+     *
+     * @param array<string, mixed> $args
      */
     abstract public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed;
 
@@ -109,6 +111,7 @@ abstract class Field
      * Return an empty array to skip validation.
      *
      * @return array<string, mixed>
+     * @param array<string, mixed> $args
      */
     public function rules(array $args = []): array
     {
@@ -140,6 +143,8 @@ abstract class Field
      *
      * Return `false` to throw an {@see AuthorizationException}.
      * For guard-aware checks, override {@see authorizeWithContext()} instead.
+     *
+     * @param array<string, mixed> $args
      */
     public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
     {
@@ -344,6 +349,8 @@ abstract class Field
      * have all passed. Defaults to calling {@see resolve()} — overridden by
      * {@see Subscription} to branch between registering a subscriber and
      * resolving a live update, without duplicating the pipeline above.
+     *
+     * @param array<string, mixed> $args
      */
     protected function handleField(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -359,9 +366,9 @@ abstract class Field
      */
     private function resolveMiddlewareInstances(array $middleware): array
     {
-        return array_map(
-            fn(string|FieldMiddlewareInterface $mw) => is_string($mw) ? app($mw) : $mw,
+        return array_values(array_map(
+            fn(string|FieldMiddlewareInterface $mw): FieldMiddlewareInterface => is_string($mw) ? app($mw) : $mw,
             $middleware,
-        );
+        ));
     }
 }

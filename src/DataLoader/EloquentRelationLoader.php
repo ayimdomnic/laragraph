@@ -38,7 +38,7 @@ final class EloquentRelationLoader extends BatchResolver
 
         $parents = $this->modelClass::query()->whereIn($keyName, $keys)->get();
 
-        /** @var Relation $relation */
+        /** @var Relation<Model, Model, mixed> $relation */
         $relation = Relation::noConstraints(fn() => $instance->{$this->relation}());
         $relation->addEagerConstraints($parents->all());
         $results = $relation->getEager();

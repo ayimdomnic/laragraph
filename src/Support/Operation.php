@@ -23,7 +23,7 @@ final class Operation
     /** Parsed documents are memoised briefly; one request typically asks several times. */
     private const MEMO_SIZE = 32;
 
-    /** @var array<string, array<string|int, string>> query hash => [operation name|index => type] */
+    /** @var array<string, array<string|int, self::QUERY|self::MUTATION|self::SUBSCRIPTION>> query hash => [operation name|index => type] */
     private static array $memo = [];
 
     /**
@@ -60,7 +60,7 @@ final class Operation
     }
 
     /**
-     * @return array<string|int, string> Operation name (or position, when anonymous) => type.
+     * @return array<string|int, self::QUERY|self::MUTATION|self::SUBSCRIPTION> Operation name (or position, when anonymous) => type.
      */
     private static function operations(string $query): array
     {
@@ -80,7 +80,11 @@ final class Operation
 
         foreach ($document->definitions as $index => $definition) {
             if ($definition instanceof OperationDefinitionNode) {
-                $operations[$definition->name->value ?? $index] = $definition->operation;
+                $operations[$definition->name->value ?? $index] = match ($definition->operation) {
+                    self::MUTATION     => self::MUTATION,
+                    self::SUBSCRIPTION => self::SUBSCRIPTION,
+                    default            => self::QUERY,
+                };
             }
         }
 

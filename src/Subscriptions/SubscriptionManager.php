@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
  *   channel is resolved during registration
  * @see LaragraphController  for the HTTP
  *   flow that calls register()
+ *
+ * @phpstan-import-type SubscriberRecord from SubscriberStoreInterface
  */
 final readonly class SubscriptionManager
 {
@@ -32,7 +34,7 @@ final readonly class SubscriptionManager
      *
      * @param  mixed  $channel  A channel name, or a list of channel names —
      *   whatever {@see Subscription::subscribe()} returned.
-     * @param  array{query: string, variables: array, operationName: ?string, schemaName: string}  $record
+     * @param SubscriberRecord $record
      * @return string  The generated subscriber id.
      */
     public function register(mixed $channel, array $record): string

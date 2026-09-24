@@ -100,6 +100,29 @@ class PaginationTypesTest extends TestCase
     // ConnectionType::paginate()
     // -------------------------------------------------------------------------
 
+    public function test_paginate_rejects_objects_without_a_paginate_method(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('has no paginate() method');
+
+        ConnectionType::paginate(new \stdClass(), []);
+    }
+
+    public function test_paginate_rejects_paginators_without_totals(): void
+    {
+        $builder = new class {
+            public function paginate(int $perPage, array $cols, string $name, int $page): array
+            {
+                return [];
+            }
+        };
+
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('must return a');
+
+        ConnectionType::simplePaginate($builder, []);
+    }
+
     public function test_paginate_returns_connection_shape(): void
     {
         $items     = [['id' => 1, 'name' => 'Alice'], ['id' => 2, 'name' => 'Bob']];

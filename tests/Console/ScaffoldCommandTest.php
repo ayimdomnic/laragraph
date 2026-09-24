@@ -106,6 +106,13 @@ class ScaffoldCommandTest extends TestCase
     // Invalid model name → FAILURE
     // -------------------------------------------------------------------------
 
+    public function test_scaffold_without_a_model_or_all_flag_fails(): void
+    {
+        $this->artisan('laragraph:scaffold')
+            ->expectsOutputToContain('Pass a model name')
+            ->assertFailed();
+    }
+
     public function test_scaffold_invalid_model_returns_failure(): void
     {
         $this->artisan('laragraph:scaffold', [

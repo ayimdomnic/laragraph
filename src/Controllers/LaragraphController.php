@@ -209,6 +209,7 @@ class LaragraphController extends BaseController
      * `resolve()` — see {@see Subscription}.
      *
      * @return array<string, mixed>
+     * @param array<string, mixed> $variables
      */
     protected function registerSubscription(
         string $query,
@@ -269,6 +270,8 @@ class LaragraphController extends BaseController
      *  - POST application/json
      *  - POST application/x-www-form-urlencoded
      *  - POST multipart/form-data  (file uploads via the multipart spec)
+     *
+     * @return array<array-key, mixed> A single operation, or a list of operations for a batch.
      */
     protected function parseRequest(Request $request): array
     {
@@ -305,6 +308,8 @@ class LaragraphController extends BaseController
     /**
      * Parse a multipart/form-data request according to the GraphQL multipart
      * request spec (https://github.com/jaydenseric/graphql-multipart-request-spec).
+     *
+     * @return array<array-key, mixed>
      */
     protected function parseMultipartRequest(Request $request): array
     {
@@ -325,6 +330,9 @@ class LaragraphController extends BaseController
         return $operations;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function castVariables(mixed $variables): array
     {
         if (is_string($variables)) {

@@ -88,7 +88,7 @@ final class TracingCollector
             return;
         }
 
-        $this->spans[$spanId]['duration'] = (hrtime(true) - $this->startNs) - $this->spans[$spanId]['startOffset'];
+        $this->spans[$spanId]['duration'] = (int) ((hrtime(true) - $this->startNs) - $this->spans[$spanId]['startOffset']);
     }
 
     /**

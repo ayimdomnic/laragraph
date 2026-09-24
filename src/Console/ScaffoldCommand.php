@@ -6,6 +6,7 @@ namespace Ayimdomnic\Laragraph\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Attribute\AsCommand;
 
@@ -18,7 +19,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 class ScaffoldCommand extends Command
 {
     protected $signature = 'laragraph:scaffold
-                            {model       : Model class name — short (User) or FQCN (App\\Models\\User)}
+                            {model?      : Model class name — short (User) or FQCN (App\\Models\\User)}
                             {--all       : Scaffold every model found in app/Models/}
                             {--with-crud : Also generate create / update / delete mutations}
                             {--register  : Append generated classes to config/laragraph.php}
@@ -36,7 +37,15 @@ class ScaffoldCommand extends Command
             return $this->scaffoldAll();
         }
 
-        return $this->scaffold($this->argument('model'));
+        $model = $this->argument('model');
+
+        if (!is_string($model) || $model === '') {
+            $this->components->error('Pass a model name, or use --all to scaffold every model in app/Models.');
+
+            return self::FAILURE;
+        }
+
+        return $this->scaffold($model);
     }
 
     // -------------------------------------------------------------------------
@@ -105,6 +114,9 @@ class ScaffoldCommand extends Command
     // File generation
     // -------------------------------------------------------------------------
 
+    /**
+     * @param array<string, string> $fields
+     */
     protected function generateType(string $model, array $fields): void
     {
         $path = app_path("GraphQL/Types/{$model}Type.php");
@@ -142,6 +154,7 @@ class ScaffoldCommand extends Command
 
     /**
      * @param  'create'|'update'|'delete'  $variant
+     * @param array<string, string> $fields
      */
     protected function generateMutation(string $model, string $variant, array $fields = []): void
     {
@@ -258,6 +271,9 @@ class ScaffoldCommand extends Command
     // Helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * @param array<string, string> $replacements
+     */
     protected function render(string $stub, array $replacements): string
     {
         $path = __DIR__ . "/stubs/scaffold/{$stub}.stub";
@@ -266,7 +282,7 @@ class ScaffoldCommand extends Command
             throw new \RuntimeException("Scaffold stub [{$stub}.stub] not found at {$path}.");
         }
 
-        $content = file_get_contents($path);
+        $content = File::get($path);
 
         foreach ($replacements as $key => $value) {
             $content = str_replace("{{ {$key} }}", $value, $content);

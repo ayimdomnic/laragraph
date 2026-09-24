@@ -6,6 +6,7 @@ namespace Ayimdomnic\Laragraph\Pagination;
 
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Relay-spec cursor pagination — Connection type.
@@ -89,19 +90,18 @@ class ConnectionType extends ObjectType
             $page = max(1, self::decodeCursor($args['before']) - 1);
         }
 
-        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+        $paginator = self::paginator($query, $perPage, $page);
         $items     = $paginator->items();
         $total     = $paginator->total();
         $offset    = ($page - 1) * $perPage;
 
-        $edges = array_map(
-            fn(mixed $item, int $index): array => [
+        $edges = [];
+        foreach (array_values($items) as $index => $item) {
+            $edges[] = [
                 'node'   => $item,
                 'cursor' => self::encodeCursor($offset + $index + 1),
-            ],
-            $items,
-            array_keys($items),
-        );
+            ];
+        }
 
         return [
             'edges'    => $edges,
@@ -128,7 +128,7 @@ class ConnectionType extends ObjectType
         $perPage = (int) ($args['per_page'] ?? config('laragraph.pagination.per_page', 15));
         $page    = (int) ($args['page'] ?? 1);
 
-        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+        $paginator = self::paginator($query, $perPage, $page);
 
         return [
             'data'          => $paginator->items(),
@@ -156,5 +156,33 @@ class ConnectionType extends ObjectType
             return 0;
         }
         return (int) substr($decoded, 7);
+    }
+
+    /**
+     * Run `paginate()` on an Eloquent/query builder, relation or anything
+     * else exposing Laravel's paginate() signature.
+     *
+     * @return LengthAwarePaginator<array-key, mixed>
+     */
+    private static function paginator(object $query, int $perPage, int $page): LengthAwarePaginator
+    {
+        if (!method_exists($query, 'paginate')) {
+            throw new \InvalidArgumentException(sprintf(
+                'Cannot paginate an instance of %s: it has no paginate() method.',
+                $query::class,
+            ));
+        }
+
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        if (!$paginator instanceof LengthAwarePaginator) {
+            throw new \UnexpectedValueException(sprintf(
+                '%s::paginate() must return a %s.',
+                $query::class,
+                LengthAwarePaginator::class,
+            ));
+        }
+
+        return $paginator;
     }
 }
