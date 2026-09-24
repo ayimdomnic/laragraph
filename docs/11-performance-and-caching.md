@@ -141,14 +141,17 @@ any error.
 ### Documents are parsed once and validated once
 
 Each query document is parsed once per request, and the AST is shared by everything that needs it:
-detecting mutations sent over GET, subscriptions, response caching and execution. Workers keep the
-last 100 parsed documents.
+detecting mutations sent over GET, subscriptions, response caching and execution. A parsed
+document takes a few hundred times the memory of its text, so workers keep the most recently used
+documents up to 100 entries *and* 64 KB of query text, whichever comes first. The document of the
+current request is always kept.
 
 Validation is split in two:
 
 - The rules that depend only on the document: the GraphQL specification's rules, plus the depth,
   alias and introspection limits. They run **once per document and schema** in a worker, and later
-  executions of the same document skip them. A changed limit, or another schema, validates the
+  executions of the same document skip them. A worker remembers the last 1,000 validated documents
+  (a few dozen bytes each). A changed limit, or another schema, validates the
   document again.
 - Query complexity, which depends on variables (`@include(if: $flag)`), and your own
   `validation.rules`, which may depend on anything. These run on **every** execution.
@@ -186,3 +189,10 @@ query results) in their properties. Use `$context` or local variables instead.
   so the response doesn't wait for them.
 - **Measure** with [tracing](12-observability.md#tracing) in development and the
   `QueryExecuted` event in production.
+
+## How Laragraph's performance is guarded
+
+The package's test suite includes performance budgets that fail when a change makes Laragraph do
+more work: more SQL queries, more classes built, more memory kept between requests. Timing
+benchmarks compare a branch against a baseline. See
+[benchmarks/README.md](../benchmarks/README.md).
