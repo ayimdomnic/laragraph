@@ -6,7 +6,7 @@ In order of impact, the tools are:
    ([Relations & DataLoaders](05-relations-and-dataloaders.md)).
 2. **Cache discovery** in production (`php artisan optimize`).
 3. **Cache responses** for read-heavy queries.
-4. **Keep workers warm** with Octane, so the schema is compiled once per worker.
+4. **Keep workers warm** with Octane, so schema compilation, parsing and validation are reused across requests.
 
 ## The response cache
 
@@ -115,11 +115,53 @@ On Laravel 11.27+, `php artisan optimize` and `optimize:clear` run these for you
 > Remember to re-run `laragraph:cache` (or `optimize`) on every deploy. A stale manifest doesn't
 > know about new classes, and an old one may point at classes that were removed.
 
-## Schema compilation
+## What Laragraph does on every request
 
-Each schema is compiled once per PHP process, on first use: classes are instantiated, fields
-collected and types resolved lazily. In PHP-FPM that happens once per request. With **Octane**,
-RoadRunner or FrankenPHP workers, it happens once per worker, so later requests skip it entirely.
+### The schema is built lazily
+
+A schema is compiled once per PHP process, and **only as far as a request needs it**:
+
+- A root field's class (`UsersQuery`, `CreatePostMutation`…) is instantiated the first time a
+  document selects that field.
+- A type class is instantiated the first time a document reaches that type.
+- The complete type map is assembled only when it's really needed: introspection, a field returning an
+  interface, `laragraph:validate` and `laragraph:schema:export`.
+
+In PHP-FPM, where every request starts from scratch, a request against an API with hundreds of
+operations therefore loads a handful of classes instead of all of them. On a synthetic schema of 300 types
+and 300 queries, a cold request spends about 6.6 ms in Laragraph instead of about 26 ms, and
+builds 3 types instead of 300. With **Octane**, RoadRunner or FrankenPHP, the work is done once per
+worker and reused.
+
+One consequence: a field class that throws while being compiled (for example a `type()` that names an
+unregistered type) now fails when that field is first used, not on every request. Run
+`php artisan laragraph:validate` in CI and on deploy. It compiles everything and fails on
+any error.
+
+### Documents are parsed once and validated once
+
+Each query document is parsed once per request, and the AST is shared by everything that needs it:
+detecting mutations sent over GET, subscriptions, response caching and execution. Workers keep the
+last 100 parsed documents.
+
+Validation is split in two:
+
+- The rules that depend only on the document: the GraphQL specification's rules, plus the depth,
+  alias and introspection limits. They run **once per document and schema** in a worker, and later
+  executions of the same document skip them. A changed limit, or another schema, validates the
+  document again.
+- Query complexity, which depends on variables (`@include(if: $flag)`), and your own
+  `validation.rules`, which may depend on anything. These run on **every** execution.
+
+Clients that send the same operations over and over, which is all of them, and especially clients
+using [persisted queries](08-http-api.md#persisted-queries), pay for validation once per worker.
+
+### Model attributes are read once
+
+Fields without a resolver read the value from the parent. For Eloquent models Laragraph calls
+`getAttribute()` once per field. webonyx's own default resolver read each attribute twice, casts
+and accessors included, through `offsetExists()` and `offsetGet()`. A missing attribute under
+`Model::shouldBeStrict()` still reads as `null`.
 
 ### Octane notes
 

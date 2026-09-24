@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Unit\Support;
 
+use Ayimdomnic\Laragraph\Support\DocumentCache;
 use Ayimdomnic\Laragraph\Support\Operation;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -48,13 +49,33 @@ class OperationTest extends TestCase
         $this->assertFalse(Operation::isSubscription('{ a }'));
     }
 
-    public function test_memo_is_bounded(): void
+    public function test_documents_are_parsed_once_and_shared(): void
     {
-        for ($i = 0; $i < 100; $i++) {
-            $this->assertSame(Operation::QUERY, Operation::type("{ field{$i} }"));
+        DocumentCache::flush();
+
+        $this->assertSame(Operation::QUERY, Operation::type('{ shared }'));
+        $this->assertSame(DocumentCache::parse('{ shared }'), DocumentCache::parse('{ shared }'));
+    }
+
+    public function test_the_document_cache_is_bounded_and_keeps_recent_documents(): void
+    {
+        DocumentCache::flush();
+        $first = DocumentCache::parse('{ first }');
+
+        for ($i = 0; $i < DocumentCache::SIZE * 2; $i++) {
+            DocumentCache::parse("{ field{$i} }");
+            DocumentCache::parse('{ first }'); // used constantly: never evicted
         }
 
-        $memo = (new \ReflectionProperty(Operation::class, 'memo'))->getValue();
-        $this->assertLessThanOrEqual(32, count($memo));
+        $documents = (new \ReflectionProperty(DocumentCache::class, 'documents'))->getValue();
+        $this->assertCount(DocumentCache::SIZE, $documents);
+        $this->assertSame($first, DocumentCache::parse('{ first }'));
+    }
+
+    public function test_syntax_errors_are_remembered_as_unparseable(): void
+    {
+        $this->assertNull(DocumentCache::parse('{ broken'));
+        $this->assertNull(DocumentCache::parse('{ broken'));
+        $this->assertNull(Operation::type('{ broken'));
     }
 }

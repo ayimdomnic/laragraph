@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Support;
 
 use GraphQL\Language\AST\OperationDefinitionNode;
-use GraphQL\Language\Parser;
 
 /**
  * Determines which kind of operation a GraphQL document will execute.
@@ -19,16 +18,6 @@ final class Operation
     public const QUERY        = 'query';
     public const MUTATION     = 'mutation';
     public const SUBSCRIPTION = 'subscription';
-
-    /**
-     * Parsed documents are memoised briefly (one request typically asks
-     * several times). Eviction is first-in-first-out, not least-recently-used:
-     * the memo only needs to survive the handful of lookups within a request.
-     */
-    private const MEMO_SIZE = 32;
-
-    /** @var array<string, array<string|int, self::QUERY|self::MUTATION|self::SUBSCRIPTION>> query hash => [operation name|index => type] */
-    private static array $memo = [];
 
     /**
      * The type of the operation that $operationName selects in $query — or of
@@ -68,21 +57,9 @@ final class Operation
      */
     private static function operations(string $query): array
     {
-        $key = hash('xxh128', $query);
-
-        if (isset(self::$memo[$key])) {
-            return self::$memo[$key];
-        }
-
-        try {
-            $document = Parser::parse($query, ['noLocation' => true]);
-        } catch (\Throwable) {
-            return [];
-        }
-
         $operations = [];
 
-        foreach ($document->definitions as $index => $definition) {
+        foreach (DocumentCache::parse($query)->definitions ?? [] as $index => $definition) {
             if ($definition instanceof OperationDefinitionNode) {
                 $operations[$definition->name->value ?? $index] = match ($definition->operation) {
                     self::MUTATION     => self::MUTATION,
@@ -92,10 +69,6 @@ final class Operation
             }
         }
 
-        if (count(self::$memo) >= self::MEMO_SIZE) {
-            array_shift(self::$memo);
-        }
-
-        return self::$memo[$key] = $operations;
+        return $operations;
     }
 }

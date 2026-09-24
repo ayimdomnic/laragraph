@@ -143,6 +143,31 @@ requests, and each gets its own DataLoaders.
 
 Remove them from your published config (leaving them in is harmless).
 
+### Lazy schema building
+
+Schemas are now built lazily: root field classes and types are instantiated when a request first
+needs them, not when the schema is created. Two things follow:
+
+- An error in a field or type class (such as a type name that isn't registered) surfaces when that
+  field is first used rather than on every request. Run `php artisan laragraph:validate`
+  in CI and on deploy. It builds and checks the whole schema.
+- Keep constructors of type and field classes free of side effects. They may run later than before,
+  or not at all.
+
+### Validation
+
+- Documents that pass the document-only rules are remembered per worker (see
+  [Performance](11-performance-and-caching.md#documents-are-parsed-once-and-validated-once)).
+  Query complexity and your own `validation.rules` still run on every execution.
+- The protected `Laragraph::buildValidationRules()` was replaced by `partitionValidationRules()`,
+  which returns the document-only rules and the per-execution rules separately.
+
+### Default field resolver
+
+Fields without a resolver use `Ayimdomnic\Laragraph\Support\DefaultFieldResolver`, which reads
+Eloquent attributes once instead of twice. For arrays, `ArrayAccess`, plain objects and `Closure`
+values it behaves exactly like webonyx's default resolver.
+
 ### Events
 
 `QueryExecuted` and `QueryError` now fire for response-cache hits too, and `QueryExecuted` has a new
