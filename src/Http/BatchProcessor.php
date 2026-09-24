@@ -25,12 +25,16 @@ class BatchProcessor
      * @param  array<int, array{query?: string, variables?: mixed, operationName?: string|null}> $operations
      * @param  mixed  $context    Passed through to every individual execute() call.
      * @param  string $schemaName Schema to run all operations against.
+     * @param  (\Closure(array<string, mixed>): array<string, mixed>)|null $executor
+     *         Runs one operation; defaults to Laragraph::execute(). The HTTP
+     *         controller passes its own so batched operations get the same
+     *         persisted-query and subscription handling as single requests.
      * @return array<int, array<string, mixed>> One result per input operation, preserving order.
      *
      * @throws BatchingDisabledException   When `laragraph.batching.enabled` is false.
      * @throws BatchLimitExceededException When the operation count exceeds the configured maximum.
      */
-    public function process(array $operations, mixed $context = null, string $schemaName = 'default'): array
+    public function process(array $operations, mixed $context = null, string $schemaName = 'default', ?\Closure $executor = null): array
     {
         if (!config('laragraph.batching.enabled', false)) {
             throw new BatchingDisabledException();
@@ -43,15 +47,14 @@ class BatchProcessor
             throw new BatchLimitExceededException($max);
         }
 
-        return array_values(array_map(
-            fn(array $op): array => $this->laragraph->execute(
-                query: (string) ($op['query'] ?? ''),
-                context: $context,
-                variables: is_array($op['variables'] ?? null) ? $op['variables'] : [],
-                operationName: isset($op['operationName']) ? (string) $op['operationName'] : null,
-                schemaName: $schemaName,
-            ),
-            $operations,
-        ));
+        $executor ??= fn(array $op): array => $this->laragraph->execute(
+            query: (string) ($op['query'] ?? ''),
+            context: $context,
+            variables: is_array($op['variables'] ?? null) ? $op['variables'] : [],
+            operationName: isset($op['operationName']) ? (string) $op['operationName'] : null,
+            schemaName: $schemaName,
+        );
+
+        return array_values(array_map($executor, $operations));
     }
 }

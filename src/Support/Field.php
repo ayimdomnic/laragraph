@@ -299,8 +299,7 @@ abstract class Field
             }
 
             // 2. Guard-aware context authorization
-            $guardName = $this->guards()[0] ?? null;
-            $ctx       = GuardResolver::buildContext($guardName);
+            $ctx = GuardResolver::buildContext($this->authenticatedGuard());
 
             if (!$this->authorizeWithContext($ctx)) {
                 throw new AuthorizationException(
@@ -343,6 +342,24 @@ abstract class Field
             // 6. Resolve (no middleware)
             return $this->handleField($root, $args, $context, $info);
         };
+    }
+
+    /**
+     * The first of {@see guards()} that authenticates the current request —
+     * or, when none does, the first one listed (so checks run, and fail, as
+     * a guest of that guard). Null when no guards are declared.
+     */
+    protected function authenticatedGuard(): ?string
+    {
+        $guards = $this->guards();
+
+        foreach ($guards as $guard) {
+            if (auth()->guard($guard)->check()) {
+                return $guard;
+            }
+        }
+
+        return $guards[0] ?? null;
     }
 
     /**
