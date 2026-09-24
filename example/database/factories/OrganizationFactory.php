@@ -29,7 +29,7 @@ class OrganizationFactory extends Factory
 
         return [
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . fake()->unique()->numberBetween(1000, 9999),
+            'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1000, 9999),
             'email' => fake()->unique()->companyEmail(),
             'phone' => fake()->phoneNumber(),
             'address' => fake()->streetAddress(),

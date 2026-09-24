@@ -1,16 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "ayimdomnic/laragraph-example",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Example application demonstrating every Laragraph feature.",
     "keywords": [
         "laravel",
         "framework"
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2 | ^8.3 | ^8.4 | ^8.5",
-        "ayimdomnic/graph-ql-l5.3": "^3.1.1",
+        "php": "^8.3",
+        "ayimdomnic/laragraph": "*@dev",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "php-open-source-saver/jwt-auth": "^2.9"
@@ -87,5 +87,14 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": {
+        "laragraph": {
+            "type": "path",
+            "url": "..",
+            "options": {
+                "symlink": true
+            }
+        }
+    }
 }

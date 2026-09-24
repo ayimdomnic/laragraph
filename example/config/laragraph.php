@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Enums\PostStatus;
+use App\Enums\UserRole;
+use App\GraphQL\Admin\AdminStatsType;
+use App\GraphQL\Admin\StatsQuery;
+use App\GraphQL\Validation\MaxRootFieldsRule;
+use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Scalars\DateTimeType;
+use Ayimdomnic\Laragraph\Scalars\JsonType;
+use Ayimdomnic\Laragraph\Scalars\UploadType;
+
 return [
 
     /*
@@ -32,7 +42,8 @@ return [
     |
     */
     'auth' => [
-        'default_guard' => null,
+        // The example authenticates API clients with JWTs on the "api" guard.
+        'default_guard' => 'api',
         'error_message' => 'Unauthorized.',
     ],
 
@@ -50,9 +61,9 @@ return [
     |
     */
     'discover' => [
-        'types'         => 'app/GraphQL/Types',
-        'queries'       => 'app/GraphQL/Queries',
-        'mutations'     => 'app/GraphQL/Mutations',
+        'types' => 'app/GraphQL/Types',
+        'queries' => 'app/GraphQL/Queries',
+        'mutations' => 'app/GraphQL/Mutations',
         'subscriptions' => 'app/GraphQL/Subscriptions',
     ],
 
@@ -66,7 +77,7 @@ return [
     */
     'route' => [
         'prefix' => 'graphql',
-        'middleware' => ['web'],
+        'middleware' => [],
         'methods' => ['GET', 'POST'],
         'input_without_namespace' => true,
     ],
@@ -94,26 +105,26 @@ return [
     |
     */
     'schemas' => [
+        // POST/GET /graphql — everything in app/GraphQL/{Queries,Mutations,Subscriptions}
+        // is discovered automatically, so nothing needs listing here.
         'default' => [
+            'query' => [],
+            'mutation' => [],
+            'subscription' => [],
+        ],
+
+        // POST /graphql/admin — a second schema with its own route middleware:
+        // only authenticated admins reach it. Its extra type is registered here,
+        // so it never appears in the public schema.
+        'admin' => [
             'query' => [
-                'currentUser' => \App\GraphQL\Queries\CurrentUserQuery::class,
-                'user' => \App\GraphQL\Queries\UserQuery::class,
-                'users' => \App\GraphQL\Queries\UsersQuery::class,
-                'organization' => \App\GraphQL\Queries\OrganizationQuery::class,
-                'organizations' => \App\GraphQL\Queries\OrganizationsQuery::class,
+                'stats' => StatsQuery::class,
             ],
-            'mutation' => [
-                'register' => \App\GraphQL\Mutations\RegisterMutation::class,
-                'createUser' => \App\GraphQL\Mutations\CreateUserMutation::class,
-                'updateUser' => \App\GraphQL\Mutations\UpdateUserMutation::class,
-                'login' => \App\GraphQL\Mutations\LoginMutation::class,
-                'logout' => \App\GraphQL\Mutations\LogoutMutation::class,
+            'types' => [
+                'AdminStats' => AdminStatsType::class,
             ],
-            'subscription' => [
-                // 'userCreated' => \App\GraphQL\Subscriptions\UserCreatedSubscription::class,
-            ],
-            'middleware' => ['web'],
-            'method' => ['GET', 'POST'],
+            'middleware' => ['auth:api', 'can:access-admin-api'],
+            'method' => ['POST'],
         ],
     ],
 
@@ -132,11 +143,16 @@ return [
     |
     */
     'types' => [
-        // Built-in scalars (uncomment to enable globally)
-        'DateTime' => \Ayimdomnic\Laragraph\Scalars\DateTimeType::class,
-        'Date'     => \Ayimdomnic\Laragraph\Scalars\DateType::class,
-        'JSON'     => \Ayimdomnic\Laragraph\Scalars\JsonType::class,
-        'Upload'   => \Ayimdomnic\Laragraph\Scalars\UploadType::class,
+        // Built-in scalars
+        'DateTime' => DateTimeType::class,
+        'JSON' => JsonType::class,
+        'Upload' => UploadType::class,
+
+        // Native PHP enums become GraphQL enums — no wrapper class needed.
+        'UserRole' => UserRole::class,
+        'PostStatus' => PostStatus::class,
+
+        // Object, input, interface and union types in app/GraphQL/Types are discovered.
     ],
 
     /*
@@ -148,7 +164,7 @@ return [
     | custom extensions or transform error messages.
     |
     */
-    'error_formatter' => [\Ayimdomnic\Laragraph\Laragraph::class, 'formatError'],
+    'error_formatter' => [Laragraph::class, 'formatError'],
 
     /*
     |--------------------------------------------------------------------------
@@ -159,22 +175,30 @@ return [
     | may use this to log, filter, or transform the errors array.
     |
     */
-    'errors_handler' => [\Ayimdomnic\Laragraph\Laragraph::class, 'handleErrors'],
+    'errors_handler' => [Laragraph::class, 'handleErrors'],
 
     /*
     |--------------------------------------------------------------------------
     | Security
     |--------------------------------------------------------------------------
     |
-    | Set limits on query complexity and depth to protect your API from
-    | overly expensive queries. null disables the limit.
+    | Limits that protect the API from overly expensive or abusive queries.
+    | Set a limit to null to disable it.
+    |
+    | query_max_depth       — deepest allowed selection nesting. The standard
+    |                         introspection query (GraphiQL, codegen) needs 11.
+    | query_max_complexity  — total field cost (see Field::complexity()).
+    | max_aliases           — aliases per document; blocks alias flooding.
+    | disable_introspection — null (default) disables introspection whenever
+    |                         app.debug is off, i.e. in production. Set true or
+    |                         false to force it either way.
     |
     */
     'security' => [
-        'query_max_complexity'  => null,
-        'query_max_depth'       => null,
-        'disable_introspection' => false,
-        'max_aliases'           => null,
+        'query_max_complexity' => 500,
+        'query_max_depth' => 15,
+        'disable_introspection' => null,
+        'max_aliases' => 30,
     ],
 
     /*
@@ -196,7 +220,9 @@ return [
     |
     */
     'validation' => [
-        'rules' => [],
+        'rules' => [
+            MaxRootFieldsRule::class,
+        ],
     ],
 
     /*
@@ -206,6 +232,8 @@ return [
     */
     'pagination' => [
         'per_page' => 15,
+        // Largest page a client may request via first/last/per_page (null: no cap).
+        'max_per_page' => 100,
     ],
 
     /*
@@ -219,18 +247,25 @@ return [
     | store — any Laravel cache driver (redis, file, array, memcached …)
     | ttl   — time-to-live in seconds
     |
-    | Cache is keyed by the query string + variables + operation name, so
-    | different variable combinations produce separate entries.
+    | scope — 'user' (default) partitions entries per authenticated user (on
+    |   laragraph.auth.default_guard), with guests sharing one partition, so a
+    |   user's data is never served to someone else. Use 'global' only when
+    |   every caller receives identical responses.
+    |
+    | Cache is keyed by schema + scope + query string + variables + operation
+    | name, so different variable combinations produce separate entries.
     |
     | To invalidate from code:
-    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::forget($key)
+    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::flush()       // everything
+    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::forget($key)  // one entry
     |
     */
     'cache' => [
         'response' => [
-            'enabled' => false,
-            'store'   => 'default',
-            'ttl'     => 60,
+            'enabled' => env('LARAGRAPH_RESPONSE_CACHE', true),
+            'store' => 'default',
+            'ttl' => 60,
+            'scope' => 'user',
         ],
     ],
 
@@ -259,6 +294,16 @@ return [
     |       'GetAllUsers' => '{ users { id name } }',
     |   ],
     |
+    | apq — Automatic Persisted Queries: when a client sends the full query
+    |   together with its sha256Hash, the query is stored so later requests
+    |   can send the hash alone. Mismatched hashes are rejected.
+    |
+    | only — Trusted-documents mode: execute query text only if it is already
+    |   in the store under its SHA-256 hash; everything else is rejected with
+    |   PERSISTED_QUERY_REQUIRED. Pair it with the 'array' store (or a cache
+    |   store you pre-populate at deploy time) to lock the API down to the
+    |   operations your own clients ship.
+    |
     | Clients may send the ID via:
     |   { "queryId": "<id>", "variables": {} }
     | Or the Apollo APQ format:
@@ -266,10 +311,12 @@ return [
     |
     */
     'persisted_queries' => [
-        'enabled' => false,
-        'store'   => 'cache',
-        'ttl'     => 3600,
-        'map'     => [],
+        'enabled' => true,
+        'store' => 'cache',
+        'ttl' => 3600,
+        'map' => [],
+        'apq' => true,
+        'only' => false,
     ],
 
     /*
@@ -289,8 +336,8 @@ return [
     |
     */
     'extensions' => [
-        'request_id'   => false,
-        'query_timing' => false,
+        'request_id' => true,
+        'query_timing' => true,
     ],
 
     /*
@@ -374,7 +421,7 @@ return [
     |
     */
     'batching' => [
-        'enabled'        => false,
+        'enabled' => true,
         'max_operations' => 10,
     ],
 
@@ -383,13 +430,82 @@ return [
     | GraphiQL
     |--------------------------------------------------------------------------
     |
-    | Enable the built-in GraphiQL browser IDE at /graphql/graphiql.
+    | The built-in GraphiQL browser IDE at /graphql/graphiql.
+    |
+    | enabled — null (default) serves it only while app.debug is on, i.e. not
+    |   in production. Set true to always serve it (then protect it with
+    |   'middleware', e.g. ['auth', 'can:viewGraphiql']) or false to never.
     |
     */
     'graphiql' => [
-        'enabled'    => true,
+        'enabled' => null,
         'middleware' => [],
-        'title'      => 'Laragraph — GraphiQL',
+        'title' => 'Laragraph — GraphiQL',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tracing
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, every field resolution (root Query/Mutation/Subscription
+    | fields and nested Type fields alike) is timed and reported under
+    | `extensions.tracing`, following the Apollo Tracing format. Disabled by
+    | default — enabling it adds a small wrapping cost to every resolver call,
+    | so it's best turned on selectively (e.g. behind a debug/admin guard)
+    | rather than left on for a public production API.
+    |
+    */
+    'tracing' => [
+        // Per-field timings under extensions.tracing — for local debugging only.
+        'enabled' => env('LARAGRAPH_TRACING', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Subscriptions
+    |--------------------------------------------------------------------------
+    |
+    | webonyx/graphql-php has no built-in subscription transport, so Laragraph
+    | provides one: the initial subscription request registers a subscriber
+    | (query + variables + the channel returned by the field's subscribe())
+    | and returns a channel/subscriberId pair instead of data. Application
+    | code then calls Laragraph::broadcast($channel, $payload) — typically
+    | from inside a mutation or a model event listener — to re-execute every
+    | registered subscriber's original query with $payload as the root value
+    | and push the result to that subscriber's own private channel via
+    | Laravel Broadcasting.
+    |
+    | enabled       — Set to true to accept subscription operations. When
+    |                 false (default) they're rejected with a client error.
+    | driver        — 'broadcast' pushes via Laravel Broadcasting (Reverb,
+    |                 Pusher, ...); 'log' writes updates to the log instead,
+    |                 useful for local development without a broadcast server.
+    | cache_store   — Laravel cache store used to persist subscriber
+    |                 registrations; null uses the application's default.
+    | ttl           — Subscriber registration lifetime in seconds.
+    | channel_prefix — Prefix for the private channel each subscriber is
+    |                 pushed to: "{prefix}.{subscriberId}".
+    |
+    */
+    'subscriptions' => [
+        'enabled' => true,
+        'driver' => 'broadcast',
+        'cache_store' => null,
+        'ttl' => 3600,
+        'channel_prefix' => 'graphql-subscriber',
+
+        // Register the private-channel rule that lets only a subscription's
+        // owner listen to it. Set to false to define your own rule in
+        // routes/channels.php for "{channel_prefix}.{subscriberId}".
+        'authorize_channel' => true,
+
+        // Where Laragraph::broadcastLater() queues subscription fan-out
+        // (null: the application's default connection / queue).
+        'queue' => [
+            'connection' => null,
+            'queue' => null,
+        ],
     ],
 
 ];

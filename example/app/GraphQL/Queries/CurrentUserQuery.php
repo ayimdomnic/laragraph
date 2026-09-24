@@ -4,29 +4,28 @@ declare(strict_types=1);
 
 namespace App\GraphQL\Queries;
 
+use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\Support\Query;
 use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Definition\Type as GType;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use GraphQL\Type\Definition\Type;
 
+/**
+ * DEPRECATED FIELD — kept for old clients; introspection and GraphiQL flag it.
+ */
 class CurrentUserQuery extends Query
 {
-    public function type(): GType
+    public function type(): Type
     {
-        return app('laragraph')->type('User');
+        return Laragraph::type('User');
     }
 
-    public function description(): ?string
+    public function deprecated(): ?string
     {
-        return 'Get the currently authenticated user.';
+        return 'Use `me` instead.';
     }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
-        try {
-            return JWTAuth::parseToken()->authenticate();
-        } catch (\Throwable $e) {
-            return null;
-        }
+        return $context->user();
     }
 }

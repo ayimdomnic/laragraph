@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\GraphQL\Queries;
 
-use Ayimdomnic\Laragraph\Support\Query;
 use App\Models\Organization;
+use Ayimdomnic\Laragraph\Facades\Laragraph;
+use Ayimdomnic\Laragraph\Support\Query;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 
@@ -13,23 +14,32 @@ class OrganizationQuery extends Query
 {
     public function type(): Type
     {
-        return app('laragraph')->type('Organization');
+        return Laragraph::type('Organization');
     }
 
     public function args(): array
     {
         return [
-            'id' => ['type' => Type::nonNull(Type::id()), 'description' => 'The organization ID.'],
+            'id' => ['type' => Type::id()],
+            'slug' => ['type' => Type::string()],
         ];
     }
 
-    public function description(): ?string
+    /**
+     * Laravel validation rules run against $args before the resolver.
+     */
+    public function rules(array $args = []): array
     {
-        return 'Fetch a single organization by ID.';
+        return [
+            'id' => ['required_without:slug'],
+            'slug' => ['required_without:id', 'string'],
+        ];
     }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
-        return Organization::findOrFail($args['id']);
+        return isset($args['id'])
+            ? Organization::find($args['id'])
+            : Organization::where('slug', $args['slug'])->first();
     }
 }

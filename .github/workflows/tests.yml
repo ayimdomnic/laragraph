@@ -121,6 +121,38 @@ jobs:
         run: composer phpstan
 
   # ---------------------------------------------------------------------------
+  # Example application — runs against this checkout of the package, so the
+  # documented example can never drift from the code.
+  # ---------------------------------------------------------------------------
+  example:
+    name: "Example application"
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: example
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, xml, pdo, pdo_sqlite, json, gd
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Validate the schemas
+        run: cp .env.example .env && php artisan key:generate && php artisan laragraph:validate
+
+      - name: Run tests
+        run: php artisan test
+
+  # ---------------------------------------------------------------------------
   # Coverage gate — must stay at 100%
   # ---------------------------------------------------------------------------
   coverage:

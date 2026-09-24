@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organization extends Model
 {
@@ -12,6 +13,7 @@ class Organization extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'email',
         'address',
         'phone',
@@ -52,5 +54,21 @@ class Organization extends Model
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function members()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    /**
+     * @return HasMany<Post, $this>
+     */
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
     }
 }
