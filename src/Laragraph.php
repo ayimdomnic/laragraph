@@ -283,7 +283,12 @@ class Laragraph
             validationRules: $this->buildValidationRules(),
         );
 
-        $result = $promiseAdapter->wait($promise);
+        try {
+            $result = $promiseAdapter->wait($promise);
+        } finally {
+            // Release this execution's loaders; see DataLoaderRegistry::clear().
+            DataLoaderRegistry::for($context)?->clear();
+        }
 
         $errorFormatter = config('laragraph.error_formatter', [static::class, 'formatError']);
         $result->setErrorFormatter($errorFormatter);
