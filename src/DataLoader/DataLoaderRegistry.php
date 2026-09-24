@@ -33,10 +33,10 @@ use Overblog\PromiseAdapter\Adapter\WebonyxGraphQLSyncPromiseAdapter;
  * {
  *     public function batch(array $ids): array
  *     {
- *         return User::whereIn('id', $ids)
- *             ->get()
- *             ->keyBy('id')
- *             ->toArray();
+ *         $users = User::whereIn('id', $ids)->get()->keyBy('id');
+ *
+ *         // One value per id, in the same order as $ids.
+ *         return array_map(fn($id) => $users->get($id), $ids);
  *     }
  * }
  * ```

@@ -86,6 +86,6 @@ class MakeCommandsTest extends TestCase
         $this->artisan('laragraph:make:input', ['name' => 'CreateArticleInput'])
              ->assertSuccessful();
 
-        $this->assertFileExists(app_path('GraphQL/Inputs/CreateArticleInput.php'));
+        $this->assertFileExists(app_path('GraphQL/Types/Inputs/CreateArticleInput.php'));
     }
 }

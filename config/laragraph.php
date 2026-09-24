@@ -25,9 +25,6 @@ return [
     | default_guard — The Laravel guard used when a field does not explicitly
     |   specify one. Set to null to use Laravel's own default guard.
     |
-    | error_message — Message returned when a field's authorizeWithContext()
-    |   or policy check fails.
-    |
     | Examples:
     |   'default_guard' => 'sanctum',
     |   'default_guard' => 'api',
@@ -35,7 +32,6 @@ return [
     */
     'auth' => [
         'default_guard' => null,
-        'error_message' => 'Unauthorized.',
     ],
 
     /*
@@ -70,7 +66,6 @@ return [
         'prefix' => 'graphql',
         'middleware' => [],
         'methods' => ['GET', 'POST'],
-        'input_without_namespace' => true,
     ],
 
     /*

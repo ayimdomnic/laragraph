@@ -9,6 +9,9 @@
 
 Laragraph gives Laravel developers a clean, expressive, **code-first** API for building GraphQL services — powered by [webonyx/graphql-php](https://github.com/webonyx/graphql-php).
 
+📖 **[Read the developer guide](docs/README.md)**: a step-by-step explanation of every feature, from your first query to production.
+🧪 **[Explore the example app](example/README.md)**: a complete API that uses every feature, with a test for each one.
+
 ---
 
 ## Features
@@ -262,7 +265,7 @@ while `app.debug` is on — never in production.
 | `laragraph:make:query UsersQuery` | `app/GraphQL/Queries/UsersQuery.php` |
 | `laragraph:make:mutation CreateUserMutation` | `app/GraphQL/Mutations/CreateUserMutation.php` |
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
-| `laragraph:make:input CreateUserInput` | `app/GraphQL/Inputs/CreateUserInput.php` |
+| `laragraph:make:input CreateUserInput` | `app/GraphQL/Types/Inputs/CreateUserInput.php` |
 | `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model — deny-by-default (see below) |
 | `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
 

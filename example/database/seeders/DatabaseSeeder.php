@@ -1,51 +1,56 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Organization;
+use App\Models\Post;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * Seed a small, predictable data set for exploring the API:
+     *
+     *   admin@example.com / password   — admin of "Acme Corporation"
+     *   member@example.com / password  — member of "Acme Corporation"
      */
     public function run(): void
     {
-        $user = User::firstOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'name' => 'Test User',
-                'password' => 'password',
-                'email_verified_at' => now(),
-            ]
-        );
-
-        Organization::firstOrCreate(
-            ['name' => 'Acme Corporation'],
-            [
-                'slug' => 'acme-corporation',
-                'email' => 'hello@acme.example',
-                'phone' => '+1 555 0100',
-                'address' => '1 Acme Plaza',
-                'city' => 'Metropolis',
-                'state' => 'NY',
-                'country' => 'USA',
-                'zip_code' => '10001',
-                'description' => 'A sample organization for example seeding.',
-                'status' => 'active',
-                'settings' => ['timezone' => 'America/New_York'],
-                'type' => 'company',
-                'owner_id' => $user->id,
-            ]
-        );
-
-        Organization::factory()->count(3)->create([
-            'owner_id' => $user->id,
+        $acme = Organization::firstOrCreate(['slug' => 'acme-corporation'], [
+            'name' => 'Acme Corporation',
+            'email' => 'hello@acme.example',
+            'city' => 'Metropolis',
+            'country' => 'USA',
+            'description' => 'A sample organization.',
+            'status' => 'active',
+            'settings' => ['timezone' => 'America/New_York', 'features' => ['blog' => true]],
+            'type' => 'company',
         ]);
+
+        $admin = User::firstOrCreate(['email' => 'admin@example.com'], [
+            'name' => 'Ada Admin',
+            'password' => 'password',
+            'role' => UserRole::Admin,
+            'organization_id' => $acme->id,
+        ]);
+
+        $member = User::firstOrCreate(['email' => 'member@example.com'], [
+            'name' => 'Mo Member',
+            'password' => 'password',
+            'role' => UserRole::Member,
+            'organization_id' => $acme->id,
+        ]);
+
+        $acme->update(['owner_id' => $admin->id]);
+
+        Post::factory()->count(3)->published()->by($admin)->create();
+        Post::factory()->count(2)->published()->by($member)->create();
+        Post::factory()->by($member)->create(['title' => 'An unpublished draft']);
+
+        Organization::factory()->count(3)->create(['owner_id' => $admin->id]);
     }
 }

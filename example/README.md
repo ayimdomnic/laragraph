@@ -1,58 +1,115 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laragraph example application
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A small "team blog" API — organizations, their members and the posts they publish — that
+exercises **every Laragraph feature**. Every feature is covered by a test in
+[`tests/Feature/GraphQL`](tests/Feature/GraphQL), so the code here is guaranteed to work with the
+Laragraph version in this repository.
 
-## About Laravel
+The step-by-step explanation of each feature lives in the [developer guide](../docs/README.md);
+this README gets the app running and tells you where to look.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Setup
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Requires PHP 8.3+ and Composer. The app installs Laragraph from the parent directory (a Composer
+`path` repository), so it always runs the code in this checkout.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cd example
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+touch database/database.sqlite
+php artisan migrate --seed
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Open **http://localhost:8000/graphql/graphiql** (served because `APP_DEBUG=true`).
 
-## Contributing
+Seeded accounts (password `password`):
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Email | Role |
+|---|---|
+| `admin@example.com` | Admin of "Acme Corporation" |
+| `member@example.com` | Member of "Acme Corporation" |
 
-## Code of Conduct
+## Try it
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Log in and keep the token:
 
-## Security Vulnerabilities
+```graphql
+mutation {
+  login(email: "member@example.com", password: "password") { token user { name role } }
+}
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+In GraphiQL, add the header `{"Authorization": "Bearer <token>"}`, then:
 
-## License
+```graphql
+{
+  me { name role organization { name memberCount } }
+  posts(first: 5) {
+    edges { cursor node { title status publishedAt author { name } } }
+    pageInfo { hasNextPage endCursor total }
+  }
+  search(term: "Acme") {
+    __typename
+    ... on Post { title }
+    ... on Organization { name }
+  }
+}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```graphql
+mutation {
+  createPost(input: { title: "Hello", body: "My first post from GraphiQL.", publish: true }) {
+    id status publishedAt
+  }
+}
+```
+
+With `curl`:
+
+```bash
+curl -s localhost:8000/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ organizations(first: 3) { edges { node { name } } } }"}'
+```
+
+Admins can also query the separate admin schema:
+
+```bash
+curl -s localhost:8000/graphql/admin -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"query":"{ stats { members publishedPosts draftPosts } }"}'
+```
+
+## Where each feature lives
+
+| Feature | Code | Test |
+|---|---|---|
+| Object types, per-field resolvers | [`Types/UserType.php`](app/GraphQL/Types/UserType.php), [`PostType.php`](app/GraphQL/Types/PostType.php) | `TypesTest` |
+| Interface / union / input types | [`NodeType`](app/GraphQL/Types/NodeType.php), [`SearchResultType`](app/GraphQL/Types/SearchResultType.php), [`PostInputType`](app/GraphQL/Types/PostInputType.php) | `TypesTest` |
+| Native PHP enums | [`app/Enums`](app/Enums), registered in [`config/laragraph.php`](config/laragraph.php) | `TypesTest` |
+| Scalars: DateTime, JSON, Upload | `publishedAt`, `Organization.settings`, [`UploadAvatarMutation`](app/GraphQL/Mutations/UploadAvatarMutation.php) | `TypesTest`, `FileUploadTest` |
+| Field arguments & deprecation | `Post.excerpt(length:)`, `Post.summary`, [`CurrentUserQuery`](app/GraphQL/Queries/CurrentUserQuery.php) | `TypesTest`, `AuthenticationTest` |
+| Auto-discovery | everything in `app/GraphQL/{Types,Queries,Mutations,Subscriptions}` | all |
+| Validation rules | [`RegisterMutation`](app/GraphQL/Mutations/RegisterMutation.php), [`CreatePostMutation`](app/GraphQL/Mutations/CreatePostMutation.php), [`SearchQuery`](app/GraphQL/Queries/SearchQuery.php) | `ValidationTest` |
+| `authorize()` / policies / `policy()` shortcut / guards | [`UserQuery`](app/GraphQL/Queries/UserQuery.php), [`UsersQuery`](app/GraphQL/Queries/UsersQuery.php), [`LogoutMutation`](app/GraphQL/Mutations/LogoutMutation.php), [`app/Policies`](app/Policies) | `AuthorizationTest` |
+| Field middleware (rate limiting) | [`LoginMutation`](app/GraphQL/Mutations/LoginMutation.php) | `AuthenticationTest` |
+| N+1-safe relations & a custom DataLoader | `batchRelation()` in the types, [`MemberCountLoader`](app/GraphQL/Loaders/MemberCountLoader.php) | `BatchingNPlusOneTest` |
+| Relay cursor pagination | [`PostsQuery`](app/GraphQL/Queries/PostsQuery.php), [`UsersQuery`](app/GraphQL/Queries/UsersQuery.php) | `PaginationTest` |
+| Subscriptions (queued fan-out, private channels, unsubscribe) | [`PostPublishedSubscription`](app/GraphQL/Subscriptions/PostPublishedSubscription.php), [`PublishPostMutation`](app/GraphQL/Mutations/PublishPostMutation.php) | `SubscriptionsTest` |
+| Multiple schemas + per-schema middleware | [`app/GraphQL/Admin`](app/GraphQL/Admin), `schemas.admin` in the config | `SecurityTest` |
+| Security limits, custom validation rule | `security` config, [`MaxRootFieldsRule`](app/GraphQL/Validation/MaxRootFieldsRule.php) | `SecurityTest` |
+| GraphQL over HTTP, batching, APQ | config: `batching`, `persisted_queries` | `HttpProtocolTest` |
+| Response cache + invalidation | `cache.response`, [`FlushResponseCacheAfterMutations`](app/Listeners/FlushResponseCacheAfterMutations.php) | `CachingAndObservabilityTest` |
+| Events, extensions, tracing | [`LogSlowGraphQLOperations`](app/Listeners/LogSlowGraphQLOperations.php), [`ApiVersionExtension`](app/GraphQL/Extensions/ApiVersionExtension.php), [`AppServiceProvider`](app/Providers/AppServiceProvider.php) | `CachingAndObservabilityTest` |
+| Deployment commands | `laragraph:validate`, `laragraph:cache`, `laragraph:schema:export` | `ToolingTest` |
+
+## Tests
+
+```bash
+php artisan test
+```
+
+The tests talk to the API over HTTP with real JWTs, exactly as a client would.

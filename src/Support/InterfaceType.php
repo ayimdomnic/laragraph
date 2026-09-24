@@ -26,7 +26,7 @@ use GraphQL\Type\Definition\ResolveInfo;
  *           ];
  *       }
  *
- *       public function resolveType(mixed $value): string
+ *       public function resolveType(mixed $value, mixed $context, ResolveInfo $info): mixed
  *       {
  *           return match (true) {
  *               $value instanceof \App\Models\User => 'User',

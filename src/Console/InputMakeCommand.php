@@ -27,7 +27,8 @@ class InputMakeCommand extends GeneratorCommand
 
     protected function getDefaultNamespace($rootNamespace): string
     {
-        return $rootNamespace . '\\GraphQL\\Inputs';
+        // Inside app/GraphQL/Types, so auto-discovery registers generated inputs.
+        return $rootNamespace . '\\GraphQL\\Types\\Inputs';
     }
 
     protected function getOptions(): array

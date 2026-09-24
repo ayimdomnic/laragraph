@@ -25,19 +25,18 @@ namespace Ayimdomnic\Laragraph\DataLoader;
  * class UserLoader extends BatchResolver
  * {
  *     /**
- *      * Receive an array of user IDs and return a map of id → User model.
+ *      * Receive an array of user IDs and return one User (or null) per id.
  *      *
- *      * IMPORTANT: the returned array must be ordered/keyed to match $keys,
- *      * or DataLoader will mis-assign values to promises.
+ *      * IMPORTANT: return a list with exactly one value per key, in the
+ *      * same order as $keys — DataLoader matches results by position.
  *      * {@literal @}param array<int|string> $keys
  *      * {@literal @}return array<mixed>
  *      *\/
  *     public function batch(array $keys): array
  *     {
- *         return User::whereIn('id', $keys)
- *             ->get()
- *             ->keyBy('id')
- *             ->toArray();
+ *         $users = User::whereIn('id', $keys)->get()->keyBy('id');
+ *
+ *         return array_map(fn($id) => $users->get($id), $keys);
  *     }
  * }
  * ```
@@ -61,8 +60,8 @@ abstract class BatchResolver
      * Resolve a batch of keys in a single call.
      *
      * @param  array<int|string>  $keys  Unique keys collected by the DataLoader.
-     * @return array<mixed>             A map (or ordered list) of resolved values.
-     *                                  Keys should correspond to the input keys.
+     * @return array<mixed>             One resolved value per key, in the same
+     *                                  order as $keys (null for a missing key).
      */
     abstract public function batch(array $keys): array;
 }
