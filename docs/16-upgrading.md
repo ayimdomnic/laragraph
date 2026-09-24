@@ -162,6 +162,16 @@ needs them, not when the schema is created. Two things follow:
 - The protected `Laragraph::buildValidationRules()` was replaced by `partitionValidationRules()`,
   which returns the document-only rules and the per-execution rules separately.
 
+### Laravel Octane
+
+- Laragraph now adds itself to `octane.warm`, so it's created once per worker instead of once per
+  request (opt out with `laragraph.octane.warm => false`). Type and field classes are therefore
+  shared by every request a worker handles. Keep request data out of their properties and
+  constructors.
+- **Security fix:** under Octane, subscription updates were authorized with the Gate of the user
+  whose request triggered the broadcast, so `Gate::allows()` and policies could reveal data to
+  subscribers that they may not see. Updates now use a Gate bound to the subscriber.
+
 ### Default field resolver
 
 Fields without a resolver use `Ayimdomnic\Laragraph\Support\DefaultFieldResolver`, which reads

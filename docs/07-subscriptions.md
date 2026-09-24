@@ -53,7 +53,8 @@ sure `/broadcasting/auth` authenticates your API users. The example uses JWT:
 ```
 
 Subscribers are kept in the cache, so `cache_store` must be shared by every web server and queue
-worker. Use Redis, Memcached or the database store in production, never `array`, and not `file` on
+worker. Use Redis, Memcached or the database store in production, never `array` (Octane also empties
+the `array` store after every request), and not `file` on
 more than one machine.
 
 ## 2. Write the subscription

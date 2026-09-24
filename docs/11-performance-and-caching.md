@@ -166,18 +166,32 @@ Fields without a resolver read the value from the parent. For Eloquent models La
 and accessors included, through `offsetExists()` and `offsetGet()`. A missing attribute under
 `Model::shouldBeStrict()` still reads as `null`.
 
-### Octane notes
+### Octane
 
-Laragraph is designed to run in long-lived workers:
+Octane handles every request in a fresh copy of the application and discards services first
+created during a request. Laragraph therefore **adds itself to Octane's `warm` list**
+automatically, so each worker creates it once. The compiled schema, the parsed documents and the
+validation cache then serve every request that worker handles. On the example app this makes a
+request about 30% faster than rebuilding them each time, and the gain grows with the size of the
+schema. Set `laragraph.octane.warm` to `false` to opt out.
+
+Laragraph is designed for long-lived workers:
 
 - DataLoaders are created per execution and released afterwards. Nothing leaks between requests.
 - The tracing collector is reset on every execution.
-- Subscription updates run in an isolated request and auth state, which is then restored.
 - The execution context is always the current request.
+- Subscription updates run in an isolated request, auth manager **and Gate**, which are all
+  restored afterwards. Octane shares the Gate between requests, and that Gate resolves users through the worker's
+  auth manager, so Laragraph binds a Gate to the subscriber for the duration of each update.
 
-What *you* must watch: **type and field classes are instantiated once and reused** across
-requests in a worker. Never keep per-request state (the current user, request data, a cache of
-query results) in their properties. Use `$context` or local variables instead.
+What *you* must watch: **type and field classes are instantiated once per worker and reused**
+across requests. Never keep per-request state (the current user, request data, a cache of query
+results) in their properties or inject it into their constructors. Use `$context` or local
+variables instead.
+
+The example app's [`OctaneTest`](../example/tests/Octane/OctaneTest.php) runs requests through a
+real Octane worker. It checks that the schema is compiled once, that each request sees only its
+own user, and that subscription updates run as the subscriber.
 
 ## Other tips
 

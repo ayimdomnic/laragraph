@@ -285,6 +285,18 @@ Accept a JSON list of operations per request. `max_operations` of `0` removes th
 Apollo-format resolver timings under `extensions.tracing`. Development only. See
 [Tracing](12-observability.md#tracing).
 
+## `octane`
+
+```php
+'octane' => [
+    'warm' => true,
+],
+```
+
+Under Laravel Octane, add Laragraph to `octane.warm` so each worker compiles the schema and
+validates each document once, instead of on every request. `false` leaves Octane's `warm` list
+alone. See [Performance → Octane](11-performance-and-caching.md#octane).
+
 ## `subscriptions`
 
 ```php
