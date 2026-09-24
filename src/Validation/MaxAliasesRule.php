@@ -44,18 +44,21 @@ class MaxAliasesRule extends ValidationRule
 
     public function getVisitor(ValidationContext $context): array
     {
-        $count = 0;
+        $count    = 0;
+        $reported = false;
 
         return [
             NodeKind::FIELD => [
-                'enter' => function (Node $node) use ($context, &$count): void {
+                'enter' => function (Node $node) use ($context, &$count, &$reported): void {
                     if (!$node instanceof FieldNode || !$node->alias instanceof NameNode) {
                         return;
                     }
 
                     $count++;
 
-                    if ($count > $this->maxAliases) {
+                    // Report once: a flood of aliases must not become a flood of errors.
+                    if ($count > $this->maxAliases && !$reported) {
+                        $reported = true;
                         $context->reportError(new Error(
                             "Exceeded maximum number of aliases ({$this->maxAliases}) allowed per query.",
                         ));

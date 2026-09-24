@@ -236,7 +236,7 @@ Resolvers return enum cases and receive cases for enum arguments. `#[Description
 `EnumType` subclass may also simply `return UserStatus::cases();` from `values()`.
 
 Enums (and input, interface, union and scalar types) placed in `app/GraphQL/Types` are
-auto-discovered.
+auto-discovered — including subdirectories such as `app/GraphQL/Types/Billing/`.
 
 ---
 
@@ -386,7 +386,7 @@ class PostType extends Type
 }
 ```
 
-Regardless of how many `Post` parents are in the result set, `comments` resolves in a fixed, small number of queries per request instead of one query per post.
+Regardless of how many `Post` parents are in the result set, `comments` resolves in **one** query per request instead of one query per post. The relation is loaded onto the parent models your resolver already returned, so relations you eager-loaded yourself (`Post::with('comments')`) cost no query at all, and parents hidden by global scopes still resolve.
 
 ---
 

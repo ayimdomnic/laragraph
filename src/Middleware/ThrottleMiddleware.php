@@ -57,6 +57,7 @@ final readonly class ThrottleMiddleware implements FieldMiddlewareInterface
     {
         $userId = auth()->id() ?? request()->ip() ?? 'guest';
 
-        return "laragraph_throttle:{$info->fieldName}:{$userId}";
+        // Parent type + field: `Query.user` and `Post.user` are throttled separately.
+        return "laragraph_throttle:{$info->parentType->name}.{$info->fieldName}:{$userId}";
     }
 }

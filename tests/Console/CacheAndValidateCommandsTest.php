@@ -169,4 +169,20 @@ PHP);
 
         $this->assertSame('unknown', $version->invoke($provider, ['vendor/not-installed']));
     }
+
+    public function test_validate_flags_a_schema_shadowed_by_the_graphiql_route(): void
+    {
+        config([
+            'laragraph.graphiql.enabled'     => true,
+            'laragraph.schemas.graphiql'     => ['query' => ['ping' => ValidPingQuery::class]],
+        ]);
+
+        $this->artisan('laragraph:validate', ['--schema' => ['graphiql']])
+            ->expectsOutputToContain('UNREACHABLE')
+            ->assertFailed();
+
+        config(['laragraph.graphiql.enabled' => false]);
+
+        $this->artisan('laragraph:validate', ['--schema' => ['graphiql']])->assertSuccessful();
+    }
 }

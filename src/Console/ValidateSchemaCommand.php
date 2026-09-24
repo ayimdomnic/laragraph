@@ -31,6 +31,15 @@ class ValidateSchemaCommand extends Command
         $valid = true;
 
         foreach ($names as $name) {
+            // The GraphiQL route (/graphql/graphiql) shadows a schema of that name.
+            if ($name === 'graphiql' && (config('laragraph.graphiql.enabled') ?? config('app.debug'))) {
+                $valid = false;
+                $this->components->twoColumnDetail($name, '<fg=red;options=bold>UNREACHABLE</>');
+                $this->components->bulletList(['/graphql/graphiql serves the GraphiQL IDE; rename this schema or disable GraphiQL.']);
+
+                continue;
+            }
+
             try {
                 $laragraph->schema($name)->assertValid();
                 $this->components->twoColumnDetail($name, '<fg=green;options=bold>VALID</>');

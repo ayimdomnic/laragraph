@@ -62,4 +62,20 @@ class RequestIdExtensionTest extends TestCase
         $this->assertArrayHasKey('id', $result);
         $this->assertArrayNotHasKey('execution_ms', $result);
     }
+
+    public function test_malformed_or_oversized_headers_are_replaced(): void
+    {
+        foreach (['<script>alert(1)</script>', str_repeat('a', 129), 'id with spaces'] as $header) {
+            $this->app->instance('request', Request::create('/', 'GET', server: ['HTTP_X_REQUEST_ID' => $header]));
+
+            $this->assertNotSame($header, (new RequestIdExtension())->get()['id']);
+        }
+    }
+
+    public function test_every_extension_instance_shares_one_id_per_request(): void
+    {
+        $this->app->instance('request', Request::create('/'));
+
+        $this->assertSame((new RequestIdExtension())->get()['id'], (new RequestIdExtension())->get()['id']);
+    }
 }

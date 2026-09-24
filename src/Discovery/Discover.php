@@ -157,7 +157,9 @@ class Discover
     }
 
     /**
-     * Every loadable class (or enum) defined by a PHP file directly inside $path.
+     * Every loadable class (or enum) defined by a PHP file inside $path or any
+     * of its subdirectories (namespaced per PSR-4, e.g. Types/Billing/InvoiceType
+     * → App\GraphQL\Types\Billing\InvoiceType).
      *
      * @param string $path Path relative to base_path()
      * @return list<class-string>
@@ -174,11 +176,27 @@ class Discover
             return [];
         }
 
-        $namespace = static::namespaceForDirectory($absolutePath);
-        $classes   = [];
+        $files = [];
 
-        foreach (glob("{$absolutePath}/*.php") ?: [] as $file) {
-            $class = $namespace . '\\' . pathinfo($file, PATHINFO_FILENAME);
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($absolutePath, \FilesystemIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            if ($file instanceof \SplFileInfo && $file->isFile() && $file->getExtension() === 'php') {
+                $files[] = $file->getPathname();
+            }
+        }
+
+        sort($files); // deterministic order (and alias precedence) across filesystems
+
+        $classes    = [];
+        $namespaces = [];
+
+        foreach ($files as $file) {
+            $directory = dirname($file);
+            $namespace = $namespaces[$directory] ??= static::namespaceForDirectory($directory);
+            $class     = $namespace . '\\' . pathinfo($file, PATHINFO_FILENAME);
 
             if (class_exists($class) || enum_exists($class)) {
                 $classes[] = $class;
