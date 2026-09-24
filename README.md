@@ -9,6 +9,9 @@
 
 Laragraph gives Laravel developers a clean, expressive, **code-first** API for building GraphQL services — powered by [webonyx/graphql-php](https://github.com/webonyx/graphql-php).
 
+📖 **[Read the developer guide](docs/README.md)**: a step-by-step explanation of every feature, from your first query to production.
+🧪 **[Explore the example app](example/README.md)**: a complete API that uses every feature, with a test for each one.
+
 ---
 
 ## Features
