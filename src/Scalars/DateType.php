@@ -4,28 +4,35 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Scalars;
 
+use Ayimdomnic\Laragraph\Scalars\Concerns\ParsesDates;
 use Ayimdomnic\Laragraph\Support\ScalarType;
 use GraphQL\Error\Error;
 use GraphQL\Language\AST\Node;
 use GraphQL\Language\AST\StringValueNode;
 
 /**
- * A scalar representing an ISO-8601 date string (no time component).
+ * A calendar date in ISO-8601 format: `YYYY-MM-DD`.
  *
- * Input: "2024-01-15"
+ * Input values are parsed into a `DateTimeImmutable` at midnight; impossible
+ * dates (2024-02-31) are rejected rather than rolled over.
  */
 class DateType extends ScalarType
 {
+    use ParsesDates;
+
+    private const FORMAT = 'Y-m-d';
+
     public string $name = 'Date';
+
     public ?string $description = 'A date string in ISO-8601 format: YYYY-MM-DD';
 
     public function serialize(mixed $value): string
     {
         if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d');
+            return $value->format(self::FORMAT);
         }
 
-        if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        if (is_string($value) && self::parseStrict($value, [self::FORMAT]) instanceof \DateTimeImmutable) {
             return $value;
         }
 
@@ -43,11 +50,8 @@ class DateType extends ScalarType
         }
 
         if (is_string($value)) {
-            $dt = \DateTimeImmutable::createFromFormat('Y-m-d', $value);
-            if ($dt === false) {
-                throw new Error("Invalid Date value: {$value}. Expected YYYY-MM-DD.");
-            }
-            return $dt;
+            return self::parseStrict($value, [self::FORMAT])
+                ?? throw new Error("Invalid Date value: {$value}. Expected a real date as YYYY-MM-DD.");
         }
 
         throw new Error('Date must be a string.');

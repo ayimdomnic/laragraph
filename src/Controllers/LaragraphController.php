@@ -41,20 +41,28 @@ class LaragraphController extends BaseController
      */
     public function query(Request $request, string $schemaName = 'default'): JsonResponse
     {
-        $parsed = $this->parseRequest($request);
-
-        // Support batched queries (array of query objects)
-        if (isset($parsed[0]) && is_array($parsed[0])) {
-            try {
-                $results = $this->laragraph->executeBatch($parsed, $request, $schemaName);
-            } catch (BatchingDisabledException|BatchLimitExceededException $e) {
-                return $this->respond($request, ['errors' => [['message' => $e->getMessage()]]], 400);
+        try {
+            if (config("laragraph.schemas.{$schemaName}") === null) {
+                throw RequestException::schemaNotFound($schemaName);
             }
 
-            return $this->respond($request, $results, 200);
-        }
+            $parsed = $this->parseRequest($request);
 
-        try {
+            // Batched queries: a JSON list of operations.
+            if ($parsed !== [] && array_is_list($parsed)) {
+                array_walk($parsed, $this->assertOperation(...));
+
+                try {
+                    $results = $this->laragraph->executeBatch($parsed, $request, $schemaName);
+                } catch (BatchingDisabledException|BatchLimitExceededException $e) {
+                    return $this->respond($request, ['errors' => [['message' => $e->getMessage()]]], 400);
+                }
+
+                return $this->respond($request, $results, 200);
+            }
+
+            $this->assertOperation($parsed);
+
             $result = $this->executeOne($parsed, $request, $schemaName);
         } catch (RequestException $e) {
             return $this->respond($request, $e->toResponse(), $e->status, $e->headers);
@@ -263,6 +271,43 @@ class LaragraphController extends BaseController
     }
 
     /**
+     * Reject request parameters of the wrong shape (GraphQL over HTTP §6.1)
+     * with a 400 instead of letting them fail deep inside execution.
+     *
+     * @phpstan-assert array<string, mixed> $operation
+     *
+     * @throws RequestException
+     */
+    protected function assertOperation(mixed $operation): void
+    {
+        if (!is_array($operation) || ($operation !== [] && array_is_list($operation))) {
+            throw RequestException::badRequest('Each GraphQL operation must be a JSON object.');
+        }
+
+        foreach (['query', 'operationName', 'queryId'] as $key) {
+            if (isset($operation[$key]) && !is_string($operation[$key])) {
+                throw RequestException::badRequest("`{$key}` must be a string.");
+            }
+        }
+
+        foreach (['variables', 'extensions'] as $key) {
+            $value = $operation[$key] ?? null;
+
+            if (is_string($value)) {
+                $value = json_decode($value, true);
+
+                if (!is_array($value)) {
+                    throw RequestException::badRequest("`{$key}` must be a JSON object.");
+                }
+            }
+
+            if ($value !== null && (!is_array($value) || ($value !== [] && array_is_list($value)))) {
+                throw RequestException::badRequest("`{$key}` must be an object.");
+            }
+        }
+    }
+
+    /**
      * Parse a GraphQL HTTP request following the GraphQL-over-HTTP spec.
      *
      * Supports:
@@ -272,6 +317,8 @@ class LaragraphController extends BaseController
      *  - POST multipart/form-data  (file uploads via the multipart spec)
      *
      * @return array<array-key, mixed> A single operation, or a list of operations for a batch.
+     *
+     * @throws RequestException When the body cannot be parsed.
      */
     protected function parseRequest(Request $request): array
     {
@@ -295,14 +342,18 @@ class LaragraphController extends BaseController
             return ['query' => (string) $request->getContent()];
         }
 
-        // application/json or form-urlencoded
-        $body = $request->json()->all();
+        if ($request->isJson() && trim((string) $request->getContent()) !== '') {
+            $body = json_decode((string) $request->getContent(), true);
 
-        if (empty($body)) {
-            return $request->all();
+            if (!is_array($body)) {
+                throw RequestException::badRequest('The request body must be a JSON object or a list of them.');
+            }
+
+            return $body === [] ? $request->all() : $body;
         }
 
-        return $body;
+        // application/x-www-form-urlencoded (or an empty body)
+        return $request->all();
     }
 
     /**
@@ -310,24 +361,46 @@ class LaragraphController extends BaseController
      * request spec (https://github.com/jaydenseric/graphql-multipart-request-spec).
      *
      * @return array<array-key, mixed>
+     *
+     * @throws RequestException When the multipart fields are malformed.
      */
     protected function parseMultipartRequest(Request $request): array
     {
-        $operationsJson = $request->input('operations', '{}');
-        $mapJson        = $request->input('map', '{}');
+        $operations = json_decode($this->multipartField($request, 'operations'), true);
+        $map        = json_decode($this->multipartField($request, 'map'), true);
 
-        $operations = json_decode($operationsJson, true) ?? [];
-        $map        = json_decode($mapJson, true) ?? [];
+        if (!is_array($operations) || !is_array($map)) {
+            throw RequestException::badRequest('Multipart `operations` and `map` fields must be JSON.');
+        }
 
         // Attach uploaded files to the variables using the map
         foreach ($map as $fileKey => $paths) {
             $file = $request->file((string) $fileKey);
+
             foreach ((array) $paths as $path) {
+                if (!is_string($path) || !preg_match('/^(\d+\.)?variables(\.[^.*]+)+$/', $path)) {
+                    throw RequestException::badRequest('Multipart `map` paths must point into `variables`.');
+                }
+
                 data_set($operations, $path, $file);
             }
         }
 
         return $operations;
+    }
+
+    /**
+     * @throws RequestException When the field is missing or not a string.
+     */
+    private function multipartField(Request $request, string $name): string
+    {
+        $value = $request->input($name);
+
+        if (!is_string($value)) {
+            throw RequestException::badRequest("Multipart requests need a JSON `{$name}` field.");
+        }
+
+        return $value;
     }
 
     /**

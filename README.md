@@ -325,6 +325,12 @@ class UsersQuery extends Query
 }
 ```
 
+Pass `endCursor` as `after` to fetch the next page, or `startCursor` as `before` with `last` to
+walk backwards; the page size may change between requests. Page sizes are capped by
+`laragraph.pagination.max_per_page` (default `100`; `null` removes the cap). Eloquent builders,
+query builders and relations are paged with exact offsets; any other object with Laravel's
+`paginate()` signature supports page-aligned windows.
+
 ### Simple Offset Pagination
 
 ```php
@@ -395,6 +401,17 @@ public function authorize(mixed $root, array $args, mixed $context, ResolveInfo 
 
 `false` → `AuthorizationException` → `extensions.category = 'authorization'`.
 
+Or delegate to a Laravel policy — return the policy class or the model it guards:
+
+```php
+public function policy(): ?string { return PostPolicy::class; } // or Post::class
+public function policyAbility(): string { return 'viewAny'; }
+```
+
+Policies registered with the Gate go through it (so `Gate::before()` hooks apply); other policy
+classes are called directly, honouring their own `before()`. Guests are denied unless the policy
+method accepts a nullable user.
+
 ---
 
 ## Validation
@@ -432,6 +449,11 @@ Errors appear in `extensions.validation`:
     'Upload'   => \Ayimdomnic\Laragraph\Scalars\UploadType::class,
 ],
 ```
+
+`Date` accepts `YYYY-MM-DD` (parsed as midnight). `DateTime` accepts ISO-8601 with or without
+fractional seconds (`2024-01-15T09:30:00.123Z`, as JavaScript's `toISOString()` produces), the SQL
+format `2024-01-15 09:30:00`, and plain dates. Impossible values such as `2024-02-31` are rejected
+rather than rolled over.
 
 ---
 
@@ -480,8 +502,12 @@ Laragraph follows the [GraphQL-over-HTTP specification](https://graphql.github.i
   status when a request fails before execution (parse/validation errors). Plain
   `application/json` clients keep the traditional always-`200` behaviour.
 - Request bodies may be `application/json`, `application/graphql`, form-encoded or multipart.
+- Malformed requests (a non-string `query`, `variables` that are not an object, unparseable JSON,
+  a non-object batch entry) get `400` with `extensions.code: BAD_REQUEST`; an unknown schema in the
+  URL gets `404` with `SCHEMA_NOT_FOUND`.
 - Requests rejected before execution carry a machine-readable `extensions.code`
-  (`METHOD_NOT_ALLOWED`, `PERSISTED_QUERY_NOT_FOUND`, `PERSISTED_QUERY_REQUIRED`, …).
+  (`BAD_REQUEST`, `SCHEMA_NOT_FOUND`, `METHOD_NOT_ALLOWED`, `PERSISTED_QUERY_NOT_FOUND`,
+  `PERSISTED_QUERY_REQUIRED`, …).
 
 ---
 

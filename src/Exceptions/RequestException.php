@@ -25,6 +25,16 @@ final class RequestException extends \RuntimeException
         parent::__construct($message);
     }
 
+    public static function badRequest(string $message): self
+    {
+        return new self($message, 'BAD_REQUEST', 400);
+    }
+
+    public static function schemaNotFound(string $schemaName): self
+    {
+        return new self("Schema [{$schemaName}] does not exist.", 'SCHEMA_NOT_FOUND', 404);
+    }
+
     public static function methodNotAllowed(): self
     {
         return new self(

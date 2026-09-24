@@ -58,7 +58,7 @@ class SecureDefaultsTest extends TestCase
     public function test_graphiql_is_not_served_in_production_by_default(): void
     {
         $this->assertFalse(app('router')->has('laragraph.graphiql'));
-        $this->assertNotSame(200, $this->get('/graphql/graphiql')->status());
+        $this->get('/graphql/graphiql')->assertNotFound();
     }
 
     public function test_introspection_is_disabled_in_production_by_default(): void

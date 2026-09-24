@@ -185,13 +185,14 @@ abstract class Field
     }
 
     /**
-     * Optional Laravel policy class to authorize against.
+     * Optional Laravel policy to authorize against: the policy class, or the
+     * model class it guards.
      *
-     * When set, `policyAbility()` is checked via `Gate::check()` before the
-     * resolver is called.
+     * When set, `policyAbility()` is checked before the resolver is called
+     * (see {@see AuthorizationContext::allowsPolicy()}).
      *
      * Example:
-     *   public function policy(): ?string { return PostPolicy::class; }
+     *   public function policy(): ?string { return PostPolicy::class; }  // or Post::class
      */
     public function policy(): ?string
     {
@@ -310,7 +311,7 @@ abstract class Field
             // 3. Policy check
             $policy = $this->policy();
             if ($policy !== null) {
-                if (!$ctx->can($this->policyAbility(), $policy)) {
+                if (!$ctx->allowsPolicy($policy, $this->policyAbility())) {
                     throw new AuthorizationException(
                         'Policy check failed for ' . class_basename(static::class) . '.',
                     );

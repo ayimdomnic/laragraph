@@ -173,10 +173,22 @@ final class DataLoaderRegistry
     }
 
     /**
-     * Clear all loader caches (call between requests or in tests).
+     * Release every loader and its cached results.
+     *
+     * overblog/dataloader-php tracks each DataLoader in a static list that is
+     * only pruned from DataLoader::__destruct() — which never runs on its own,
+     * because that static list still references the loader. Without an
+     * explicit release every request leaks its loaders (and their cached
+     * rows), and DataLoader::await() walks an ever-growing list. Called
+     * automatically when Laragraph finishes an execution.
      */
     public function clear(): void
     {
+        foreach ($this->loaders as $loader) {
+            $loader->clearAll();
+            $loader->__destruct();
+        }
+
         $this->loaders = [];
     }
 }
