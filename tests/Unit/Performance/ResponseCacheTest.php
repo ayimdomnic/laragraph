@@ -6,6 +6,8 @@ namespace Ayimdomnic\Laragraph\Tests\Unit\Performance;
 
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Tests\TestCase;
+use Illuminate\Foundation\Auth\User;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Full test suite for ResponseCache.
@@ -162,5 +164,76 @@ class ResponseCacheTest extends TestCase
     public function test_is_cacheable_returns_false_for_subscription(): void
     {
         $this->assertFalse(ResponseCache::isCacheable('subscription { onMessage { text } }'));
+    }
+
+    public function test_is_cacheable_ignores_leading_comments_before_a_mutation(): void
+    {
+        $this->assertFalse(ResponseCache::isCacheable("# looks like a query\nmutation { deleteAll }"));
+    }
+
+    public function test_is_cacheable_respects_the_selected_operation(): void
+    {
+        $document = 'query Read { a } mutation Write { b }';
+
+        $this->assertTrue(ResponseCache::isCacheable($document, 'Read'));
+        $this->assertFalse(ResponseCache::isCacheable($document, 'Write'));
+    }
+
+    public function test_is_cacheable_returns_false_for_unparseable_documents(): void
+    {
+        $this->assertFalse(ResponseCache::isCacheable('query {'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Key partitioning, scope() and flush()
+    // -------------------------------------------------------------------------
+
+    public function test_key_differs_per_schema_and_scope(): void
+    {
+        $base = ResponseCache::key('{ me }', [], null, 'default', 'user:1');
+
+        $this->assertNotSame($base, ResponseCache::key('{ me }', [], null, 'admin', 'user:1'));
+        $this->assertNotSame($base, ResponseCache::key('{ me }', [], null, 'default', 'user:2'));
+        $this->assertNotSame($base, ResponseCache::key('{ me }', [], null, 'default', 'guest'));
+    }
+
+    public function test_scope_is_guest_without_an_authenticated_user(): void
+    {
+        $this->assertSame('guest', ResponseCache::scope());
+    }
+
+    public function test_scope_identifies_the_authenticated_user(): void
+    {
+        $user = new User();
+        $user->forceFill(['id' => 7]);
+        $this->actingAs($user);
+
+        $this->assertSame('user:7', ResponseCache::scope());
+    }
+
+    public function test_scope_can_be_global(): void
+    {
+        config(['laragraph.cache.response.scope' => 'global']);
+
+        $this->assertSame('global', ResponseCache::scope());
+    }
+
+    public function test_flush_invalidates_every_existing_key(): void
+    {
+        $key = ResponseCache::key('{ users }');
+        ResponseCache::put($key, ['data' => ['users' => []]]);
+        $this->assertNotNull(ResponseCache::get($key));
+
+        ResponseCache::flush();
+
+        $this->assertNotSame($key, ResponseCache::key('{ users }'));
+        $this->assertNull(ResponseCache::get(ResponseCache::key('{ users }')));
+    }
+
+    public function test_get_ignores_non_array_entries(): void
+    {
+        Cache::put('laragraph:response:corrupt', 'not-an-array');
+
+        $this->assertNull(ResponseCache::get('laragraph:response:corrupt'));
     }
 }

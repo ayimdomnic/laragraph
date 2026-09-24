@@ -213,11 +213,17 @@ return [
     | store — any Laravel cache driver (redis, file, array, memcached …)
     | ttl   — time-to-live in seconds
     |
-    | Cache is keyed by the query string + variables + operation name, so
-    | different variable combinations produce separate entries.
+    | scope — 'user' (default) partitions entries per authenticated user (on
+    |   laragraph.auth.default_guard), with guests sharing one partition, so a
+    |   user's data is never served to someone else. Use 'global' only when
+    |   every caller receives identical responses.
+    |
+    | Cache is keyed by schema + scope + query string + variables + operation
+    | name, so different variable combinations produce separate entries.
     |
     | To invalidate from code:
-    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::forget($key)
+    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::flush()       // everything
+    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::forget($key)  // one entry
     |
     */
     'cache' => [

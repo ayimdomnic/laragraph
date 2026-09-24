@@ -142,8 +142,14 @@ class Laragraph
         }
 
         // Response cache — only for read-only queries
-        if (ResponseCache::enabled() && ResponseCache::isCacheable($query)) {
-            $cacheKey = ResponseCache::key($query, $variables, $operationName);
+        if (ResponseCache::enabled() && ResponseCache::isCacheable($query, $operationName)) {
+            $cacheKey = ResponseCache::key(
+                $query,
+                $variables,
+                $operationName,
+                $resolvedSchemaName,
+                ResponseCache::scope(),
+            );
             $cached   = ResponseCache::get($cacheKey);
 
             if ($cached !== null) {
