@@ -716,7 +716,13 @@ composer lint       # code style — PER-CS 2.0 via Laravel Pint (composer forma
 composer phpstan    # PHPStan / Larastan, level 8
 composer refactor   # Rector (PHP 8.2 set, dead code, code quality, type declarations)
 composer check      # all of the above, as CI runs them
+
+composer test:performance   # performance budgets: SQL queries, classes built, memory kept
+composer bench              # timing benchmarks (PHPBench); bench:baseline / bench:compare to check a change
 ```
+
+See [benchmarks/README.md](benchmarks/README.md) for how the performance budgets and benchmarks work and how to
+check a change for regressions.
 
 CI runs the suite on every supported PHP × Laravel combination (including `--prefer-lowest`),
 enforces 100% line coverage, and fails on any PHP deprecation.

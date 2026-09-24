@@ -1,0 +1,21 @@
+{
+    "$schema": "./vendor/phpbench/phpbench/phpbench.schema.json",
+    "runner.bootstrap": "vendor/autoload.php",
+    "runner.path": "benchmarks",
+    "runner.file_pattern": "*Bench.php",
+    "runner.retry_threshold": 10,
+    "runner.time_unit": "microseconds",
+    "runner.php_config": {
+        "memory_limit": "1G",
+        "opcache.enable_cli": 1,
+        "xdebug.mode": "off"
+    },
+    "report.generators": {
+        "laragraph": {
+            "generator": "expression",
+            "cols": ["benchmark", "subject", "revs", "its", "mem_peak", "mode", "rstdev"],
+            "break": ["benchmark"]
+        }
+    },
+    "storage.xml_storage_path": ".phpbench"
+}

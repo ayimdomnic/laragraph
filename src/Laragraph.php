@@ -66,6 +66,9 @@ class Laragraph
 
     protected ?SchemaBuilder $schemaBuilder = null;
 
+    /** How many validated documents a worker remembers (a key is ~60 bytes). */
+    public const VALIDATED_DOCUMENTS = 1000;
+
     /** @var array<string, true> Documents that passed the document-only validation rules, see prevalidate(). */
     protected array $validated = [];
 
@@ -345,7 +348,7 @@ class Laragraph
             return new ExecutionResult(null, $errors);
         }
 
-        if (count($this->validated) >= DocumentCache::SIZE) {
+        if (count($this->validated) >= self::VALIDATED_DOCUMENTS) {
             unset($this->validated[array_key_first($this->validated)]);
         }
 

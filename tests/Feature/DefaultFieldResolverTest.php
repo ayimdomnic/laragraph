@@ -92,7 +92,10 @@ class DefaultFieldResolverTest extends TestCase
     {
         Model::preventAccessingMissingAttributes();
 
-        $this->assertSame(['name' => 'ada', 'missing' => null], $this->thing((new DfrModel())->forceFill(['name' => 'ada']), 'name missing'));
+        // Laravel only throws MissingAttributeException for models loaded from the database.
+        $model = (new DfrModel())->newFromBuilder(['name' => 'ada']);
+
+        $this->assertSame(['name' => 'ada', 'missing' => null], $this->thing($model, 'name missing'));
     }
 
     public function test_arrays_array_access_and_objects_resolve_like_webonyx(): void
