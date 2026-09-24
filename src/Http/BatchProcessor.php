@@ -36,9 +36,10 @@ class BatchProcessor
             throw new BatchingDisabledException();
         }
 
-        $max = (int) config('laragraph.batching.max_operations', 10);
+        $max = (int) (config('laragraph.batching.max_operations') ?? 10);
 
-        if (count($operations) > $max) {
+        // 0 (or a negative value) means "no limit", as documented in the config.
+        if ($max > 0 && count($operations) > $max) {
             throw new BatchLimitExceededException($max);
         }
 

@@ -100,6 +100,18 @@ class BatchProcessorTest extends TestCase
         $this->assertCount(3, $results);
     }
 
+    public function test_zero_max_operations_means_no_limit(): void
+    {
+        config(['laragraph.batching.enabled' => true, 'laragraph.batching.max_operations' => 0]);
+
+        $laragraph = $this->mockLaragraph();
+        $laragraph->shouldReceive('execute')->times(25)->andReturn(['data' => []]);
+
+        $results = (new BatchProcessor($laragraph))->process(array_fill(0, 25, ['query' => '{ a }']));
+
+        $this->assertCount(25, $results);
+    }
+
     // -------------------------------------------------------------------------
     // Result assembly
     // -------------------------------------------------------------------------
