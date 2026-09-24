@@ -8,6 +8,7 @@ use Ayimdomnic\Laragraph\Support\Mutation;
 use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Support\Subscription;
 use Ayimdomnic\Laragraph\Support\Type;
+use Composer\Autoload\ClassLoader;
 use Illuminate\Support\Str;
 
 /**
@@ -105,7 +106,7 @@ class Discover
         $absolutePath = rtrim($absolutePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
         foreach (spl_autoload_functions() as $autoloader) {
-            if (is_array($autoloader) && $autoloader[0] instanceof \Composer\Autoload\ClassLoader) {
+            if (is_array($autoloader) && $autoloader[0] instanceof ClassLoader) {
                 $result = static::matchPsr4Map($absolutePath, $autoloader[0]->getPrefixesPsr4());
                 if ($result !== '') {
                     return $result;

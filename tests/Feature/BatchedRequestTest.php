@@ -16,7 +16,10 @@ use GraphQL\Type\Definition\Type;
 
 class BatchGreetQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function args(): array
     {
@@ -31,7 +34,10 @@ class BatchGreetQuery extends Query
 
 class BatchSumMutation extends Mutation
 {
-    public function type(): Type { return Type::int(); }
+    public function type(): Type
+    {
+        return Type::int();
+    }
 
     public function args(): array
     {

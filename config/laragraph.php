@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Ayimdomnic\Laragraph\Laragraph;
+
 return [
 
     /*
@@ -140,7 +142,7 @@ return [
     | custom extensions or transform error messages.
     |
     */
-    'error_formatter' => [\Ayimdomnic\Laragraph\Laragraph::class, 'formatError'],
+    'error_formatter' => [Laragraph::class, 'formatError'],
 
     /*
     |--------------------------------------------------------------------------
@@ -151,7 +153,7 @@ return [
     | may use this to log, filter, or transform the errors array.
     |
     */
-    'errors_handler' => [\Ayimdomnic\Laragraph\Laragraph::class, 'handleErrors'],
+    'errors_handler' => [Laragraph::class, 'handleErrors'],
 
     /*
     |--------------------------------------------------------------------------

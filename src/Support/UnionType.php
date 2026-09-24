@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Support;
 
+use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\UnionType as GraphQLUnionType;
 
 /**
@@ -47,8 +49,8 @@ abstract class UnionType extends GraphQLUnionType
             ['name' => class_basename(static::class)],
             $this->attributes,
             [
-                'types'       => fn (): array => $this->types(),
-                'resolveType' => fn (mixed $value, mixed $context, \GraphQL\Type\Definition\ResolveInfo $info): mixed => $this->resolveType($value, $context, $info),
+                'types'       => $this->types(...),
+                'resolveType' => fn(mixed $value, mixed $context, ResolveInfo $info): mixed => $this->resolveType($value, $context, $info),
             ],
         );
 
@@ -58,7 +60,7 @@ abstract class UnionType extends GraphQLUnionType
     /**
      * Return the array of possible concrete ObjectType instances.
      *
-     * @return array<\GraphQL\Type\Definition\ObjectType>
+     * @return array<ObjectType>
      */
     abstract public function types(): array;
 
@@ -67,9 +69,8 @@ abstract class UnionType extends GraphQLUnionType
      *
      * @param  mixed  $value    The resolved field value
      * @param  mixed  $context  Shared execution context
-     * @param  \GraphQL\Type\Definition\ResolveInfo  $info
      */
-    public function resolveType(mixed $value, mixed $context, \GraphQL\Type\Definition\ResolveInfo $info): mixed
+    public function resolveType(mixed $value, mixed $context, ResolveInfo $info): mixed
     {
         return null;
     }

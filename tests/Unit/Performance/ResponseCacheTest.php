@@ -156,7 +156,7 @@ class ResponseCacheTest extends TestCase
 
     public function test_is_cacheable_returns_false_for_mutation_with_whitespace(): void
     {
-        $this->assertFalse(ResponseCache::isCacheable("  mutation  { createUser { id } }"));
+        $this->assertFalse(ResponseCache::isCacheable('  mutation  { createUser { id } }'));
     }
 
     public function test_is_cacheable_returns_false_for_subscription(): void

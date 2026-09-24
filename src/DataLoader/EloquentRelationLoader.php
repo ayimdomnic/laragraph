@@ -39,7 +39,7 @@ final class EloquentRelationLoader extends BatchResolver
         $parents = $this->modelClass::query()->whereIn($keyName, $keys)->get();
 
         /** @var Relation $relation */
-        $relation = Relation::noConstraints(fn () => $instance->{$this->relation}());
+        $relation = Relation::noConstraints(fn() => $instance->{$this->relation}());
         $relation->addEagerConstraints($parents->all());
         $results = $relation->getEager();
         $parents = $relation->match($parents->all(), $results, $this->relation);
@@ -50,7 +50,7 @@ final class EloquentRelationLoader extends BatchResolver
         }
 
         return array_map(
-            static fn ($key) => $byKey[(string) $key] ?? null,
+            static fn(int|string $key): mixed => $byKey[(string) $key] ?? null,
             $keys,
         );
     }

@@ -7,6 +7,7 @@ namespace Ayimdomnic\Laragraph\Scalars;
 use Ayimdomnic\Laragraph\Support\ScalarType;
 use GraphQL\Error\Error;
 use GraphQL\Language\AST\Node;
+use Illuminate\Http\UploadedFile;
 
 /**
  * A scalar representing a file upload.
@@ -32,7 +33,7 @@ class UploadType extends ScalarType
 
     public function parseValue(mixed $value): mixed
     {
-        if ($value instanceof \Illuminate\Http\UploadedFile) {
+        if ($value instanceof UploadedFile) {
             return $value;
         }
 

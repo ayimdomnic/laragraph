@@ -19,7 +19,10 @@ use GraphQL\Type\Definition\Type as GType;
 
 class SbQuery extends Query
 {
-    public function type(): GType { return GType::string(); }
+    public function type(): GType
+    {
+        return GType::string();
+    }
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
         return 'query-result';
@@ -28,7 +31,10 @@ class SbQuery extends Query
 
 class SbMutation extends Mutation
 {
-    public function type(): GType { return GType::string(); }
+    public function type(): GType
+    {
+        return GType::string();
+    }
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
         return 'mutation-result';
@@ -37,7 +43,10 @@ class SbMutation extends Mutation
 
 class SbSubscription extends Subscription
 {
-    public function type(): GType { return GType::string(); }
+    public function type(): GType
+    {
+        return GType::string();
+    }
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
         return null;
@@ -71,7 +80,10 @@ class SbNodeQuery extends Query
 /** A Query field with a custom complexity cost. */
 class SbCostlyQuery extends Query
 {
-    public function type(): GType { return GType::string(); }
+    public function type(): GType
+    {
+        return GType::string();
+    }
 
     public function complexity(): int
     {
@@ -102,7 +114,7 @@ class SchemaBuilderTest extends TestCase
         $this->app->forgetInstance('laragraph');
         $this->app->make('laragraph');
 
-        $manager = $this->app->make(\Ayimdomnic\Laragraph\Laragraph::class);
+        $manager = $this->app->make(Laragraph::class);
         $schema  = $manager->schema(); // build schema (typeMap is frozen)
 
         // Register a type AFTER schema build — not in typeMap yet

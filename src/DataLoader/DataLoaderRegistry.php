@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\DataLoader;
 
+use Illuminate\Database\Eloquent\Model;
 use Overblog\DataLoader\DataLoader;
 use Overblog\PromiseAdapter\Adapter\WebonyxGraphQLSyncPromiseAdapter;
 
@@ -57,7 +58,7 @@ final class DataLoaderRegistry
      */
     public function get(string $class): DataLoader
     {
-        return $this->getOrRegister($class, fn () => app($class));
+        return $this->getOrRegister($class, fn() => app($class));
     }
 
     /**
@@ -77,9 +78,7 @@ final class DataLoaderRegistry
             $adapter  = new WebonyxGraphQLSyncPromiseAdapter();
 
             $this->loaders[$key] = new DataLoader(
-                function (array $keys) use ($resolver, $adapter) {
-                    return $adapter->createAll($resolver->batch($keys));
-                },
+                fn(array $keys) => $adapter->createAll($resolver->batch($keys)),
                 $adapter,
             );
         }
@@ -92,13 +91,13 @@ final class DataLoaderRegistry
      * relation via the model's own eager-loading machinery, keyed by parent
      * primary key. See {@see EloquentRelationLoader}.
      *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param class-string<Model> $modelClass
      */
     public function relation(string $modelClass, string $relation): DataLoader
     {
         return $this->getOrRegister(
             "relation::{$modelClass}::{$relation}",
-            fn () => new EloquentRelationLoader($modelClass, $relation),
+            fn(): EloquentRelationLoader => new EloquentRelationLoader($modelClass, $relation),
         );
     }
 

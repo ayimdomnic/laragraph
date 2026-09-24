@@ -7,16 +7,18 @@ namespace Ayimdomnic\Laragraph;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderPromiseAdapter;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Events\QueryError;
-use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
-use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
-use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Events\QueryExecuted;
 use Ayimdomnic\Laragraph\Events\QueryExecuting;
 use Ayimdomnic\Laragraph\Events\SchemaBuilt;
+use Ayimdomnic\Laragraph\Exceptions\AuthorizationException;
+use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
+use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\SchemaException;
+use Ayimdomnic\Laragraph\Exceptions\ValidationException;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
+use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
@@ -36,6 +38,7 @@ use GraphQL\Validator\DocumentValidator;
 use GraphQL\Validator\Rules\DisableIntrospection;
 use GraphQL\Validator\Rules\QueryComplexity;
 use GraphQL\Validator\Rules\QueryDepth;
+use GraphQL\Validator\Rules\ValidationRule;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Arr;
 
@@ -165,7 +168,7 @@ class Laragraph
         $executionMs   = round(microtime(true) * 1000 - $startMs, 2);
         $extensionData = $this->buildResponseExtensions($executionMs);
 
-        if (!empty($extensionData)) {
+        if ($extensionData !== []) {
             $data['extensions'] = array_merge($data['extensions'] ?? [], $extensionData);
         }
 
@@ -175,13 +178,13 @@ class Laragraph
         }
 
         event(new QueryExecuted(
-            query:         $query,
-            variables:     $variables,
+            query: $query,
+            variables: $variables,
             operationName: $operationName,
-            schemaName:    $resolvedSchemaName,
-            result:        $data,
-            executionMs:   $executionMs,
-            hasErrors:     !empty($data['errors']),
+            schemaName: $resolvedSchemaName,
+            result: $data,
+            executionMs: $executionMs,
+            hasErrors: !empty($data['errors']),
         ));
 
         return $data;
@@ -255,14 +258,14 @@ class Laragraph
             : null;
 
         $promise = GraphQL::promiseToExecute(
-            promiseAdapter:  $promiseAdapter,
-            schema:          $schema,
-            source:          $query,
-            rootValue:       $rootValue,
-            context:         $context,
-            variableValues:  $variables ?: null,
-            operationName:   $operationName,
-            fieldResolver:   $fieldResolver,
+            promiseAdapter: $promiseAdapter,
+            schema: $schema,
+            source: $query,
+            rootValue: $rootValue,
+            context: $context,
+            variableValues: $variables ?: null,
+            operationName: $operationName,
+            fieldResolver: $fieldResolver,
             validationRules: $this->buildValidationRules(),
         );
 
@@ -280,7 +283,7 @@ class Laragraph
      * Rules are composed per-execution rather than mutating global state, so
      * different schemas / requests can have different security settings.
      *
-     * @return array<\GraphQL\Validator\Rules\ValidationRule>
+     * @return array<ValidationRule>
      */
     protected function buildValidationRules(): array
     {
@@ -307,7 +310,7 @@ class Laragraph
         $registry = $this->container->make(ValidationRuleRegistry::class);
         if (!$registry->isEmpty()) {
             foreach ($registry->resolve() as $rule) {
-                $rules[get_class($rule)] = $rule;
+                $rules[$rule::class] = $rule;
             }
         }
 
@@ -332,9 +335,9 @@ class Laragraph
      * The rule is added to the {@see ValidationRuleRegistry} singleton and will
      * be applied to every subsequent execution.
      *
-     * @param  string|\GraphQL\Validator\Rules\ValidationRule $rule  FQCN or instance.
+     * @param string|ValidationRule $rule FQCN or instance.
      */
-    public function addValidationRule(string|\GraphQL\Validator\Rules\ValidationRule $rule): void
+    public function addValidationRule(string|ValidationRule $rule): void
     {
         $this->container->make(ValidationRuleRegistry::class)->add($rule);
     }
@@ -379,7 +382,7 @@ class Laragraph
 
         if (!isset($this->types[$name])) {
             throw new \InvalidArgumentException(
-                "Type [{$name}] is not registered. Add it to laragraph.types in your config."
+                "Type [{$name}] is not registered. Add it to laragraph.types in your config.",
             );
         }
 
@@ -417,7 +420,7 @@ class Laragraph
             'message'   => $error->getMessage() ?: 'An unexpected error occurred.',
             'locations' => $error->getLocations()
                 ? array_map(
-                    fn ($loc) => ['line' => $loc->line, 'column' => $loc->column],
+                    fn($loc): array => ['line' => $loc->line, 'column' => $loc->column],
                     $error->getLocations(),
                 )
                 : null,
@@ -427,10 +430,10 @@ class Laragraph
 
         $previous = $error->getPrevious();
 
-        if ($previous instanceof \Ayimdomnic\Laragraph\Exceptions\ValidationException) {
+        if ($previous instanceof ValidationException) {
             $formatted['extensions']['category']   = 'validation';
             $formatted['extensions']['validation'] = $previous->getValidationErrors();
-        } elseif ($previous instanceof \Ayimdomnic\Laragraph\Exceptions\AuthorizationException) {
+        } elseif ($previous instanceof AuthorizationException) {
             $formatted['extensions']['category'] = 'authorization';
         } elseif ($error->isClientSafe()) {
             $formatted['extensions']['category'] = 'graphql';
@@ -438,22 +441,22 @@ class Laragraph
             $formatted['extensions']['category'] = 'internal';
         }
 
-        if (config('app.debug') && $previous !== null) {
+        if (config('app.debug') && $previous instanceof \Throwable) {
             $formatted['extensions']['debugMessage'] = $previous->getMessage();
             $formatted['extensions']['trace'] = array_map(
-                fn ($frame) => Arr::only($frame, ['file', 'line', 'function', 'class']),
+                fn(array $frame) => Arr::only($frame, ['file', 'line', 'function', 'class']),
                 array_slice($previous->getTrace(), 0, 10),
             );
         }
 
-        return array_filter($formatted, fn ($v) => $v !== null);
+        return array_filter($formatted, fn(string|array|null $v): bool => $v !== null);
     }
 
     /**
      * Default errors handler — called once with the full errors array.
      *
-     * @param  array<int, \GraphQL\Error\Error>  $errors
-     * @param  callable(\GraphQL\Error\Error): array<string, mixed>  $formatter
+     * @param array<int, Error> $errors
+     * @param callable(Error):array<string, mixed> $formatter
      * @return array<int, array<string, mixed>>
      */
     public static function handleErrors(array $errors, callable $formatter): array
@@ -467,9 +470,7 @@ class Laragraph
 
     protected function getSchemaBuilder(): SchemaBuilder
     {
-        if ($this->schemaBuilder === null) {
-            $this->schemaBuilder = new SchemaBuilder($this, $this->container);
-        }
+        $this->schemaBuilder ??= new SchemaBuilder($this, $this->container);
 
         return $this->schemaBuilder;
     }

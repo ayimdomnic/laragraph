@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests;
 
+use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\LaragraphServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
@@ -25,7 +26,7 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageAliases($app): array
     {
         return [
-            'Laragraph' => \Ayimdomnic\Laragraph\Facades\Laragraph::class,
+            'Laragraph' => Laragraph::class,
         ];
     }
 

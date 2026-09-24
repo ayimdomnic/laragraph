@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of the Laragraph package.
  *
@@ -14,7 +16,7 @@ $routeConfig = array_filter([
     'middleware' => config('laragraph.route.middleware', []),
 ]);
 
-Route::group($routeConfig, function () {
+Route::group($routeConfig, function (): void {
     $methods = config('laragraph.route.methods', ['GET', 'POST']);
 
     // Default schema endpoint

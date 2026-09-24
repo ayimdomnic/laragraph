@@ -36,17 +36,15 @@ class LaragraphServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/laragraph.php', 'laragraph');
 
-        $this->app->singleton('laragraph', function ($app) {
-            return new Laragraph($app);
-        });
+        $this->app->singleton('laragraph', fn($app) => new Laragraph($app));
 
         $this->app->alias('laragraph', Laragraph::class);
 
-        $this->app->singleton(ExtensionRegistry::class, fn () => new ExtensionRegistry());
+        $this->app->singleton(ExtensionRegistry::class, fn(): ExtensionRegistry => new ExtensionRegistry());
 
-        $this->app->singleton(TracingCollector::class, fn () => new TracingCollector());
+        $this->app->singleton(TracingCollector::class, fn(): TracingCollector => new TracingCollector());
 
-        $this->app->singleton(ValidationRuleRegistry::class, function ($app) {
+        $this->app->singleton(ValidationRuleRegistry::class, function ($app): ValidationRuleRegistry {
             $registry = new ValidationRuleRegistry();
 
             foreach ((array) config('laragraph.validation.rules', []) as $rule) {
@@ -56,12 +54,12 @@ class LaragraphServiceProvider extends ServiceProvider
             return $registry;
         });
 
-        $this->app->singleton(PersistedQueryStoreInterface::class, function ($app) {
+        $this->app->singleton(PersistedQueryStoreInterface::class, function ($app): ArrayPersistedQueryStore|CachePersistedQueryStore {
             $driver = config('laragraph.persisted_queries.store', 'cache');
 
             if ($driver === 'array') {
                 return new ArrayPersistedQueryStore(
-                    (array) config('laragraph.persisted_queries.map', [])
+                    (array) config('laragraph.persisted_queries.map', []),
                 );
             }
 
@@ -71,12 +69,10 @@ class LaragraphServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(SubscriberStoreInterface::class, function ($app) {
-            return new CacheSubscriberStore(
-                $app['cache']->store(config('laragraph.subscriptions.cache_store')),
-                (int) config('laragraph.subscriptions.ttl', 3600) ?: null,
-            );
-        });
+        $this->app->singleton(SubscriberStoreInterface::class, fn($app) => new CacheSubscriberStore(
+            $app['cache']->store(config('laragraph.subscriptions.cache_store')),
+            (int) config('laragraph.subscriptions.ttl', 3600) ?: null,
+        ));
     }
 
     /**
@@ -115,7 +111,7 @@ class LaragraphServiceProvider extends ServiceProvider
      */
     public function provides(): array
     {
-        return ['laragraph', \Ayimdomnic\Laragraph\Laragraph::class];
+        return ['laragraph', Laragraph::class];
     }
 
     /**

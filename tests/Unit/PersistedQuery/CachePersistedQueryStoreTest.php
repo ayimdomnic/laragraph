@@ -76,7 +76,7 @@ class CachePersistedQueryStoreTest extends TestCase
     public function test_null_ttl_uses_default(): void
     {
         // null ttl falls back to the constructor default (3600)
-        $this->store->set('q5', '{ orders }', null);
+        $this->store->set('q5', '{ orders }');
         $this->assertSame('{ orders }', $this->store->get('q5'));
     }
 }

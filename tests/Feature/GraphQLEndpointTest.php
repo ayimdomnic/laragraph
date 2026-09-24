@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
-use Ayimdomnic\Laragraph\Exceptions\AuthorizationException;
 use Ayimdomnic\Laragraph\Support\Mutation;
 use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Tests\TestCase;
@@ -17,7 +16,10 @@ use GraphQL\Type\Definition\Type;
 
 class HelloQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -27,7 +29,10 @@ class HelloQuery extends Query
 
 class SecureQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
     {
@@ -42,7 +47,10 @@ class SecureQuery extends Query
 
 class AddMutation extends Mutation
 {
-    public function type(): Type { return Type::int(); }
+    public function type(): Type
+    {
+        return Type::int();
+    }
 
     public function args(): array
     {

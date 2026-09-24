@@ -8,6 +8,8 @@ use Ayimdomnic\Laragraph\Scalars\JsonType;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Error\Error;
 use GraphQL\Language\AST\ListValueNode;
+use GraphQL\Language\AST\NameNode;
+use GraphQL\Language\AST\Node;
 use GraphQL\Language\AST\NodeList;
 use GraphQL\Language\AST\ObjectFieldNode;
 use GraphQL\Language\AST\ObjectValueNode;
@@ -73,7 +75,7 @@ class JsonTypeTest extends TestCase
     public function test_parse_literal_object_node(): void
     {
         $field        = new ObjectFieldNode([]);
-        $field->name  = new \GraphQL\Language\AST\NameNode(['value' => 'key']);
+        $field->name  = new NameNode(['value' => 'key']);
         $field->value = $this->strNode('value');
 
         $node         = new ObjectValueNode([]);
@@ -86,9 +88,15 @@ class JsonTypeTest extends TestCase
     public function test_parse_literal_unknown_node_throws(): void
     {
         $this->expectException(Error::class);
-        $unknown = new class extends \GraphQL\Language\AST\Node {
-            public function __construct() { parent::__construct([]); }
-            public function cloneDeep(): static { return clone $this; }
+        $unknown = new class extends Node {
+            public function __construct()
+            {
+                parent::__construct([]);
+            }
+            public function cloneDeep(): static
+            {
+                return clone $this;
+            }
         };
         $this->scalar->parseLiteral($unknown);
     }

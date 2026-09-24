@@ -9,13 +9,12 @@ use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Tests\TestCase;
-use Mockery;
 
 class BatchProcessorTest extends TestCase
 {
     protected function tearDown(): void
     {
-        Mockery::close();
+        \Mockery::close();
         parent::tearDown();
     }
 
@@ -25,7 +24,7 @@ class BatchProcessorTest extends TestCase
 
     private function mockLaragraph(): Laragraph
     {
-        return Mockery::mock(Laragraph::class);
+        return \Mockery::mock(Laragraph::class);
     }
 
     // -------------------------------------------------------------------------
@@ -174,8 +173,8 @@ class BatchProcessorTest extends TestCase
                 array $variables,
                 ?string $operationName,
                 string $schemaName,
-            ) use (&$captured) {
-                $captured = compact('query', 'variables', 'operationName', 'schemaName');
+            ) use (&$captured): array {
+                $captured = ['query' => $query, 'variables' => $variables, 'operationName' => $operationName, 'schemaName' => $schemaName];
                 return ['data' => []];
             });
 
@@ -197,7 +196,7 @@ class BatchProcessorTest extends TestCase
         $laragraph = $this->mockLaragraph();
         $laragraph->shouldReceive('execute')
             ->once()
-            ->andReturnUsing(function ($q, $ctx, array $vars) use (&$captured) {
+            ->andReturnUsing(function ($q, $ctx, array $vars) use (&$captured): array {
                 $captured['variables'] = $vars;
                 return ['data' => []];
             });
@@ -216,7 +215,7 @@ class BatchProcessorTest extends TestCase
         $laragraph = $this->mockLaragraph();
         $laragraph->shouldReceive('execute')
             ->once()
-            ->andReturnUsing(function ($q, $ctx, array $vars) use (&$captured) {
+            ->andReturnUsing(function ($q, $ctx, array $vars) use (&$captured): array {
                 $captured['variables'] = $vars;
                 return ['data' => [], 'errors' => [['message' => 'Syntax Error']]];
             });
@@ -236,7 +235,7 @@ class BatchProcessorTest extends TestCase
         $laragraph = $this->mockLaragraph();
         $laragraph->shouldReceive('execute')
             ->once()
-            ->andReturnUsing(function (string $query) use (&$captured) {
+            ->andReturnUsing(function (string $query) use (&$captured): array {
                 $captured['query'] = $query;
                 return ['data' => [], 'errors' => [['message' => 'Syntax Error']]];
             });
@@ -256,7 +255,7 @@ class BatchProcessorTest extends TestCase
         $laragraph = $this->mockLaragraph();
         $laragraph->shouldReceive('execute')
             ->once()
-            ->andReturnUsing(function ($q, $ctx, $vars, $op, string $schema) use (&$captured) {
+            ->andReturnUsing(function ($q, $ctx, $vars, $op, string $schema) use (&$captured): array {
                 $captured['schema'] = $schema;
                 return ['data' => []];
             });

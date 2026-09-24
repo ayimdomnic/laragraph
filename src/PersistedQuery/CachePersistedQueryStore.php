@@ -26,13 +26,13 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
  * The cache driver used is taken from `laragraph.cache.response.store` by
  * default, but you may inject any {@see CacheRepository} directly.
  */
-final class CachePersistedQueryStore implements PersistedQueryStoreInterface
+final readonly class CachePersistedQueryStore implements PersistedQueryStoreInterface
 {
     private const PREFIX = 'laragraph_pq:';
 
     public function __construct(
-        private readonly CacheRepository $cache,
-        private readonly ?int $ttl = 3600,
+        private CacheRepository $cache,
+        private ?int $ttl = 3600,
     ) {}
 
     public function get(string $id): ?string

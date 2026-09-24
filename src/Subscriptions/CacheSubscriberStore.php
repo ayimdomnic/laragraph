@@ -16,15 +16,15 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
  * high-throughput deployment may want a Redis-backed set implementation
  * instead — {@see SubscriberStoreInterface} is the extension point for that.
  */
-final class CacheSubscriberStore implements SubscriberStoreInterface
+final readonly class CacheSubscriberStore implements SubscriberStoreInterface
 {
     private const CHANNEL_PREFIX = 'laragraph_sub_channel:';
 
     private const RECORD_PREFIX = 'laragraph_sub_record:';
 
     public function __construct(
-        private readonly CacheRepository $cache,
-        private readonly ?int $ttl = 3600,
+        private CacheRepository $cache,
+        private ?int $ttl = 3600,
     ) {}
 
     public function store(string $channel, string $subscriberId, array $record, ?int $ttl = null): void
@@ -58,7 +58,7 @@ final class CacheSubscriberStore implements SubscriberStoreInterface
             $subscribers[$id] = $record;
         }
 
-        if (!empty($stale)) {
+        if ($stale !== []) {
             $this->cache->put($this->channelKey($channel), array_values(array_diff($ids, $stale)), $this->ttl);
         }
 

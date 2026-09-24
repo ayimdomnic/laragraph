@@ -19,20 +19,38 @@ class FixedExtension implements GraphQLExtensionInterface
         private readonly array $data,
     ) {}
 
-    public function key(): string { return $this->key; }
-    public function get(array $context = []): array { return $this->data; }
+    public function key(): string
+    {
+        return $this->key;
+    }
+    public function get(array $context = []): array
+    {
+        return $this->data;
+    }
 }
 
 class ContextEchoExtension implements GraphQLExtensionInterface
 {
-    public function key(): string { return 'echo'; }
-    public function get(array $context = []): array { return $context; }
+    public function key(): string
+    {
+        return 'echo';
+    }
+    public function get(array $context = []): array
+    {
+        return $context;
+    }
 }
 
 class EmptyExtension implements GraphQLExtensionInterface
 {
-    public function key(): string { return 'empty'; }
-    public function get(array $context = []): array { return []; }
+    public function key(): string
+    {
+        return 'empty';
+    }
+    public function get(array $context = []): array
+    {
+        return [];
+    }
 }
 
 // ---------------------------------------------------------------------------

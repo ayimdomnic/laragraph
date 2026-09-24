@@ -6,8 +6,13 @@ namespace Ayimdomnic\Laragraph\Schema;
 
 use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Support\Field;
+use Ayimdomnic\Laragraph\Support\Mutation;
+use Ayimdomnic\Laragraph\Support\Query;
+use Ayimdomnic\Laragraph\Support\Subscription;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use Illuminate\Contracts\Container\Container;
 
@@ -51,31 +56,31 @@ class SchemaBuilder
 
         // Discovered fields are merged with (and overridden by) explicit config
         $queryFields = $this->buildFields(array_merge(
-            $this->discoverFields('queries', \Ayimdomnic\Laragraph\Support\Query::class),
+            $this->discoverFields('queries', Query::class),
             $config['query'] ?? [],
         ));
-        if (!empty($queryFields)) {
+        if ($queryFields !== []) {
             $schemaConfig['query'] = new ObjectType(['name' => 'Query', 'fields' => $queryFields]);
         }
 
         $mutationFields = $this->buildFields(array_merge(
-            $this->discoverFields('mutations', \Ayimdomnic\Laragraph\Support\Mutation::class),
+            $this->discoverFields('mutations', Mutation::class),
             $config['mutation'] ?? [],
         ));
-        if (!empty($mutationFields)) {
+        if ($mutationFields !== []) {
             $schemaConfig['mutation'] = new ObjectType(['name' => 'Mutation', 'fields' => $mutationFields]);
         }
 
         $subscriptionFields = $this->buildFields(array_merge(
-            $this->discoverFields('subscriptions', \Ayimdomnic\Laragraph\Support\Subscription::class),
+            $this->discoverFields('subscriptions', Subscription::class),
             $config['subscription'] ?? [],
         ));
-        if (!empty($subscriptionFields)) {
+        if ($subscriptionFields !== []) {
             $schemaConfig['subscription'] = new ObjectType(['name' => 'Subscription', 'fields' => $subscriptionFields]);
         }
 
         $schemaConfig['types']      = $this->resolveAllTypeInstances();
-        $schemaConfig['typeLoader'] = fn (string $name): ?\GraphQL\Type\Definition\Type
+        $schemaConfig['typeLoader'] = fn(string $name): ?Type
             => $this->manager->hasType($name) ? $this->manager->type($name) : null;
 
         return $schemaConfig;
@@ -109,13 +114,13 @@ class SchemaBuilder
         $fields = [];
 
         foreach ($fieldClasses as $name => $class) {
-            /** @var \Ayimdomnic\Laragraph\Support\Field $instance */
+            /** @var Field $instance */
             $instance = $this->container->make($class);
             $field    = $instance->toArray();
 
             $cost = $instance->complexity();
             if ($cost !== null) {
-                $field['complexity'] = fn (int $childrenComplexity) => $childrenComplexity + $cost;
+                $field['complexity'] = fn(int $childrenComplexity): int => $childrenComplexity + $cost;
             }
 
             if (config('laragraph.tracing.enabled')) {
@@ -139,7 +144,7 @@ class SchemaBuilder
     {
         // Auto-discover types first, then merge with explicit config (explicit wins)
         $discoveredTypes = Discover::types(
-            (string) config('laragraph.discover.types', '')
+            (string) config('laragraph.discover.types', ''),
         );
 
         foreach (array_merge($discoveredTypes, $typeClasses) as $alias => $class) {
@@ -148,12 +153,12 @@ class SchemaBuilder
     }
 
     /**
-     * @return array<\GraphQL\Type\Definition\Type>
+     * @return array<Type>
      */
     protected function resolveAllTypeInstances(): array
     {
         return array_map(
-            fn (string $name) => $this->manager->type($name),
+            fn(string $name): Type => $this->manager->type($name),
             array_keys($this->manager->getTypes()),
         );
     }

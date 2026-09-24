@@ -94,7 +94,7 @@ class BatchRelationTest extends TestCase
     {
         parent::setUp();
 
-        Schema::create('users', function ($table) {
+        Schema::create('users', function ($table): void {
             $table->id();
             $table->string('name');
             $table->string('email');
@@ -103,7 +103,7 @@ class BatchRelationTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('posts', function ($table) {
+        Schema::create('posts', function ($table): void {
             $table->id();
             $table->foreignId('user_id');
             $table->string('title');

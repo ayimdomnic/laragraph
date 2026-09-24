@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Subscriptions;
 
+use Ayimdomnic\Laragraph\Laragraph;
+
 /**
  * Contract for a subscriber store.
  *
@@ -11,7 +13,7 @@ namespace Ayimdomnic\Laragraph\Subscriptions;
  * subscribers currently registered on it — each subscriber's record carries
  * everything needed to re-execute their original subscription query later
  * (query text, variables, operation name, schema) when
- * {@see \Ayimdomnic\Laragraph\Laragraph::broadcast()} is called.
+ * {@see Laragraph::broadcast()} is called.
  *
  * ## Implementations provided
  *

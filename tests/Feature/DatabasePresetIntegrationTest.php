@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
+use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
 use Ayimdomnic\Laragraph\Scalars\Database\InetType;
+use Ayimdomnic\Laragraph\Scalars\Database\TsvectorType;
 use Ayimdomnic\Laragraph\Scalars\Database\UuidType;
 use Ayimdomnic\Laragraph\Tests\TestCase;
-use Illuminate\Foundation\Application;
 
 /**
  * Integration tests for database preset auto-registration via the service provider.
@@ -41,7 +42,7 @@ class DatabasePresetIntegrationTest extends TestCase
         // Re-run the merge logic manually (simulates a fresh boot with the new config)
         $preset      = config('laragraph.database_types.preset');
         $custom      = config('laragraph.database_types.custom', []);
-        $presetTypes = \Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset::types($preset);
+        $presetTypes = DatabasePreset::types($preset);
 
         config(['laragraph.types' => array_merge(
             config('laragraph.types', []),
@@ -54,4 +55,4 @@ class DatabasePresetIntegrationTest extends TestCase
 }
 
 /** @internal fixture */
-class TsvectorStub extends \Ayimdomnic\Laragraph\Scalars\Database\TsvectorType {}
+class TsvectorStub extends TsvectorType {}

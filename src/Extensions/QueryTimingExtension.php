@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Extensions;
 
+use Ayimdomnic\Laragraph\Laragraph;
+
 /**
  * Reports query execution wall-clock time under `extensions.timing`.
  *
  * The elapsed time is measured from the start of
- * {@see \Ayimdomnic\Laragraph\Laragraph::execute()} to just before the
+ * {@see Laragraph::execute()} to just before the
  * response is built and is passed in via `$context['execution_ms']`.
  *
  * Enable via config:

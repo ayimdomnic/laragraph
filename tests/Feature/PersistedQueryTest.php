@@ -16,7 +16,10 @@ use GraphQL\Type\Definition\Type;
 
 class PqPingQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {

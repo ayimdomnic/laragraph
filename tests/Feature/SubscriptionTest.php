@@ -13,6 +13,7 @@ use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -189,10 +190,8 @@ class SubscriptionTest extends TestCase
 
         $this->assertSame(1, $notified);
 
-        Event::assertDispatched(SubscriptionMessage::class, function (SubscriptionMessage $message) use ($subscriberId) {
-            return $message->subscriberId === $subscriberId
-                && $message->payload['data']['ping'] === 'hello world';
-        });
+        Event::assertDispatched(SubscriptionMessage::class, fn(SubscriptionMessage $message) => $message->subscriberId === $subscriberId
+            && $message->payload['data']['ping'] === 'hello world');
     }
 
     public function test_broadcast_notifies_zero_subscribers_for_an_unknown_channel(): void
@@ -260,14 +259,14 @@ class SubscriptionTest extends TestCase
     {
         config(['laragraph.subscriptions.driver' => 'log']);
 
-        \Illuminate\Support\Facades\Log::shouldReceive('channel')
+        Log::shouldReceive('channel')
             ->once()
             ->with(null)
             ->andReturnSelf();
-        \Illuminate\Support\Facades\Log::shouldReceive('info')
+        Log::shouldReceive('info')
             ->once()
             ->with('GraphQL subscription update', \Mockery::on(
-                fn (array $context) => ($context['payload']['data']['ping'] ?? null) === 'hello world'
+                fn(array $context): bool => ($context['payload']['data']['ping'] ?? null) === 'hello world',
             ));
 
         $this->graphql('subscription { ping }');

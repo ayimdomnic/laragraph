@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Performance;
 
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -89,7 +90,7 @@ final class ResponseCache
     public static function get(string $key): ?array
     {
         /** @var array<mixed>|null */
-        return static::driver()->get($key);
+        return self::driver()->get($key);
     }
 
     /**
@@ -100,7 +101,7 @@ final class ResponseCache
      */
     public static function put(string $key, array $value): void
     {
-        static::driver()->put($key, $value, static::ttl());
+        self::driver()->put($key, $value, self::ttl());
     }
 
     /**
@@ -108,7 +109,7 @@ final class ResponseCache
      */
     public static function forget(string $key): void
     {
-        static::driver()->forget($key);
+        self::driver()->forget($key);
     }
 
     /**
@@ -117,12 +118,10 @@ final class ResponseCache
      * When the store name is 'default' we call Cache::store() with no argument
      * so that Laravel uses whatever driver is set in cache.default — there is
      * no actual store *named* "default" in the cache config.
-     *
-     * @return \Illuminate\Contracts\Cache\Repository
      */
-    private static function driver(): \Illuminate\Contracts\Cache\Repository
+    private static function driver(): Repository
     {
-        $name = static::store();
+        $name = self::store();
 
         return Cache::store($name === 'default' ? null : $name);
     }

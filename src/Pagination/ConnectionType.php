@@ -56,11 +56,10 @@ class ConnectionType extends ObjectType
     // -------------------------------------------------------------------------
     // Helpers — call these from your query resolvers
     // -------------------------------------------------------------------------
-
     /**
      * Standard cursor-pagination arguments to add to a query's args().
      *
-     * @return array<string, array{type: \GraphQL\Type\Definition\Type, description: string}>
+     * @return array<string, array{type: Type, description: string}>
      */
     public static function args(): array
     {
@@ -76,7 +75,6 @@ class ConnectionType extends ObjectType
      * Paginate an Eloquent builder using cursor (offset-encoded) pagination
      * and return a Connection-shaped array.
      *
-     * @param  object  $query
      * @param  array<string, mixed>  $args
      * @return array{edges: array<int, array{node: mixed, cursor: string}>, pageInfo: array<string, mixed>}
      */
@@ -97,7 +95,7 @@ class ConnectionType extends ObjectType
         $offset    = ($page - 1) * $perPage;
 
         $edges = array_map(
-            fn (mixed $item, int $index) => [
+            fn(mixed $item, int $index): array => [
                 'node'   => $item,
                 'cursor' => self::encodeCursor($offset + $index + 1),
             ],
@@ -110,8 +108,8 @@ class ConnectionType extends ObjectType
             'pageInfo' => [
                 'hasNextPage'     => $paginator->hasMorePages(),
                 'hasPreviousPage' => $page > 1,
-                'startCursor'     => !empty($edges) ? $edges[0]['cursor'] : null,
-                'endCursor'       => !empty($edges) ? $edges[array_key_last($edges)]['cursor'] : null,
+                'startCursor'     => $edges !== [] ? $edges[0]['cursor'] : null,
+                'endCursor'       => $edges !== [] ? $edges[array_key_last($edges)]['cursor'] : null,
                 'total'           => $total,
             ],
         ];
@@ -122,7 +120,6 @@ class ConnectionType extends ObjectType
      *
      * Returns the standard simple paginator format.
      *
-     * @param  object  $query
      * @param  array<string, mixed>  $args
      * @return array{data: array<mixed>, total: int, per_page: int, current_page: int, last_page: int, has_more_pages: bool}
      */

@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
+use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\LaragraphServiceProvider;
 use Ayimdomnic\Laragraph\Support\Mutation;
 use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Tests\TestCase;
+use GraphQL\Error\Error;
+use GraphQL\Language\AST\Node;
 use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Http\UploadedFile;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -22,7 +28,10 @@ class NoNameClassFixture
 
 class ValidatedMutation extends Mutation
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function args(): array
     {
@@ -58,7 +67,10 @@ class ValidatedMutation extends Mutation
 
 class AuthDeniedQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
     {
@@ -73,7 +85,10 @@ class AuthDeniedQuery extends Query
 
 class ResolverErrorQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
         throw new \RuntimeException('Something blew up.');
@@ -170,10 +185,10 @@ class ValidationAndErrorTest extends TestCase
 
     public function test_handle_errors_maps_formatter_over_errors(): void
     {
-        $errors    = [new \GraphQL\Error\Error('one'), new \GraphQL\Error\Error('two')];
-        $formatted = \Ayimdomnic\Laragraph\Laragraph::handleErrors(
+        $errors    = [new Error('one'), new Error('two')];
+        $formatted = Laragraph::handleErrors(
             $errors,
-            fn (\GraphQL\Error\Error $e) => ['message' => $e->getMessage()],
+            fn(Error $e): array => ['message' => $e->getMessage()],
         );
 
         $this->assertCount(2, $formatted);
@@ -187,14 +202,23 @@ class ValidationAndErrorTest extends TestCase
 
     public function test_add_type_with_instance_stores_by_name(): void
     {
-        $typeInstance = new class extends \GraphQL\Type\Definition\ScalarType {
+        $typeInstance = new class extends ScalarType {
             public string $name = 'MyScalar';
-            public function serialize(mixed $value): mixed { return $value; }
-            public function parseValue(mixed $value): mixed { return $value; }
-            public function parseLiteral(\GraphQL\Language\AST\Node $valueNode, ?array $variables = null): mixed { return null; }
+            public function serialize(mixed $value): mixed
+            {
+                return $value;
+            }
+            public function parseValue(mixed $value): mixed
+            {
+                return $value;
+            }
+            public function parseLiteral(Node $valueNode, ?array $variables = null): mixed
+            {
+                return null;
+            }
         };
 
-        /** @var \Ayimdomnic\Laragraph\Laragraph $manager */
+        /** @var Laragraph $manager */
         $manager = $this->app->make('laragraph');
         $manager->addType($typeInstance);
 
@@ -210,9 +234,9 @@ class ValidationAndErrorTest extends TestCase
         $class = new class {
             public const NAME = 'ConstantName';
         };
-        $className = get_class($class);
+        $className = $class::class;
 
-        /** @var \Ayimdomnic\Laragraph\Laragraph $manager */
+        /** @var Laragraph $manager */
         $manager = $this->app->make('laragraph');
         $manager->addType($className);
         $this->assertTrue($manager->hasType('ConstantName'));
@@ -223,9 +247,9 @@ class ValidationAndErrorTest extends TestCase
         // Call addType without an explicit alias so resolveTypeName() is invoked.
         // The class has neither a NAME constant nor a $name property →
         // resolveTypeName() falls through to class_basename().
-        /** @var \Ayimdomnic\Laragraph\Laragraph $manager */
+        /** @var Laragraph $manager */
         $manager = $this->app->make('laragraph');
-        $manager->addType(\Ayimdomnic\Laragraph\Tests\Feature\NoNameClassFixture::class);
+        $manager->addType(NoNameClassFixture::class);
         $this->assertTrue($manager->hasType('NoNameClassFixture'));
     }
 
@@ -235,11 +259,11 @@ class ValidationAndErrorTest extends TestCase
 
     public function test_service_provider_provides_correct_bindings(): void
     {
-        $provider = new \Ayimdomnic\Laragraph\LaragraphServiceProvider($this->app);
+        $provider = new LaragraphServiceProvider($this->app);
         $provides  = $provider->provides();
 
         $this->assertContains('laragraph', $provides);
-        $this->assertContains(\Ayimdomnic\Laragraph\Laragraph::class, $provides);
+        $this->assertContains(Laragraph::class, $provides);
     }
 
     // -------------------------------------------------------------------------
@@ -267,7 +291,7 @@ class ValidationAndErrorTest extends TestCase
 
     public function test_multipart_request_with_file_map_is_parsed(): void
     {
-        $file = \Illuminate\Http\UploadedFile::fake()->create('doc.pdf', 10);
+        $file = UploadedFile::fake()->create('doc.pdf', 10);
 
         // 6th arg = $server — sets Content-Type to trigger parseMultipartRequest()
         $response = $this->call(

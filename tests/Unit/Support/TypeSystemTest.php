@@ -10,7 +10,7 @@ use Ayimdomnic\Laragraph\Support\InterfaceType;
 use Ayimdomnic\Laragraph\Support\Type;
 use Ayimdomnic\Laragraph\Support\UnionType;
 use Ayimdomnic\Laragraph\Tests\TestCase;
-use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type as GType;
 
 // ---------------------------------------------------------------------------
@@ -44,27 +44,42 @@ class CreatePostInput extends InputType
 class NodeInterface extends InterfaceType
 {
     protected array $attributes = ['name' => 'Node', 'description' => 'Global ID node.'];
-    public function fields(): array { return ['id' => ['type' => GType::nonNull(GType::id())]]; }
-    public function resolveType(mixed $value, mixed $context, \GraphQL\Type\Definition\ResolveInfo $info): mixed { return null; }
+    public function fields(): array
+    {
+        return ['id' => ['type' => GType::nonNull(GType::id())]];
+    }
+    public function resolveType(mixed $value, mixed $context, ResolveInfo $info): mixed
+    {
+        return null;
+    }
 }
 
 /** Subclass that relies on the *default* (non-overridden) resolveType. */
 class NodeInterfaceDefault extends InterfaceType
 {
     protected array $attributes = ['name' => 'NodeDefault'];
-    public function fields(): array { return ['id' => ['type' => GType::nonNull(GType::id())]]; }
+    public function fields(): array
+    {
+        return ['id' => ['type' => GType::nonNull(GType::id())]];
+    }
 }
 
 class ArticleType extends Type
 {
     protected array $attributes = ['name' => 'Article'];
-    public function fields(): array { return ['id' => ['type' => GType::id()]]; }
+    public function fields(): array
+    {
+        return ['id' => ['type' => GType::id()]];
+    }
 }
 
 class VideoType extends Type
 {
     protected array $attributes = ['name' => 'Video'];
-    public function fields(): array { return ['id' => ['type' => GType::id()]]; }
+    public function fields(): array
+    {
+        return ['id' => ['type' => GType::id()]];
+    }
 }
 
 class MediaUnion extends UnionType
@@ -74,14 +89,20 @@ class MediaUnion extends UnionType
     {
         return [new ArticleType(), new VideoType()];
     }
-    public function resolveType(mixed $value, mixed $context, \GraphQL\Type\Definition\ResolveInfo $info): mixed { return null; }
+    public function resolveType(mixed $value, mixed $context, ResolveInfo $info): mixed
+    {
+        return null;
+    }
 }
 
 /** Subclass that relies on the *default* (non-overridden) resolveType. */
 class MediaUnionDefault extends UnionType
 {
     protected array $attributes = ['name' => 'MediaDefault'];
-    public function types(): array { return [new ArticleType(), new VideoType()]; }
+    public function types(): array
+    {
+        return [new ArticleType(), new VideoType()];
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -137,13 +158,13 @@ class TypeSystemTest extends TestCase
     public function test_interface_type_resolve_type_returns_null_by_default(): void
     {
         $iface = new NodeInterface();
-        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createMock(\GraphQL\Type\Definition\ResolveInfo::class)));
+        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
     }
 
     public function test_interface_type_parent_resolve_type_returns_null(): void
     {
         $iface = new NodeInterfaceDefault();
-        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createMock(\GraphQL\Type\Definition\ResolveInfo::class)));
+        $this->assertNull($iface->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
     }
 
     // UnionType
@@ -156,13 +177,13 @@ class TypeSystemTest extends TestCase
     public function test_union_type_resolve_type_returns_null_by_default(): void
     {
         $union = new MediaUnion();
-        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createMock(\GraphQL\Type\Definition\ResolveInfo::class)));
+        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
     }
 
     public function test_union_type_parent_resolve_type_returns_null(): void
     {
         $union = new MediaUnionDefault();
-        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createMock(\GraphQL\Type\Definition\ResolveInfo::class)));
+        $this->assertNull($union->resolveType(new \stdClass(), null, $this->createMock(ResolveInfo::class)));
     }
 
     // Type — shorthand field registration
@@ -170,7 +191,10 @@ class TypeSystemTest extends TestCase
     {
         $typeClass = new class extends Type {
             protected array $attributes = ['name' => 'Shorthand'];
-            public function fields(): array { return ['title' => GType::string()]; }
+            public function fields(): array
+            {
+                return ['title' => GType::string()];
+            }
         };
 
         $fields = $typeClass->getFields();
@@ -182,8 +206,14 @@ class TypeSystemTest extends TestCase
     {
         $typeClass = new class extends Type {
             protected array $attributes = ['name' => 'WithResolver'];
-            public function fields(): array { return ['name' => ['type' => GType::string()]]; }
-            protected function resolveNameField(mixed $root, array $args): string { return 'resolved'; }
+            public function fields(): array
+            {
+                return ['name' => ['type' => GType::string()]];
+            }
+            protected function resolveNameField(mixed $root, array $args): string
+            {
+                return 'resolved';
+            }
         };
 
         $fields = $typeClass->getFields();

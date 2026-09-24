@@ -10,6 +10,7 @@ use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionRegistrar;
+use Ayimdomnic\Laragraph\Support\Subscription;
 use GraphQL\Language\AST\OperationDefinitionNode;
 use GraphQL\Language\Parser;
 use Illuminate\Http\JsonResponse;
@@ -143,7 +144,7 @@ class LaragraphController extends BaseController
      * (via Laragraph::execute(), with `subscribing` flagged on the context)
      * so a subscription request is authorized exactly like any other field,
      * but the field's `handleField()` calls `subscribe()` rather than
-     * `resolve()` — see {@see \Ayimdomnic\Laragraph\Support\Subscription}.
+     * `resolve()` — see {@see Subscription}.
      *
      * @return array<string, mixed>
      */
@@ -230,7 +231,7 @@ class LaragraphController extends BaseController
         $body = $request->json()->all();
 
         if (empty($body)) {
-            $body = $request->all();
+            return $request->all();
         }
 
         return $body;

@@ -9,7 +9,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 
 /**
  * Broadcast to a single subscriber's private channel when
- * {@see \Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager::broadcast()}
+ * {@see SubscriptionManager::broadcast()}
  * re-executes their subscription query.
  *
  * Dispatched via Laravel's broadcasting system (`event()`), so delivery uses
@@ -23,15 +23,15 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
  *     .listen('.GraphQLSubscriptionUpdate', (payload) => { ... });
  * ```
  */
-final class SubscriptionMessage implements ShouldBroadcastNow
+final readonly class SubscriptionMessage implements ShouldBroadcastNow
 {
     /**
      * @param  array<string, mixed>  $payload  The re-executed GraphQL result ({data, errors}).
      */
     public function __construct(
-        public readonly string $subscriberId,
-        public readonly array $payload,
-        private readonly string $channelPrefix = 'graphql-subscriber',
+        public string $subscriberId,
+        public array $payload,
+        private string $channelPrefix = 'graphql-subscriber',
     ) {}
 
     public function broadcastOn(): PrivateChannel

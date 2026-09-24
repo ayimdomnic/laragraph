@@ -38,7 +38,7 @@ class InetType extends ScalarType
             throw new Error('Inet must be a string, got: ' . gettype($value));
         }
 
-        $host = strpos($value, '/') !== false
+        $host = str_contains($value, '/')
             ? explode('/', $value, 2)[0]
             : $value;
 

@@ -37,9 +37,7 @@ final class RequestIdExtension implements GraphQLExtensionInterface
      */
     public function get(array $context = []): array
     {
-        if ($this->id === null) {
-            $this->id = request()->header('X-Request-ID') ?: (string) Str::uuid();
-        }
+        $this->id ??= request()->header('X-Request-ID') ?: (string) Str::uuid();
 
         return ['id' => $this->id];
     }

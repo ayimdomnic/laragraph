@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Console;
 
+use Ayimdomnic\Laragraph\Console\ScaffoldCommand;
 use Ayimdomnic\Laragraph\Tests\TestCase;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\File;
 
 // ---------------------------------------------------------------------------
 // Fake model for scaffolding — avoids any DB/migration dependency
 // ---------------------------------------------------------------------------
 
-class FakeScaffoldModel extends \Illuminate\Database\Eloquent\Model
+class FakeScaffoldModel extends Model
 {
     protected $table    = 'fake_scaffold_models';
     protected $fillable = ['name', 'email', 'age', 'is_admin', 'score', 'meta', 'birth_date', 'created_at'];
@@ -26,11 +28,11 @@ class FakeScaffoldModel extends \Illuminate\Database\Eloquent\Model
 }
 
 /** Model whose constructor throws — exercises the catch(\Throwable) branch in extractFields(). */
-class ThrowingScaffoldModel extends \Illuminate\Database\Eloquent\Model
+class ThrowingScaffoldModel extends Model
 {
     protected $table = 'throwing_models';
 
-    public function __construct(array $attributes = [])
+    public function __construct()
     {
         throw new \RuntimeException('Intentional constructor failure for test coverage.');
     }
@@ -246,7 +248,7 @@ PHP);
     {
         // Create a stub config file in the testbench app's config dir
         $configPath = config_path('laragraph.php');
-        \Illuminate\Support\Facades\File::ensureDirectoryExists(dirname($configPath));
+        File::ensureDirectoryExists(dirname($configPath));
         file_put_contents($configPath, "<?php\nreturn [];\n");
 
         $this->artisan('laragraph:scaffold', [
@@ -263,10 +265,9 @@ PHP);
 
     public function test_render_throws_for_missing_stub(): void
     {
-        $command = new \Ayimdomnic\Laragraph\Console\ScaffoldCommand();
+        $command = new ScaffoldCommand();
         $reflect = new \ReflectionClass($command);
         $method  = $reflect->getMethod('render');
-        $method->setAccessible(true);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/stub \[nonexistent.stub\] not found/');

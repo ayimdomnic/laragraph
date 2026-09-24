@@ -11,13 +11,13 @@ class HelpersTest extends TestCase
 {
     public function test_apply_each_with_scalar(): void
     {
-        $result = Helpers::applyEach(fn ($v) => $v * 2, 5);
+        $result = Helpers::applyEach(fn($v): int|float => $v * 2, 5);
         $this->assertSame(10, $result);
     }
 
     public function test_apply_each_with_array(): void
     {
-        $result = Helpers::applyEach(fn ($v) => $v . '!', ['a', 'b', 'c']);
+        $result = Helpers::applyEach(fn($v): string => $v . '!', ['a', 'b', 'c']);
         $this->assertSame(['a!', 'b!', 'c!'], $result);
     }
 
@@ -28,14 +28,14 @@ class HelpersTest extends TestCase
             yield 'y' => 2;
         })();
 
-        $result = Helpers::applyEach(fn ($v) => $v + 10, $gen);
+        $result = Helpers::applyEach(fn($v): int|float => $v + 10, $gen);
 
         $this->assertSame(['x' => 11, 'y' => 12], $result);
     }
 
     public function test_apply_each_with_empty_array(): void
     {
-        $result = Helpers::applyEach(fn ($v) => $v, []);
+        $result = Helpers::applyEach(fn($v) => $v, []);
         $this->assertSame([], $result);
     }
 }

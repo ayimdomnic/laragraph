@@ -16,9 +16,9 @@ use Ayimdomnic\Laragraph\Extensions\GraphQLExtensionInterface;
  * 'tracing' => ['enabled' => true],
  * ```
  */
-final class TracingExtension implements GraphQLExtensionInterface
+final readonly class TracingExtension implements GraphQLExtensionInterface
 {
-    public function __construct(private readonly TracingCollector $collector) {}
+    public function __construct(private TracingCollector $collector) {}
 
     public function key(): string
     {
@@ -44,7 +44,7 @@ final class TracingExtension implements GraphQLExtensionInterface
             'duration'  => $durationNs,
             'execution' => [
                 'resolvers' => array_map(
-                    static fn (array $span): array => [
+                    static fn(array $span): array => [
                         'path'        => $span['path'],
                         'parentType'  => $span['parentType'],
                         'fieldName'   => $span['fieldName'],

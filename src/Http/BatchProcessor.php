@@ -43,12 +43,12 @@ class BatchProcessor
         }
 
         return array_values(array_map(
-            fn (array $op) => $this->laragraph->execute(
-                query:         (string) ($op['query'] ?? ''),
-                context:       $context,
-                variables:     is_array($op['variables'] ?? null) ? $op['variables'] : [],
+            fn(array $op): array => $this->laragraph->execute(
+                query: (string) ($op['query'] ?? ''),
+                context: $context,
+                variables: is_array($op['variables'] ?? null) ? $op['variables'] : [],
                 operationName: isset($op['operationName']) ? (string) $op['operationName'] : null,
-                schemaName:    $schemaName,
+                schemaName: $schemaName,
             ),
             $operations,
         ));

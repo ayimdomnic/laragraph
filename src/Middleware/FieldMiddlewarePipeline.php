@@ -13,10 +13,10 @@ use GraphQL\Type\Definition\ResolveInfo;
  * Middleware run in declared order: the first element is the outermost wrapper
  * (it runs before all others and sees the return value of all others).
  */
-final class FieldMiddlewarePipeline
+final readonly class FieldMiddlewarePipeline
 {
     /** @param list<FieldMiddlewareInterface> $middleware */
-    public function __construct(private readonly array $middleware) {}
+    public function __construct(private array $middleware) {}
 
     /**
      * Run the middleware stack and ultimately invoke `$resolver`.
@@ -32,10 +32,8 @@ final class FieldMiddlewarePipeline
     ): mixed {
         $pipeline = array_reduce(
             array_reverse($this->middleware),
-            static function (callable $carry, FieldMiddlewareInterface $mw) use ($root, $args, $context, $info): callable {
-                return static fn () => $mw->handle($root, $args, $context, $info, $carry);
-            },
-            static fn () => $resolver($root, $args, $context, $info),
+            static fn(callable $carry, FieldMiddlewareInterface $mw): callable => static fn(): mixed => $mw->handle($root, $args, $context, $info, $carry),
+            static fn() => $resolver($root, $args, $context, $info),
         );
 
         return ($pipeline)();

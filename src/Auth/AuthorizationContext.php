@@ -52,9 +52,7 @@ final class AuthorizationContext
      */
     public function guard(): Guard
     {
-        if ($this->resolvedGuard === null) {
-            $this->resolvedGuard = auth()->guard($this->guardName);
-        }
+        $this->resolvedGuard ??= auth()->guard($this->guardName);
 
         return $this->resolvedGuard;
     }
@@ -84,7 +82,7 @@ final class AuthorizationContext
     {
         $user = $this->user();
 
-        if ($user === null) {
+        if (!$user instanceof Authenticatable) {
             return false;
         }
 
