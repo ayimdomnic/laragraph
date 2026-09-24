@@ -19,7 +19,7 @@ use Ayimdomnic\Laragraph\Laragraph;
  *
  * - {@see CacheSubscriberStore} — backed by any Laravel cache driver
  *
- * @phpstan-type SubscriberRecord array{query: string, variables: array<string, mixed>, operationName: ?string, schemaName: string}
+ * @phpstan-type SubscriberRecord array{query: string, variables: array<string, mixed>, operationName: ?string, schemaName: string, auth?: array{guard: string, id: int|string|null, type?: class-string|null}}
  */
 interface SubscriberStoreInterface
 {

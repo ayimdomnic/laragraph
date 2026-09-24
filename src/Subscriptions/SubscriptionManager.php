@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Subscriptions;
 
 use Ayimdomnic\Laragraph\Controllers\LaragraphController;
+use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Support\Subscription;
 use GraphQL\Error\DebugFlag;
+use GraphQL\Executor\ExecutionResult;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -27,10 +29,14 @@ final readonly class SubscriptionManager
     public function __construct(
         private SubscriberStoreInterface $store,
         private Laragraph $laragraph,
+        private SubscriberSandbox $sandbox,
     ) {}
 
     /**
      * Register a new subscriber on one or more channels.
+     *
+     * The identity of the user making the current request is stored with the
+     * subscriber, so later updates are resolved — and authorized — as them.
      *
      * @param  mixed  $channel  A channel name, or a list of channel names —
      *   whatever {@see Subscription::subscribe()} returned.
@@ -39,9 +45,10 @@ final readonly class SubscriptionManager
      */
     public function register(mixed $channel, array $record): string
     {
-        $subscriberId = (string) Str::uuid();
-        $ttl          = config('laragraph.subscriptions.ttl');
-        $ttl          = $ttl !== null ? (int) $ttl : null;
+        $subscriberId   = (string) Str::uuid();
+        $record['auth'] ??= $this->sandbox->currentIdentity();
+        $ttl            = config('laragraph.subscriptions.ttl');
+        $ttl            = $ttl !== null ? (int) $ttl : null;
 
         foreach ($this->normalizeChannels($channel) as $ch) {
             $this->store->store($ch, $subscriberId, $record, $ttl);
@@ -55,6 +62,10 @@ final readonly class SubscriptionManager
      * $payload as the root value, and push each result to that subscriber's
      * private channel.
      *
+     * Each query runs authenticated as its subscriber — never as whoever
+     * called broadcast() — see {@see SubscriberSandbox}. Subscribers whose
+     * user no longer exists are removed from the channel.
+     *
      * @return int  The number of subscribers notified.
      */
     public function broadcast(string $channel, mixed $payload = null): int
@@ -62,16 +73,20 @@ final readonly class SubscriptionManager
         $count = 0;
 
         foreach ($this->store->subscribers($channel) as $subscriberId => $record) {
-            $context = (object) ['subscribing' => false];
-
-            $result = $this->laragraph->executeQuery(
+            $result = $this->sandbox->run($record['auth'] ?? null, fn(GraphQLContext $context): ExecutionResult => $this->laragraph->executeQuery(
                 query: $record['query'],
                 context: $context,
                 variables: $record['variables'],
                 operationName: $record['operationName'],
                 schemaName: $record['schemaName'],
                 rootValue: $payload,
-            );
+            ));
+
+            if ($result === null) {
+                $this->store->forget($channel, $subscriberId);
+
+                continue;
+            }
 
             $debug = config('app.debug')
                 ? DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE

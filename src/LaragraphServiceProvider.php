@@ -21,10 +21,12 @@ use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
 use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Composer\InstalledVersions;
+use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 
@@ -87,6 +89,7 @@ class LaragraphServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->mergePresetTypes();
+        $this->authorizeSubscriberChannels();
 
         $this->loadRoutesFrom(__DIR__ . '/routes.php');
         $this->loadViewsFrom(__DIR__ . '/views', 'laragraph');
@@ -120,6 +123,24 @@ class LaragraphServiceProvider extends ServiceProvider
 
             AboutCommand::add('Laragraph', $this->aboutInformation(...));
         }
+    }
+
+    /**
+     * Only the user who created a subscription may listen on its private
+     * channel. Registered when the broadcaster is first resolved, so apps
+     * that never broadcast are unaffected.
+     */
+    protected function authorizeSubscriberChannels(): void
+    {
+        if (!config('laragraph.subscriptions.enabled') || !config('laragraph.subscriptions.authorize_channel', true)) {
+            return;
+        }
+
+        $this->callAfterResolving(BroadcastManager::class, static function (BroadcastManager $broadcast): void {
+            $prefix = (string) config('laragraph.subscriptions.channel_prefix', 'graphql-subscriber');
+
+            $broadcast->channel($prefix . '.{subscriberId}', SubscriberChannel::class);
+        });
     }
 
     /**
