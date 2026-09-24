@@ -28,7 +28,7 @@ use GraphQL\Type\Definition\UnionType as GraphQLUnionType;
  *           ];
  *       }
  *
- *       public function resolveType(mixed $value): mixed
+ *       public function resolveType(mixed $value, mixed $context, ResolveInfo $info): mixed
  *       {
  *           return $value instanceof \App\Models\User
  *               ? app('laragraph')->type('User')

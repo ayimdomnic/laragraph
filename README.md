@@ -262,7 +262,7 @@ while `app.debug` is on — never in production.
 | `laragraph:make:query UsersQuery` | `app/GraphQL/Queries/UsersQuery.php` |
 | `laragraph:make:mutation CreateUserMutation` | `app/GraphQL/Mutations/CreateUserMutation.php` |
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
-| `laragraph:make:input CreateUserInput` | `app/GraphQL/Inputs/CreateUserInput.php` |
+| `laragraph:make:input CreateUserInput` | `app/GraphQL/Types/Inputs/CreateUserInput.php` |
 | `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model — deny-by-default (see below) |
 | `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
 
