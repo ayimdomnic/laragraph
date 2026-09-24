@@ -231,6 +231,7 @@ return [
             'enabled' => false,
             'store'   => 'default',
             'ttl'     => 60,
+            'scope'   => 'user',
         ],
     ],
 
@@ -259,6 +260,16 @@ return [
     |       'GetAllUsers' => '{ users { id name } }',
     |   ],
     |
+    | apq — Automatic Persisted Queries: when a client sends the full query
+    |   together with its sha256Hash, the query is stored so later requests
+    |   can send the hash alone. Mismatched hashes are rejected.
+    |
+    | only — Trusted-documents mode: execute query text only if it is already
+    |   in the store under its SHA-256 hash; everything else is rejected with
+    |   PERSISTED_QUERY_REQUIRED. Pair it with the 'array' store (or a cache
+    |   store you pre-populate at deploy time) to lock the API down to the
+    |   operations your own clients ship.
+    |
     | Clients may send the ID via:
     |   { "queryId": "<id>", "variables": {} }
     | Or the Apollo APQ format:
@@ -270,6 +281,8 @@ return [
         'store'   => 'cache',
         'ttl'     => 3600,
         'map'     => [],
+        'apq'     => true,
+        'only'    => false,
     ],
 
     /*

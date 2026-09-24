@@ -194,6 +194,18 @@ class SubscriptionTest extends TestCase
             && $message->payload['data']['ping'] === 'hello world');
     }
 
+    public function test_broadcast_omits_debug_details_when_debug_is_off(): void
+    {
+        Event::fake([SubscriptionMessage::class]);
+        config(['app.debug' => false]);
+
+        $this->graphql('subscription { ping }');
+
+        $this->assertSame(1, Laragraph::broadcast('pings', 'quiet'));
+
+        Event::assertDispatched(SubscriptionMessage::class, fn(SubscriptionMessage $message): bool => $message->payload['data']['ping'] === 'quiet');
+    }
+
     public function test_broadcast_notifies_zero_subscribers_for_an_unknown_channel(): void
     {
         Event::fake([SubscriptionMessage::class]);

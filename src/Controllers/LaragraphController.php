@@ -6,14 +6,14 @@ namespace Ayimdomnic\Laragraph\Controllers;
 
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
+use Ayimdomnic\Laragraph\Exceptions\RequestException;
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionRegistrar;
+use Ayimdomnic\Laragraph\Support\Operation;
 use Ayimdomnic\Laragraph\Support\Subscription;
-use GraphQL\Language\AST\OperationDefinitionNode;
-use GraphQL\Language\Parser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -26,10 +26,18 @@ use Illuminate\Routing\Controller as BaseController;
  */
 class LaragraphController extends BaseController
 {
+    /** The GraphQL-over-HTTP response media type. */
+    public const GRAPHQL_RESPONSE_MEDIA_TYPE = 'application/graphql-response+json';
+
     public function __construct(protected readonly Laragraph $laragraph) {}
 
     /**
      * Execute a GraphQL query / mutation.
+     *
+     * Follows the GraphQL-over-HTTP specification: clients that send
+     * `Accept: application/graphql-response+json` receive that media type and
+     * a 4xx status whenever the request fails before execution; others get
+     * `application/json` with the traditional always-200 behaviour.
      */
     public function query(Request $request, string $schemaName = 'default'): JsonResponse
     {
@@ -40,15 +48,19 @@ class LaragraphController extends BaseController
             try {
                 $results = $this->laragraph->executeBatch($parsed, $request, $schemaName);
             } catch (BatchingDisabledException|BatchLimitExceededException $e) {
-                return response()->json(
-                    ['errors' => [['message' => $e->getMessage()]]],
-                    400,
-                );
+                return $this->respond($request, ['errors' => [['message' => $e->getMessage()]]], 400);
             }
-            return response()->json($results);
+
+            return $this->respond($request, $results, 200);
         }
 
-        return response()->json($this->executeOne($parsed, $request, $schemaName));
+        try {
+            $result = $this->executeOne($parsed, $request, $schemaName);
+        } catch (RequestException $e) {
+            return $this->respond($request, $e->toResponse(), $e->status, $e->headers);
+        }
+
+        return $this->respond($request, $result);
     }
 
     /**
@@ -69,29 +81,25 @@ class LaragraphController extends BaseController
     // Internals
     // -------------------------------------------------------------------------
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     *
+     * @throws RequestException When the request is rejected before execution.
+     */
     protected function executeOne(array $data, Request $request, string $schemaName): array
     {
         $query         = (string) ($data['query'] ?? '');
         $variables     = $this->castVariables($data['variables'] ?? null);
         $operationName = isset($data['operationName']) ? (string) $data['operationName'] : null;
 
-        // Persisted query resolution: swap a query ID for its full text
-        if ($query === '' && config('laragraph.persisted_queries.enabled', false)) {
-            $queryId = $data['queryId']
-                ?? $data['extensions']['persistedQuery']['sha256Hash']
-                ?? null;
+        if (config('laragraph.persisted_queries.enabled', false)) {
+            $query = $this->resolvePersistedQuery($query, $data);
+        }
 
-            if ($queryId !== null) {
-                /** @var PersistedQueryStoreInterface $store */
-                $store       = app(PersistedQueryStoreInterface::class);
-                $resolvedQuery = $store->get((string) $queryId);
-
-                if ($resolvedQuery === null) {
-                    return ['errors' => [['message' => 'PersistedQueryNotFound: ' . $queryId]]];
-                }
-
-                $query = $resolvedQuery;
-            }
+        // GraphQL-over-HTTP: GET must never execute a mutation (it would be CSRF-able).
+        if ($request->isMethod('GET') && Operation::isMutation($query, $operationName)) {
+            throw RequestException::methodNotAllowed();
         }
 
         if ($query !== '' && $this->isSubscriptionOperation($query, $operationName)) {
@@ -108,6 +116,55 @@ class LaragraphController extends BaseController
     }
 
     /**
+     * Resolve the query text for a request when persisted queries are enabled.
+     *
+     * - `queryId` or the APQ `extensions.persistedQuery.sha256Hash` alone
+     *   looks the query up in the store.
+     * - APQ registration: a full query *plus* its SHA-256 hash stores it for
+     *   subsequent hash-only requests (unless `persisted_queries.only` is on).
+     * - `persisted_queries.only` turns the store into an allow-list: query
+     *   text is executed only when it is already stored under its hash.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @throws RequestException
+     */
+    protected function resolvePersistedQuery(string $query, array $data): string
+    {
+        /** @var PersistedQueryStoreInterface $store */
+        $store   = app(PersistedQueryStoreInterface::class);
+        $only    = (bool) config('laragraph.persisted_queries.only', false);
+        $queryId = $data['queryId'] ?? $data['extensions']['persistedQuery']['sha256Hash'] ?? null;
+        $queryId = is_scalar($queryId) ? (string) $queryId : null;
+
+        if ($query === '') {
+            if ($queryId === null) {
+                return $query;
+            }
+
+            return $store->get($queryId) ?? throw RequestException::persistedQueryNotFound();
+        }
+
+        $hash = hash('sha256', $query);
+
+        if ($only) {
+            return $store->has($hash) ? $query : throw RequestException::persistedQueryRequired();
+        }
+
+        if ($queryId !== null && isset($data['extensions']['persistedQuery'])) {
+            if (!hash_equals($hash, strtolower($queryId))) {
+                throw RequestException::persistedQueryHashMismatch();
+            }
+
+            if (config('laragraph.persisted_queries.apq', true)) {
+                $store->set($hash, $query);
+            }
+        }
+
+        return $query;
+    }
+
+    /**
      * Whether $query's (matching) operation is a `subscription`.
      *
      * webonyx/graphql-php has no dedicated subscription-execution entrypoint
@@ -116,26 +173,30 @@ class LaragraphController extends BaseController
      */
     protected function isSubscriptionOperation(string $query, ?string $operationName): bool
     {
-        try {
-            $document = Parser::parse($query);
-        } catch (\Throwable) {
-            // Let normal execution run and surface the syntax error as usual.
-            return false;
+        return Operation::isSubscription($query, $operationName);
+    }
+
+    /**
+     * Serialise a result, negotiating the GraphQL-over-HTTP response media type.
+     *
+     * @param array<mixed>          $result
+     * @param array<string, string> $headers
+     */
+    protected function respond(Request $request, array $result, ?int $status = null, array $headers = []): JsonResponse
+    {
+        $graphqlResponse = str_contains(
+            strtolower((string) $request->header('Accept', '')),
+            self::GRAPHQL_RESPONSE_MEDIA_TYPE,
+        );
+
+        if ($graphqlResponse) {
+            $headers['Content-Type'] = self::GRAPHQL_RESPONSE_MEDIA_TYPE . '; charset=utf-8';
+
+            // No `data` entry means the request failed before execution began.
+            $status ??= array_key_exists('data', $result) || array_is_list($result) ? 200 : 400;
         }
 
-        foreach ($document->definitions as $definition) {
-            if (!$definition instanceof OperationDefinitionNode) {
-                continue;
-            }
-
-            if ($operationName !== null && $definition->name?->value !== $operationName) {
-                continue;
-            }
-
-            return $definition->operation === 'subscription';
-        }
-
-        return false;
+        return response()->json($result, $status ?? 200, $headers);
     }
 
     /**
@@ -216,6 +277,8 @@ class LaragraphController extends BaseController
                 'query'         => $request->query('query', ''),
                 'variables'     => $request->query('variables'),
                 'operationName' => $request->query('operationName'),
+                'queryId'       => $request->query('queryId'),
+                'extensions'    => $this->castVariables($request->query('extensions')),
             ];
         }
 

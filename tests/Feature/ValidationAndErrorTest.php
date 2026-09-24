@@ -225,6 +225,17 @@ class ValidationAndErrorTest extends TestCase
         $this->assertTrue($manager->hasType('MyScalar'));
     }
 
+    public function test_add_type_requires_an_alias_for_wrapping_types(): void
+    {
+        /** @var Laragraph $manager */
+        $manager = $this->app->make('laragraph');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('An alias is required');
+
+        $manager->addType(Type::listOf(Type::string()));
+    }
+
     // -------------------------------------------------------------------------
     // Laragraph::resolveTypeName
     // -------------------------------------------------------------------------
