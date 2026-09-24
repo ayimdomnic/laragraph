@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
+use Rector\Php81\Rector\Array_\ArrayToFirstClassCallableRector;
 use Rector\TypeDeclaration\Rector\ClassMethod\StrictArrayParamDimFetchRector;
 
 return RectorConfig::configure()
@@ -15,6 +16,8 @@ return RectorConfig::configure()
         __DIR__ . '/src/Console/stubs',
         // Mis-types the service container ($app['cache']) as `array` — it is ArrayAccess.
         StrictArrayParamDimFetchRector::class,
+        // Config values must stay [Class, 'method'] arrays so `config:cache` can serialise them.
+        ArrayToFirstClassCallableRector::class => [__DIR__ . '/tests/Feature/ExecutionConsistencyTest.php'],
     ])
     ->withPhpSets(php82: true)
     ->withPreparedSets(

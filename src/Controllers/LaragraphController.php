@@ -7,6 +7,7 @@ namespace Ayimdomnic\Laragraph\Controllers;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\RequestException;
+use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
@@ -53,7 +54,18 @@ class LaragraphController extends BaseController
                 array_walk($parsed, $this->assertOperation(...));
 
                 try {
-                    $results = $this->laragraph->executeBatch($parsed, $request, $schemaName);
+                    $results = app(BatchProcessor::class)->process(
+                        $parsed,
+                        $request,
+                        $schemaName,
+                        function (array $operation) use ($request, $schemaName): array {
+                            try {
+                                return $this->executeOne($operation, $request, $schemaName);
+                            } catch (RequestException $e) {
+                                return $e->toResponse();
+                            }
+                        },
+                    );
                 } catch (BatchingDisabledException|BatchLimitExceededException $e) {
                     return $this->respond($request, ['errors' => [['message' => $e->getMessage()]]], 400);
                 }
