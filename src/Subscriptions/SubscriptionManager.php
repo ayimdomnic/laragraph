@@ -45,16 +45,64 @@ final readonly class SubscriptionManager
      */
     public function register(mixed $channel, array $record): string
     {
-        $subscriberId   = (string) Str::uuid();
-        $record['auth'] ??= $this->sandbox->currentIdentity();
-        $ttl            = config('laragraph.subscriptions.ttl');
-        $ttl            = $ttl !== null ? (int) $ttl : null;
+        $subscriberId       = (string) Str::uuid();
+        $record['auth']   ??= $this->sandbox->currentIdentity();
+        $record['channels'] = $this->normalizeChannels($channel);
+        $ttl                = config('laragraph.subscriptions.ttl');
+        $ttl                = $ttl !== null ? (int) $ttl : null;
 
-        foreach ($this->normalizeChannels($channel) as $ch) {
+        foreach ($record['channels'] as $ch) {
             $this->store->store($ch, $subscriberId, $record, $ttl);
         }
 
         return $subscriberId;
+    }
+
+    /**
+     * Remove a subscriber from every channel it subscribed to.
+     *
+     * @return bool False when the subscriber is unknown (or already gone).
+     */
+    public function unsubscribe(string $subscriberId): bool
+    {
+        $record = $this->find($subscriberId);
+
+        if ($record === null) {
+            return false;
+        }
+
+        foreach ($record['channels'] ?? [] as $channel) {
+            $this->store->forget($channel, $subscriberId);
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether the current user created the subscription: the same user (id
+     * and class), or — for subscriptions created by a guest — any guest,
+     * for whom the unguessable subscriber id acts as the credential.
+     */
+    public function ownedByCurrentUser(string $subscriberId): bool
+    {
+        $owner = $this->find($subscriberId)['auth'] ?? null;
+
+        if ($owner === null) {
+            return false;
+        }
+
+        $current = $this->sandbox->currentIdentity();
+
+        return (string) $owner['id'] === (string) $current['id']
+            && ($owner['type'] ?? null) === ($current['type'] ?? null);
+    }
+
+    /**
+     * @return SubscriberRecord|null
+     */
+    private function find(string $subscriberId): ?array
+    {
+        return $this->store instanceof FindsSubscribers ? $this->store->find($subscriberId) : null;
     }
 
     /**

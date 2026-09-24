@@ -474,6 +474,13 @@ return [
         // owner listen to it. Set to false to define your own rule in
         // routes/channels.php for "{channel_prefix}.{subscriberId}".
         'authorize_channel' => true,
+
+        // Where Laragraph::broadcastLater() queues subscription fan-out
+        // (null: the application's default connection / queue).
+        'queue' => [
+            'connection' => null,
+            'queue'      => null,
+        ],
     ],
 
 ];

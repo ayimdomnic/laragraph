@@ -72,6 +72,26 @@ class LaragraphController extends BaseController
     }
 
     /**
+     * Cancel a subscription. Only its owner may do so; unknown subscriptions
+     * and those owned by someone else both answer 404, so ids cannot be probed.
+     */
+    public function unsubscribe(string $subscriberId): Response|JsonResponse
+    {
+        $subscriptions = app(SubscriptionManager::class);
+
+        if (!config('laragraph.subscriptions.enabled', false) || !$subscriptions->ownedByCurrentUser($subscriberId)) {
+            return response()->json(['errors' => [[
+                'message'    => 'Subscription not found.',
+                'extensions' => ['code' => 'SUBSCRIPTION_NOT_FOUND'],
+            ]]], 404);
+        }
+
+        $subscriptions->unsubscribe($subscriberId);
+
+        return response()->noContent();
+    }
+
+    /**
      * Serve the GraphiQL browser IDE.
      */
     public function graphiql(Request $request, string $schemaName = 'default'): Response
