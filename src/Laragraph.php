@@ -24,6 +24,7 @@ use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
 use Ayimdomnic\Laragraph\Subscriptions\BroadcastSubscriptionUpdates;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
+use Ayimdomnic\Laragraph\Support\DocumentCache;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
@@ -33,6 +34,7 @@ use GraphQL\Error\Error;
 use GraphQL\Executor\ExecutionResult;
 use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
+use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Type\Definition\NamedType;
 use GraphQL\Type\Definition\PhpEnumType;
 use GraphQL\Type\Definition\Type;
@@ -63,6 +65,9 @@ class Laragraph
     protected array $typesInstances = [];
 
     protected ?SchemaBuilder $schemaBuilder = null;
+
+    /** @var array<string, true> Documents that passed the document-only validation rules, see prevalidate(). */
+    protected array $validated = [];
 
     public function __construct(protected readonly Container $container) {}
 
@@ -277,20 +282,24 @@ class Laragraph
             ? TracingCollector::wrap(Executor::defaultFieldResolver(...))
             : null;
 
-        $promise = GraphQL::promiseToExecute(
-            promiseAdapter: $promiseAdapter,
-            schema: $schema,
-            source: $query,
-            rootValue: $rootValue,
-            context: $context,
-            variableValues: $variables ?: null,
-            operationName: $operationName,
-            fieldResolver: $fieldResolver,
-            validationRules: $this->buildValidationRules(),
-        );
+        // Parsed once per document and shared with operation detection; a
+        // syntax error is left for webonyx to report from the raw source.
+        $document       = DocumentCache::parse($query);
+        [$static, $rules] = $this->partitionValidationRules();
 
         try {
-            $result = $promiseAdapter->wait($promise);
+            $result = $this->prevalidate($schema, $query, $document, $static, $rules)
+                ?? $promiseAdapter->wait(GraphQL::promiseToExecute(
+                    promiseAdapter: $promiseAdapter,
+                    schema: $schema,
+                    source: $document ?? $query,
+                    rootValue: $rootValue,
+                    context: $context,
+                    variableValues: $variables ?: null,
+                    operationName: $operationName,
+                    fieldResolver: $fieldResolver,
+                    validationRules: $rules,
+                ));
         } finally {
             // Release this execution's loaders; see DataLoaderRegistry::clear().
             DataLoaderRegistry::for($context)?->clear();
@@ -303,54 +312,120 @@ class Laragraph
     }
 
     /**
-     * Build the set of validation rules for this execution.
+     * Validate $document against the rules that depend only on the document
+     * and the schema, remembering documents that pass.
+     *
+     * Those rules — the spec's, plus depth, alias and introspection limits —
+     * give the same answer for the same document every time, so a worker
+     * that has validated a document once skips them afterwards. When the
+     * document cannot be pre-validated (a syntax error), every rule is moved
+     * into $rules for webonyx to run as usual.
+     *
+     * @param  list<ValidationRule> $static Rules whose result depends only on the document.
+     * @param  list<ValidationRule> $rules  Rules webonyx must still run; widened when nothing was pre-validated.
+     * @return ExecutionResult|null         The validation failure, or null to execute.
+     */
+    protected function prevalidate(Schema $schema, string $query, ?DocumentNode $document, array $static, array &$rules): ?ExecutionResult
+    {
+        if ($document === null) {
+            $rules = [...$static, ...$rules]; // webonyx reports the syntax error
+
+            return null;
+        }
+
+        $key = spl_object_id($schema) . ':' . hash('xxh128', implode('|', array_map($this->ruleSignature(...), $static)) . "\n" . $query);
+
+        if (isset($this->validated[$key])) {
+            return null;
+        }
+
+        $errors = DocumentValidator::validate($schema, $document, $static);
+
+        if ($errors !== []) {
+            return new ExecutionResult(null, $errors);
+        }
+
+        if (count($this->validated) >= DocumentCache::SIZE) {
+            unset($this->validated[array_key_first($this->validated)]);
+        }
+
+        $this->validated[$key] = true;
+
+        return null;
+    }
+
+    /**
+     * Identifies a rule and its configuration, so a document validated
+     * under one setting (e.g. a depth limit of 10) is not trusted under
+     * another.
+     */
+    private function ruleSignature(ValidationRule $rule): string
+    {
+        return match (true) {
+            $rule instanceof QueryDepth     => 'depth:' . $rule->getMaxQueryDepth(),
+            $rule instanceof MaxAliasesRule => 'aliases:' . $rule->getMaxAliases(),
+            default                         => $rule::class,
+        };
+    }
+
+    /**
+     * This execution's validation rules, split by whether their result
+     * depends only on the document.
      *
      * Rules are composed per-execution rather than mutating global state, so
      * different schemas / requests can have different security settings.
      *
-     * @return array<ValidationRule>
+     * Query complexity reads the variables (`@include(if: $x)`, list sizes),
+     * and application rules may look at anything, so those run on every
+     * execution; the rest can be answered once per document.
+     *
+     * @return array{list<ValidationRule>, list<ValidationRule>} [document-only rules, per-execution rules]
      */
-    protected function buildValidationRules(): array
+    protected function partitionValidationRules(): array
     {
-        $rules    = DocumentValidator::allRules();
+        $static   = DocumentValidator::allRules();
+        $dynamic  = [];
         $security = config('laragraph.security', []);
 
+        // webonyx's own security rules ship switched off (limit 0, introspection
+        // allowed); they are replaced below only when a limit is configured,
+        // so a rule's presence always means it is enforced.
+        unset($static[QueryComplexity::class], $static[QueryDepth::class], $static[DisableIntrospection::class]);
+
         if (!empty($security['query_max_complexity'])) {
-            $rules['queryComplexity'] = new QueryComplexity((int) $security['query_max_complexity']);
+            $dynamic[QueryComplexity::class] = new QueryComplexity((int) $security['query_max_complexity']);
         }
 
         if (!empty($security['query_max_depth'])) {
-            $rules['queryDepth'] = new QueryDepth((int) $security['query_max_depth']);
+            $static[QueryDepth::class] = new QueryDepth((int) $security['query_max_depth']);
         }
 
         // null = automatic: introspection is only available while app.debug is on.
         if ($security['disable_introspection'] ?? !config('app.debug')) {
-            $rules['disableIntrospection'] = new DisableIntrospection(DisableIntrospection::ENABLED);
+            $static[DisableIntrospection::class] = new DisableIntrospection(DisableIntrospection::ENABLED);
         }
 
         if (!empty($security['max_aliases'])) {
-            $rules['maxAliases'] = new MaxAliasesRule((int) $security['max_aliases']);
+            $static[MaxAliasesRule::class] = new MaxAliasesRule((int) $security['max_aliases']);
         }
 
-        // User-registered custom validation rules
-        $registry = $this->container->make(ValidationRuleRegistry::class);
-        if (!$registry->isEmpty()) {
-            $seen = [];
+        // User-registered custom validation rules. The first custom rule of a
+        // class replaces the built-in rule of that class; further instances
+        // (e.g. differently configured) are added alongside.
+        $seen = [];
 
-            foreach ($registry->resolve() as $rule) {
-                // The first custom rule of a class may replace the built-in rule
-                // of that class; further instances (e.g. differently configured)
-                // are added alongside instead of overwriting each other.
-                if (isset($seen[$rule::class])) {
-                    $rules[] = $rule;
-                } else {
-                    $rules[$rule::class] = $rule;
-                    $seen[$rule::class]  = true;
-                }
+        foreach ($this->container->make(ValidationRuleRegistry::class)->resolve() as $rule) {
+            unset($static[$rule::class]);
+
+            if (isset($seen[$rule::class])) {
+                $dynamic[] = $rule;
+            } else {
+                $dynamic[$rule::class] = $rule;
+                $seen[$rule::class]    = true;
             }
         }
 
-        return array_values($rules);
+        return [array_values($static), array_values($dynamic)];
     }
 
     /**

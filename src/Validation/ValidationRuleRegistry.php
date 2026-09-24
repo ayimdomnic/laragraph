@@ -11,7 +11,7 @@ use GraphQL\Validator\Rules\ValidationRule;
  * Stores user-defined (and config-declared) GraphQL validation rules.
  *
  * Rules registered here are merged into every execution's rule set by
- * {@see Laragraph::buildValidationRules()}.
+ * {@see Laragraph::partitionValidationRules()}.
  *
  * Usage:
  *
