@@ -18,7 +18,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
  *
  * @phpstan-import-type SubscriberRecord from SubscriberStoreInterface
  */
-final readonly class CacheSubscriberStore implements SubscriberStoreInterface
+final readonly class CacheSubscriberStore implements FindsSubscribers, SubscriberStoreInterface
 {
     private const CHANNEL_PREFIX = 'laragraph_sub_channel:';
 
@@ -79,6 +79,14 @@ final readonly class CacheSubscriberStore implements SubscriberStoreInterface
 
         $ids = $this->cache->get($this->channelKey($channel), []);
         $this->cache->put($this->channelKey($channel), array_values(array_diff($ids, [$subscriberId])), $this->ttl);
+    }
+
+    public function find(string $subscriberId): ?array
+    {
+        /** @var SubscriberRecord|null $record Written by store() with exactly this shape. */
+        $record = $this->cache->get($this->recordKey($subscriberId));
+
+        return is_array($record) ? $record : null;
     }
 
     private function channelKey(string $channel): string

@@ -200,6 +200,14 @@ class EnumAndTypeResolutionTest extends TestCase
         $this->assertSame('renamed to Ada', $result['data']['renameAccount'] ?? $result);
     }
 
+    public function test_type_by_name_resolves_by_graphql_name_rather_than_alias(): void
+    {
+        $manager = $this->builtManager();
+
+        $this->assertSame('RenameAccountInput', $manager->typeByName('RenameAccountInput')?->name);
+        $this->assertSame('AccountStatus', $manager->typeByName('AccountStatus')?->name);
+    }
+
     public function test_type_by_name_returns_null_for_unknown_names(): void
     {
         $this->assertNull(app(Laragraph::class)->typeByName('DoesNotExist'));

@@ -24,7 +24,8 @@ Route::group($routeConfig, function (): void {
         ->name('laragraph.query');
 
     // GraphiQL browser IDE
-    if (config('laragraph.graphiql.enabled', true)) {
+    // null = automatic: only served while app.debug is on (never in production).
+    if (config('laragraph.graphiql.enabled') ?? config('app.debug')) {
         Route::get('/graphiql', [LaragraphController::class, 'graphiql'])
             ->middleware((array) config('laragraph.graphiql.middleware', []))
             ->name('laragraph.graphiql');

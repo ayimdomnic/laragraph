@@ -242,10 +242,14 @@ auto-discovered.
 
 ## GraphiQL
 
-Built-in browser IDE at `/graphql/graphiql` (enabled by default).
+Built-in browser IDE at `/graphql/graphiql`. By default (`'enabled' => null`) it is only served
+while `app.debug` is on — never in production.
 
 ```php
-'graphiql' => ['enabled' => false], // disable
+'graphiql' => [
+    'enabled'    => true,                           // always serve it…
+    'middleware' => ['auth', 'can:viewGraphiql'],   // …but only to trusted users
+],
 ```
 
 ---
@@ -259,8 +263,15 @@ Built-in browser IDE at `/graphql/graphiql` (enabled by default).
 | `laragraph:make:mutation CreateUserMutation` | `app/GraphQL/Mutations/CreateUserMutation.php` |
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
 | `laragraph:make:input CreateUserInput` | `app/GraphQL/Inputs/CreateUserInput.php` |
-| `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model |
+| `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model — deny-by-default (see below) |
 | `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
+
+---
+
+Scaffolded code is **deny-by-default**: every generated query and mutation calls
+`Gate::allows()` for the matching policy ability (`viewAny`, `view`, `create`, `update`,
+`delete`), so nothing is reachable until you write a policy, and attributes in the model's
+`$hidden` list (passwords, tokens) are never added to the generated type.
 
 ---
 
@@ -439,14 +450,21 @@ Endpoints: `POST /graphql` and `POST /graphql/admin`.
 
 ## Security
 
+Secure by default — these are the shipped values:
+
 ```php
 'security' => [
-    'query_max_complexity'  => 200,
-    'query_max_depth'       => 10,
-    'disable_introspection' => true, // recommended in production
-    'max_aliases'           => 50,   // blocks alias-flooding attacks
+    'query_max_complexity'  => 500,
+    'query_max_depth'       => 15,   // the standard introspection query needs 11
+    'max_aliases'           => 30,   // blocks alias-flooding attacks
+    'disable_introspection' => null, // null: disabled whenever app.debug is off
 ],
 ```
+
+Set a limit to `null` to remove it, or `disable_introspection` to `true`/`false` to force it.
+
+Each named schema only contains the types registered for it (globally or under its own
+`types` key); an admin-only type is never visible through another schema's introspection.
 
 See also [GraphQL over HTTP](#graphql-over-http) and [trusted documents](#persisted-queries).
 
@@ -611,7 +629,15 @@ class CreateUserMutation extends Mutation
        });
    ```
 
-Delivery uses whichever broadcast driver your app has configured (Reverb, Pusher, …) — Laragraph only decides the channel and payload shape. Set `'subscriptions' => ['driver' => 'log']` to write updates to the log instead, useful for local development without a broadcast server.
+Delivery uses whichever broadcast driver your app has configured (Reverb, Pusher, …) — Laragraph only decides the channel and payload shape.
+
+**Security.** Each update is resolved *as the subscriber*: the subscriber's identity is stored when
+they subscribe, and `Laragraph::broadcast()` re-runs their query authenticated as them — never as
+whoever triggered the broadcast — so `authorize()`, policies and `auth()` behave exactly as on the
+original request. Laragraph also registers the private-channel rule for
+`graphql-subscriber.{subscriberId}`, admitting only the user who created the subscription (turn off
+with `'subscriptions' => ['authorize_channel' => false]` to write your own in `routes/channels.php`).
+Because updates use private channels, subscribers must be authenticated to receive them. Set `'subscriptions' => ['driver' => 'log']` to write updates to the log instead, useful for local development without a broadcast server.
 
 ---
 

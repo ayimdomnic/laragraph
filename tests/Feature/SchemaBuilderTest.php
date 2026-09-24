@@ -103,27 +103,25 @@ class SbCostlyQuery extends Query
 class SchemaBuilderTest extends TestCase
 {
     // -------------------------------------------------------------------------
-    // typeLoader closure is invoked for types added after schema build
+    // The type loader only resolves types that belong to the built schema
     // -------------------------------------------------------------------------
 
-    public function test_type_loader_is_called_for_post_build_registered_type(): void
+    public function test_types_registered_after_build_are_not_injected_into_the_schema(): void
     {
         $this->app['config']->set('laragraph.schemas.default', [
             'query' => ['sb' => SbQuery::class],
         ]);
         $this->app->forgetInstance('laragraph');
-        $this->app->make('laragraph');
 
         $manager = $this->app->make(Laragraph::class);
-        $schema  = $manager->schema(); // build schema (typeMap is frozen)
+        $schema  = $manager->schema();
 
-        // Register a type AFTER schema build — not in typeMap yet
+        // Registered in the shared registry, but never part of this schema.
         $manager->addType(SbNodeType::class, 'SbNode');
 
-        // Schema::getType() → typeLoader closure fires for unknown names
-        $resolved = $schema->getType('SbNode');
-        $this->assertNotNull($resolved);
-        $this->assertSame('SbNode', $resolved->name);
+        $this->assertNull($schema->getType('SbNode'));
+        $this->assertSame('Query', $schema->getType('Query')?->name);
+        $schema->assertValid();
     }
 
     // -------------------------------------------------------------------------

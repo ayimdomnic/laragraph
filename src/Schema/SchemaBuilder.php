@@ -14,6 +14,7 @@ use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
+use GraphQL\Type\SchemaConfig;
 use Illuminate\Contracts\Container\Container;
 
 /**
@@ -39,9 +40,18 @@ class SchemaBuilder
      */
     public function build(array $config): Schema
     {
-        $this->registerTypes($config['types'] ?? []);
-        $schemaConfig = $this->buildSchemaConfig($config);
-        return new Schema($schemaConfig);
+        $aliases      = $this->registerTypes($config['types'] ?? []);
+        $schemaConfig = SchemaConfig::create($this->buildSchemaConfig($config, $aliases));
+        $schema       = new Schema($schemaConfig);
+
+        // Resolve names only against *this* schema's type map (its root types,
+        // its own registered types, and everything they reference). The
+        // Laragraph type registry is shared by every schema, so resolving
+        // against it would expose another schema's types here — e.g. an
+        // admin-only type answering `__type(name: ...)` on the public schema.
+        $schemaConfig->setTypeLoader(static fn(string $name): ?Type => $schema->getTypeMap()[$name] ?? null);
+
+        return $schema;
     }
 
     // -------------------------------------------------------------------------
@@ -50,9 +60,10 @@ class SchemaBuilder
 
     /**
      * @param  array<string, mixed>  $config
+     * @param  list<string>|null     $typeAliases Registered types that belong to this schema (null: every registered type).
      * @return array<string, mixed>
      */
-    protected function buildSchemaConfig(array $config): array
+    protected function buildSchemaConfig(array $config, ?array $typeAliases = null): array
     {
         $schemaConfig = [];
 
@@ -81,17 +92,7 @@ class SchemaBuilder
             $schemaConfig['subscription'] = new ObjectType(['name' => 'Subscription', 'fields' => $subscriptionFields]);
         }
 
-        $schemaConfig['types']      = $this->resolveAllTypeInstances();
-        // The loader is asked by GraphQL name for every type — including the
-        // root operation types, which live outside the Laragraph registry.
-        $rootTypes = [];
-        foreach (['query', 'mutation', 'subscription'] as $operation) {
-            if (isset($schemaConfig[$operation])) {
-                $rootTypes[$schemaConfig[$operation]->name] = $schemaConfig[$operation];
-            }
-        }
-
-        $schemaConfig['typeLoader'] = fn(string $name): ?Type => $rootTypes[$name] ?? $this->manager->typeByName($name);
+        $schemaConfig['types'] = $this->resolveAllTypeInstances($typeAliases);
 
         return $schemaConfig;
     }
@@ -147,10 +148,16 @@ class SchemaBuilder
     // -------------------------------------------------------------------------
 
     /**
-     * @param  array<string|int, string>  $typeClasses
+     * Register this schema's types (discovered + global + schema-specific)
+     * and return the aliases they were registered under.
+     *
+     * @param  array<string|int, string|Type>  $typeClasses
+     * @return list<string>
      */
-    protected function registerTypes(array $typeClasses): void
+    protected function registerTypes(array $typeClasses): array
     {
+        $aliases = [];
+
         // Auto-discover types first, then merge with explicit config (explicit wins)
         $discoveredTypes = Discover::types(Discover::configuredPath('types'));
 
@@ -160,23 +167,26 @@ class SchemaBuilder
 
         foreach ($discoveredTypes as $alias => $class) {
             if (!isset($explicit[$class])) {
-                $this->manager->addType($class, $alias);
+                $aliases[] = $this->manager->addType($class, $alias);
             }
         }
 
         foreach ($typeClasses as $alias => $class) {
-            $this->manager->addType($class, is_string($alias) ? $alias : null);
+            $aliases[] = $this->manager->addType($class, is_string($alias) ? $alias : null);
         }
+
+        return array_values(array_unique($aliases));
     }
 
     /**
+     * @param  list<string>|null $aliases Only these registered types (null: every registered type).
      * @return array<Type>
      */
-    protected function resolveAllTypeInstances(): array
+    protected function resolveAllTypeInstances(?array $aliases = null): array
     {
         return array_map(
             fn(string $name): Type => $this->manager->type($name),
-            array_keys($this->manager->getTypes()),
+            $aliases ?? array_keys($this->manager->getTypes()),
         );
     }
 }

@@ -21,10 +21,12 @@ use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
 use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Composer\InstalledVersions;
+use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 
@@ -87,6 +89,7 @@ class LaragraphServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->mergePresetTypes();
+        $this->authorizeSubscriberChannels();
 
         $this->loadRoutesFrom(__DIR__ . '/routes.php');
         $this->loadViewsFrom(__DIR__ . '/views', 'laragraph');
@@ -123,6 +126,24 @@ class LaragraphServiceProvider extends ServiceProvider
     }
 
     /**
+     * Only the user who created a subscription may listen on its private
+     * channel. Registered when the broadcaster is first resolved, so apps
+     * that never broadcast are unaffected.
+     */
+    protected function authorizeSubscriberChannels(): void
+    {
+        if (!config('laragraph.subscriptions.enabled') || !config('laragraph.subscriptions.authorize_channel', true)) {
+            return;
+        }
+
+        $this->callAfterResolving(BroadcastManager::class, static function (BroadcastManager $broadcast): void {
+            $prefix = (string) config('laragraph.subscriptions.channel_prefix', 'graphql-subscriber');
+
+            $broadcast->channel($prefix . '.{subscriberId}', SubscriberChannel::class);
+        });
+    }
+
+    /**
      * The section Laragraph contributes to `php artisan about`.
      *
      * @return array<string, string>
@@ -137,8 +158,8 @@ class LaragraphServiceProvider extends ServiceProvider
             'Endpoint'          => '/' . trim((string) config('laragraph.route.prefix', 'graphql'), '/'),
             'Schemas'           => implode(', ', array_keys((array) config('laragraph.schemas', []))),
             'Discovery'         => Discover::isCached() ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>',
-            'GraphiQL'          => config('laragraph.graphiql.enabled') ? $on : $off,
-            'Introspection'     => config('laragraph.security.disable_introspection') ? $off : $on,
+            'GraphiQL'          => (config('laragraph.graphiql.enabled') ?? config('app.debug')) ? $on : $off,
+            'Introspection'     => (config('laragraph.security.disable_introspection') ?? !config('app.debug')) ? $off : $on,
             'Response cache'    => config('laragraph.cache.response.enabled') ? $on : $off,
             'Persisted queries' => config('laragraph.persisted_queries.enabled') ? $on : $off,
             'Subscriptions'     => config('laragraph.subscriptions.enabled') ? $on : $off,
