@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph;
 
+use Ayimdomnic\Laragraph\Console\CacheCommand;
+use Ayimdomnic\Laragraph\Console\ClearCommand;
 use Ayimdomnic\Laragraph\Console\ExportSchemaCommand;
 use Ayimdomnic\Laragraph\Console\InputMakeCommand;
 use Ayimdomnic\Laragraph\Console\MutationMakeCommand;
@@ -11,6 +13,8 @@ use Ayimdomnic\Laragraph\Console\QueryMakeCommand;
 use Ayimdomnic\Laragraph\Console\ScaffoldCommand;
 use Ayimdomnic\Laragraph\Console\SubscriptionMakeCommand;
 use Ayimdomnic\Laragraph\Console\TypeMakeCommand;
+use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
+use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
@@ -20,6 +24,8 @@ use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
+use Composer\InstalledVersions;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -95,6 +101,9 @@ class LaragraphServiceProvider extends ServiceProvider
             ], 'laragraph-views');
 
             $this->commands([
+                CacheCommand::class,
+                ClearCommand::class,
+                ValidateSchemaCommand::class,
                 TypeMakeCommand::class,
                 QueryMakeCommand::class,
                 MutationMakeCommand::class,
@@ -103,7 +112,52 @@ class LaragraphServiceProvider extends ServiceProvider
                 ScaffoldCommand::class,
                 ExportSchemaCommand::class,
             ]);
+
+            // `php artisan optimize` / `optimize:clear` integration (Laravel 11.27+).
+            if (method_exists($this, 'optimizes')) { // @phpstan-ignore function.alreadyNarrowedType (absent before Laravel 11.27)
+                $this->optimizes(optimize: 'laragraph:cache', clear: 'laragraph:clear', key: 'laragraph');
+            }
+
+            AboutCommand::add('Laragraph', $this->aboutInformation(...));
         }
+    }
+
+    /**
+     * The section Laragraph contributes to `php artisan about`.
+     *
+     * @return array<string, string>
+     */
+    protected function aboutInformation(): array
+    {
+        $on  = '<fg=green;options=bold>ENABLED</>';
+        $off = 'OFF';
+
+        return [
+            'Version'           => $this->installedVersion(),
+            'Endpoint'          => '/' . trim((string) config('laragraph.route.prefix', 'graphql'), '/'),
+            'Schemas'           => implode(', ', array_keys((array) config('laragraph.schemas', []))),
+            'Discovery'         => Discover::isCached() ? '<fg=green;options=bold>CACHED</>' : '<fg=yellow;options=bold>NOT CACHED</>',
+            'GraphiQL'          => config('laragraph.graphiql.enabled') ? $on : $off,
+            'Introspection'     => config('laragraph.security.disable_introspection') ? $off : $on,
+            'Response cache'    => config('laragraph.cache.response.enabled') ? $on : $off,
+            'Persisted queries' => config('laragraph.persisted_queries.enabled') ? $on : $off,
+            'Subscriptions'     => config('laragraph.subscriptions.enabled') ? $on : $off,
+            'Tracing'           => config('laragraph.tracing.enabled') ? $on : $off,
+        ];
+    }
+
+    /**
+     * @param list<string> $packages Composer names this package has been published under.
+     */
+    protected function installedVersion(array $packages = ['ayimdomnic/laragraph', 'ayimdomnic/graph-ql-l5.3']): string
+    {
+        foreach ($packages as $package) {
+            if (InstalledVersions::isInstalled($package)) {
+                return (string) InstalledVersions::getPrettyVersion($package);
+            }
+        }
+
+        return 'unknown';
     }
 
     /**

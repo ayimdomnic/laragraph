@@ -101,11 +101,9 @@ class SchemaBuilder
      */
     protected function discoverFields(string $type, string $baseClass): array
     {
-        $path = config("laragraph.discover.{$type}", '');
-        if (empty($path)) {
-            return [];
-        }
-        return Discover::scan(is_array($path) ? ($path['path'] ?? '') : (string) $path, $baseClass);
+        $path = Discover::configuredPath($type);
+
+        return $path === '' ? [] : Discover::scan($path, $baseClass);
     }
 
     // -------------------------------------------------------------------------
@@ -151,9 +149,7 @@ class SchemaBuilder
     protected function registerTypes(array $typeClasses): void
     {
         // Auto-discover types first, then merge with explicit config (explicit wins)
-        $discoveredTypes = Discover::types(
-            (string) config('laragraph.discover.types', ''),
-        );
+        $discoveredTypes = Discover::types(Discover::configuredPath('types'));
 
         // A class registered explicitly (possibly under a different alias) must
         // not also be registered by discovery, or it would be instantiated twice.

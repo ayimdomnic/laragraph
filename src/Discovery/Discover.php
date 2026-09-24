@@ -24,6 +24,106 @@ use Illuminate\Support\Str;
  */
 class Discover
 {
+    /** Configured discovery category => base class of the classes it collects (null: named types). */
+    private const CATEGORIES = [
+        'types'         => null,
+        'queries'       => Query::class,
+        'mutations'     => Mutation::class,
+        'subscriptions' => Subscription::class,
+    ];
+
+    /** @var array<string, array<string, string>>|null Loaded manifest; null until first read. */
+    private static ?array $manifest = null;
+
+    // -------------------------------------------------------------------------
+    // Manifest (php artisan laragraph:cache / optimize)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Where `laragraph:cache` writes the discovery manifest.
+     */
+    public static function manifestPath(): string
+    {
+        return app()->bootstrapPath('cache/laragraph.php');
+    }
+
+    public static function isCached(): bool
+    {
+        return is_file(static::manifestPath());
+    }
+
+    /**
+     * Scan every configured discovery directory and write the results to the
+     * manifest, so production requests never touch the filesystem to find
+     * GraphQL classes. Run by `php artisan laragraph:cache` and `optimize`.
+     *
+     * @return array<string, array<string, string>> The manifest that was written.
+     */
+    public static function cache(): array
+    {
+        static::clearCache();
+
+        $manifest = [];
+
+        foreach (self::CATEGORIES as $category => $baseClass) {
+            $path = static::configuredPath($category);
+
+            if ($path === '') {
+                continue;
+            }
+
+            $manifest[$baseClass === null ? "types:{$path}" : "scan:{$baseClass}:{$path}"] = $baseClass === null
+                ? static::discoverTypes($path)
+                : static::discover($path, $baseClass);
+        }
+
+        $file = static::manifestPath();
+
+        if (!is_dir(dirname($file))) {
+            mkdir(dirname($file), 0755, true);
+        }
+
+        file_put_contents($file, '<?php' . PHP_EOL . PHP_EOL . 'return ' . var_export($manifest, true) . ';' . PHP_EOL);
+
+        return self::$manifest = $manifest;
+    }
+
+    /**
+     * Delete the manifest; discovery scans directories again on the next request.
+     */
+    public static function clearCache(): void
+    {
+        if (static::isCached()) {
+            unlink(static::manifestPath());
+        }
+
+        self::$manifest = null;
+    }
+
+    /**
+     * The directory configured for a discovery category, relative to base_path().
+     */
+    public static function configuredPath(string $category): string
+    {
+        $path = config("laragraph.discover.{$category}", '');
+
+        return is_array($path) ? (string) ($path['path'] ?? '') : (string) $path;
+    }
+
+    /**
+     * @param \Closure(): array<string, string> $discover
+     * @return array<string, string>
+     */
+    protected static function remember(string $key, \Closure $discover): array
+    {
+        if (self::$manifest === null) {
+            $file           = static::manifestPath();
+            self::$manifest = is_file($file) ? (array) require $file : [];
+        }
+
+        return self::$manifest[$key] ?? $discover();
+    }
+
     /**
      * Scan a directory for PHP classes that extend a given base class.
      *
@@ -32,6 +132,14 @@ class Discover
      * @return array<string, string>  alias => FQCN
      */
     public static function scan(string $path, string $baseClass): array
+    {
+        return static::remember("scan:{$baseClass}:{$path}", static fn(): array => static::discover($path, $baseClass));
+    }
+
+    /**
+     * @return array<string, string> alias => FQCN
+     */
+    protected static function discover(string $path, string $baseClass): array
     {
         $results = [];
 
@@ -93,6 +201,14 @@ class Discover
      * @return array<string, string>
      */
     public static function types(string $path): array
+    {
+        return static::remember("types:{$path}", static fn(): array => static::discoverTypes($path));
+    }
+
+    /**
+     * @return array<string, string> alias => FQCN
+     */
+    protected static function discoverTypes(string $path): array
     {
         $results = [];
 
