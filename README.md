@@ -4,7 +4,7 @@
 
 [![Latest Version](https://img.shields.io/packagist/v/ayimdomnic/graph-ql-l5.3.svg)](https://packagist.org/packages/ayimdomnic/graph-ql-l5.3)
 [![PHP Version](https://img.shields.io/badge/php-%5E8.2-blue)](https://www.php.net)
-[![Laravel Version](https://img.shields.io/badge/laravel-10%20|%2011%20|%2012|&2013-orange)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/laravel-10%20|%2011%20|%2012%20|%2013-orange)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Laragraph gives Laravel developers a clean, expressive, **code-first** API for building GraphQL services — powered by [webonyx/graphql-php](https://github.com/webonyx/graphql-php).
@@ -18,12 +18,16 @@ Laragraph gives Laravel developers a clean, expressive, **code-first** API for b
 | Queries & Mutations | ✅ |
 | Real-time Subscriptions (Laravel Broadcasting) | ✅ |
 | Object / Input / Enum / Interface / Union types | ✅ |
+| Native PHP enums as GraphQL enums | ✅ |
 | Custom scalars (DateTime, Date, JSON, Upload) | ✅ |
 | Built-in argument validation (Laravel rules) | ✅ |
 | Per-field authorization | ✅ |
 | N+1-safe Eloquent relation batching | ✅ |
 | Relay cursor pagination + simple paginator | ✅ |
 | Batched queries | ✅ |
+| Automatic Persisted Queries + trusted-documents mode | ✅ |
+| GraphQL-over-HTTP (`application/graphql-response+json`, no mutations over GET) | ✅ |
+| Per-user response cache | ✅ |
 | File uploads (multipart spec) | ✅ |
 | Multiple named schemas | ✅ |
 | Query complexity & depth limiting | ✅ |
@@ -31,15 +35,36 @@ Laragraph gives Laravel developers a clean, expressive, **code-first** API for b
 | Per-field tracing (Apollo Tracing format) | ✅ |
 | GraphiQL browser IDE | ✅ |
 | Artisan generators | ✅ |
-| Auto-discovery (no manual registration) | ✅ |
-| Static analysis (PHPStan / Larastan) | ✅ |
+| Auto-discovery, cacheable via `php artisan optimize` | ✅ |
+| `php artisan about` integration + `laragraph:validate` deploy check | ✅ |
+| PHPStan level 8, PER-CS, 100% line coverage | ✅ |
 
 ---
 
 ## Requirements
 
-- PHP **8.2+**
-- Laravel **10 / 11 / 12**
+- PHP **8.2 – 8.5**
+- Laravel **10 / 11 / 12 / 13** (Laravel 13 requires PHP 8.3+)
+
+Every combination Laravel itself supports is tested in CI.
+
+---
+
+## Why Laragraph?
+
+Laragraph is **code-first**: types, queries and mutations are plain PHP classes, so your IDE,
+refactoring tools and PHPStan understand your whole API. On top of
+[webonyx/graphql-php](https://github.com/webonyx/graphql-php) it adds the parts a Laravel team
+otherwise builds by hand:
+
+- **Laravel-native everything** — validation rules, policies and guards, Broadcasting for
+  subscriptions, cache stores, `php artisan about`, `optimize`, and generators.
+- **Performance by default** — N+1-safe Eloquent relation batching through the model's own eager
+  loading, a per-user response cache, persisted queries and a cached discovery manifest.
+- **Secure by default** — depth/complexity/alias limits, no mutations over GET, trusted-documents
+  mode, and per-user cache partitioning so one user's data is never served to another.
+- **Modern PHP** — native enums, readonly value objects, strict types throughout and no dynamic
+  properties (deprecated since PHP 8.2).
 
 ---
 
@@ -189,6 +214,32 @@ Content-Type: application/json
 
 ---
 
+## Native PHP Enums
+
+Register a backed or pure enum directly — no wrapper class needed:
+
+```php
+enum UserStatus: string
+{
+    case Active = 'active';
+
+    #[\GraphQL\Type\Definition\Description('Suspended by a moderator.')]
+    case Banned = 'banned';
+}
+
+// config/laragraph.php
+'types' => ['UserStatus' => \App\Enums\UserStatus::class],
+```
+
+Resolvers return enum cases and receive cases for enum arguments. `#[Description]` and
+`#[Deprecated]` attributes on the enum and its cases are exposed through introspection. An
+`EnumType` subclass may also simply `return UserStatus::cases();` from `values()`.
+
+Enums (and input, interface, union and scalar types) placed in `app/GraphQL/Types` are
+auto-discovered.
+
+---
+
 ## GraphiQL
 
 Built-in browser IDE at `/graphql/graphiql` (enabled by default).
@@ -208,6 +259,23 @@ Built-in browser IDE at `/graphql/graphiql` (enabled by default).
 | `laragraph:make:mutation CreateUserMutation` | `app/GraphQL/Mutations/CreateUserMutation.php` |
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
 | `laragraph:make:input CreateUserInput` | `app/GraphQL/Inputs/CreateUserInput.php` |
+| `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model |
+| `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
+
+---
+
+## Deploying
+
+```bash
+php artisan optimize            # also runs laragraph:cache on Laravel 11.27+
+php artisan laragraph:cache     # cache the discovery manifest (bootstrap/cache/laragraph.php)
+php artisan laragraph:clear     # remove it (also part of optimize:clear)
+php artisan laragraph:validate  # build every schema and run full GraphQL validation — fails the deploy on errors
+php artisan about               # shows a Laragraph section: version, schemas, cache and feature status
+```
+
+Like Laravel's event and route caches, a cached manifest is not refreshed automatically — rerun
+`laragraph:cache` (or `optimize`) when you add GraphQL classes.
 
 ---
 
@@ -272,7 +340,14 @@ class UserLoader extends BatchResolver
 
 // In a resolver:
 return $context->dataLoaders->get(UserLoader::class)->load($root->user_id);
+
+// Works for any context type, including custom objects:
+return DataLoaderRegistry::for($context)->get(UserLoader::class)->load($root->user_id);
 ```
+
+For HTTP requests `$context` is an `Ayimdomnic\Laragraph\Http\GraphQLContext` — a regular
+`Illuminate\Http\Request` (input, headers, `user()`, session all work) with declared slots for
+Laragraph's per-request state, so no dynamic properties are ever added to Laravel's request.
 
 For a plain Eloquent relation, skip the hand-written loader entirely — `Type::batchRelation()` batches it through the relation's own eager-loading machinery (the same code path `Model::with()` uses), so it works for `belongsTo`, `hasOne`, `hasMany`, `belongsToMany`, and morph relations alike:
 
@@ -369,8 +444,66 @@ Endpoints: `POST /graphql` and `POST /graphql/admin`.
     'query_max_complexity'  => 200,
     'query_max_depth'       => 10,
     'disable_introspection' => true, // recommended in production
+    'max_aliases'           => 50,   // blocks alias-flooding attacks
 ],
 ```
+
+See also [GraphQL over HTTP](#graphql-over-http) and [trusted documents](#persisted-queries).
+
+---
+
+## GraphQL over HTTP
+
+Laragraph follows the [GraphQL-over-HTTP specification](https://graphql.github.io/graphql-over-http/):
+
+- `GET` executes queries only; mutations over `GET` receive `405 Method Not Allowed` (they would
+  otherwise be exploitable via CSRF).
+- Clients sending `Accept: application/graphql-response+json` get that media type, with a `4xx`
+  status when a request fails before execution (parse/validation errors). Plain
+  `application/json` clients keep the traditional always-`200` behaviour.
+- Request bodies may be `application/json`, `application/graphql`, form-encoded or multipart.
+- Requests rejected before execution carry a machine-readable `extensions.code`
+  (`METHOD_NOT_ALLOWED`, `PERSISTED_QUERY_NOT_FOUND`, `PERSISTED_QUERY_REQUIRED`, …).
+
+---
+
+## Response Cache
+
+```php
+'cache' => [
+    'response' => [
+        'enabled' => true,
+        'store'   => 'redis',
+        'ttl'     => 60,
+        'scope'   => 'user', // or 'global' when every caller gets identical data
+    ],
+],
+```
+
+Only `query` operations are cached — the operation type is read from the parsed document, so
+comments or `operationName` cannot smuggle a mutation into the cache. With the default `user`
+scope, entries are partitioned per authenticated user (guests share one partition). Invalidate
+everything with `ResponseCache::flush()`.
+
+---
+
+## Persisted Queries
+
+```php
+'persisted_queries' => [
+    'enabled' => true,
+    'store'   => 'cache', // or 'array' with a static 'map'
+    'apq'     => true,    // Automatic Persisted Queries registration
+    'only'    => false,   // trusted-documents mode
+],
+```
+
+- **Automatic Persisted Queries** — compatible with Apollo Client's persisted-queries link: the
+  client sends a SHA-256 hash, and on `PersistedQueryNotFound` retries with the full query, which is
+  then stored (hashes are verified). Works over `GET` too.
+- **Trusted documents** — with `'only' => true`, only query text already stored under its hash is
+  executed. Pre-populate the store at deploy time (or use the `array` store) to restrict your API
+  to the operations your own clients ship.
 
 ---
 
@@ -512,21 +645,18 @@ Every resolved field is recorded — root Query/Mutation/Subscription fields and
 
 ---
 
-## Static Analysis
-
-Larastan/PHPStan ships configured out of the box:
+## Development
 
 ```bash
-composer phpstan
+composer test       # PHPUnit
+composer lint       # code style — PER-CS 2.0 via Laravel Pint (composer format to fix)
+composer phpstan    # PHPStan / Larastan, level 8
+composer refactor   # Rector (PHP 8.2 set, dead code, code quality, type declarations)
+composer check      # all of the above, as CI runs them
 ```
 
----
-
-## Testing
-
-```bash
-composer test
-```
+CI runs the suite on every supported PHP × Laravel combination (including `--prefer-lowest`),
+enforces 100% line coverage, and fails on any PHP deprecation.
 
 ---
 
