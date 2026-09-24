@@ -24,6 +24,7 @@ use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
 use Ayimdomnic\Laragraph\Subscriptions\BroadcastSubscriptionUpdates;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
+use Ayimdomnic\Laragraph\Support\DefaultFieldResolver;
 use Ayimdomnic\Laragraph\Support\DocumentCache;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
@@ -32,7 +33,6 @@ use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use GraphQL\Error\DebugFlag;
 use GraphQL\Error\Error;
 use GraphQL\Executor\ExecutionResult;
-use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
 use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Type\Definition\NamedType;
@@ -279,8 +279,8 @@ class Laragraph
         // wrapped for tracing where they're compiled; see SchemaBuilder and
         // Support\Type).
         $fieldResolver = config('laragraph.tracing.enabled')
-            ? TracingCollector::wrap(Executor::defaultFieldResolver(...))
-            : null;
+            ? TracingCollector::wrap(DefaultFieldResolver::resolve(...))
+            : DefaultFieldResolver::resolve(...);
 
         // Parsed once per document and shared with operation detection; a
         // syntax error is left for webonyx to report from the raw source.
