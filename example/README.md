@@ -2,7 +2,7 @@
 
 A small "team blog" API — organizations, their members and the posts they publish — that
 exercises **every Laragraph feature**. Every feature is covered by a test in
-[`tests/Feature/GraphQL`](tests/Feature/GraphQL), so the code here is guaranteed to work with the
+[`tests/Feature/GraphQL`](tests/Feature/GraphQL) or [`tests/Octane`](tests/Octane), so the code here is guaranteed to work with the
 Laragraph version in this repository.
 
 The step-by-step explanation of each feature lives in the [developer guide](../docs/README.md);
@@ -105,6 +105,7 @@ curl -s localhost:8000/graphql/admin -H 'Content-Type: application/json' \
 | Response cache + invalidation | `cache.response`, [`FlushResponseCacheAfterMutations`](app/Listeners/FlushResponseCacheAfterMutations.php) | `CachingAndObservabilityTest` |
 | Events, extensions, tracing | [`LogSlowGraphQLOperations`](app/Listeners/LogSlowGraphQLOperations.php), [`ApiVersionExtension`](app/GraphQL/Extensions/ApiVersionExtension.php), [`AppServiceProvider`](app/Providers/AppServiceProvider.php) | `CachingAndObservabilityTest` |
 | Deployment commands | `laragraph:validate`, `laragraph:cache`, `laragraph:schema:export` | `ToolingTest` |
+| Laravel Octane (schema compiled once per worker, per-request isolation) | automatic (`laragraph.octane.warm`) | [`tests/Octane/OctaneTest`](tests/Octane/OctaneTest.php) |
 
 ## Tests
 
