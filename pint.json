@@ -1,0 +1,28 @@
+{
+    "preset": "per",
+    "exclude": [
+        "example",
+        "src/Console/stubs"
+    ],
+    "rules": {
+        "declare_strict_types": true,
+        "fully_qualified_strict_types": {
+            "import_symbols": true
+        },
+        "global_namespace_import": {
+            "import_classes": false,
+            "import_constants": false,
+            "import_functions": false
+        },
+        "no_unused_imports": true,
+        "ordered_imports": {
+            "sort_algorithm": "alpha",
+            "imports_order": [
+                "class",
+                "function",
+                "const"
+            ]
+        },
+        "single_quote": true
+    }
+}

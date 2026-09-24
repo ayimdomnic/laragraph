@@ -11,10 +11,8 @@
 /laragraph            export-ignore
 /bin                  export-ignore
 /.github              export-ignore
-/.travis.yaml         export-ignore
 /phpunit.xml          export-ignore
 /phpunit.xml.bak      export-ignore
-/build.xml            export-ignore
 /build                export-ignore
 /composer.lock        export-ignore
 /CONTRIBUTING.md      export-ignore
@@ -23,3 +21,10 @@
 /workbench.json       export-ignore
 /src/config           export-ignore
 /example              export-ignore
+/.editorconfig        export-ignore
+/phpstan.neon.dist    export-ignore
+/pint.json            export-ignore
+/rector.php           export-ignore
+/.releaserc.json      export-ignore
+/package.json         export-ignore
+/package-lock.json    export-ignore

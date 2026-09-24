@@ -1,7 +1,13 @@
 {
     "name": "ayimdomnic/laragraph",
     "description": "A modern, feature-rich GraphQL package for Laravel — types, queries, mutations, subscriptions, pagination, and more.",
-    "keywords": ["laravel", "graphql", "api", "schema", "php"],
+    "keywords": [
+        "laravel",
+        "graphql",
+        "api",
+        "schema",
+        "php"
+    ],
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -12,7 +18,7 @@
         }
     ],
     "require": {
-        "php": "^8.2 | ^8.3 | ^8.4 | ^8.5",
+        "php": "^8.2",
         "ext-json": "*",
         "illuminate/broadcasting": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
@@ -25,10 +31,12 @@
     },
     "require-dev": {
         "larastan/larastan": "^3.10",
-        "orchestra/testbench": "^8.0|^9.0|^10.0",
-        "orchestra/workbench": "^8.0|^9.0|^10.0",
+        "laravel/pint": "^1.32",
+        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+        "orchestra/workbench": "^8.0|^9.0|^10.0|^11.0",
         "phpstan/phpstan": "^2.2",
-        "phpunit/phpunit": "^10.0|^11.0|^12.0"
+        "phpunit/phpunit": "^10.5|^11.5|^12.5",
+        "rector/rector": "^2.6"
     },
     "autoload": {
         "psr-4": {
@@ -60,6 +68,16 @@
         "test:filter": "vendor/bin/phpunit --filter",
         "test:coverage": "@php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-html build/coverage --coverage-clover build/coverage.xml",
         "phpstan": "vendor/bin/phpstan analyse --memory-limit=1G",
+        "lint": "vendor/bin/pint --test",
+        "format": "vendor/bin/pint",
+        "refactor": "vendor/bin/rector process",
+        "refactor:check": "vendor/bin/rector process --dry-run",
+        "check": [
+            "@lint",
+            "@refactor:check",
+            "@phpstan",
+            "@test"
+        ],
         "serve": "vendor/bin/testbench serve",
         "tinker": "vendor/bin/testbench tinker",
         "workbench:build": "vendor/bin/testbench workbench:build --ansi"
@@ -68,5 +86,13 @@
         "optimize-autoloader": true,
         "sort-packages": true,
         "preferred-install": "dist"
+    },
+    "scripts-descriptions": {
+        "lint": "Check code style (PER-CS via Laravel Pint).",
+        "format": "Fix code style (PER-CS via Laravel Pint).",
+        "refactor": "Apply Rector upgrades.",
+        "refactor:check": "Preview Rector upgrades without writing.",
+        "phpstan": "Run static analysis.",
+        "check": "Run every quality gate: style, Rector, PHPStan and tests."
     }
 }
