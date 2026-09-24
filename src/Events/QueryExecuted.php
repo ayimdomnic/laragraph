@@ -31,5 +31,7 @@ final readonly class QueryExecuted
         public float $executionMs,
         /** `true` when `$result` contains at least one error. */
         public bool $hasErrors,
+        /** `true` when `$result` was served from the response cache. */
+        public bool $cached = false,
     ) {}
 }

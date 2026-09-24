@@ -146,7 +146,12 @@ class Laragraph
             $this->container->make(TracingCollector::class)->reset();
         }
 
+        event(new QueryExecuting($query, $variables, $operationName, $resolvedSchemaName));
+
         // Response cache — only for read-only queries
+        $cacheKey = null;
+        $data     = null;
+
         if (ResponseCache::enabled() && ResponseCache::isCacheable($query, $operationName)) {
             $cacheKey = ResponseCache::key(
                 $query,
@@ -155,29 +160,28 @@ class Laragraph
                 $resolvedSchemaName,
                 ResponseCache::scope(),
             );
-            $cached   = ResponseCache::get($cacheKey);
+            $data = ResponseCache::get($cacheKey);
+        }
 
-            if ($cached !== null) {
-                return $cached;
+        $cached = $data !== null;
+
+        if ($data === null) {
+            $result = $this->executeQuery($query, $context, $variables, $operationName, $schemaName, $rootValue);
+
+            $debug = DebugFlag::NONE;
+            if (config('app.debug')) {
+                $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE;
+            }
+
+            $data = $result->toArray($debug);
+
+            if ($cacheKey !== null && empty($data['errors'])) {
+                ResponseCache::put($cacheKey, $data);
             }
         }
 
-        event(new QueryExecuting($query, $variables, $operationName, $resolvedSchemaName));
-
-        $result = $this->executeQuery($query, $context, $variables, $operationName, $schemaName, $rootValue);
-
-        $debug = DebugFlag::NONE;
-        if (config('app.debug')) {
-            $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE;
-        }
-
-        $data = $result->toArray($debug);
-
-        if (isset($cacheKey) && empty($data['errors'])) {
-            ResponseCache::put($cacheKey, $data);
-        }
-
-        // Merge response-level extensions (built-ins + user-registered)
+        // Response-level extensions (built-ins + user-registered) are computed
+        // per response — never cached — so request ids and timings stay accurate.
         $executionMs   = round(microtime(true) * 1000 - $startMs, 2);
         $extensionData = $this->buildResponseExtensions($executionMs);
 
@@ -185,7 +189,7 @@ class Laragraph
             $data['extensions'] = array_merge($data['extensions'] ?? [], $extensionData);
         }
 
-        // Lifecycle events
+        // Lifecycle events — fired for cache hits too, so auditing and metrics see every request.
         if (!empty($data['errors'])) {
             event(new QueryError($query, $variables, $operationName, $resolvedSchemaName, $data['errors']));
         }
@@ -198,6 +202,7 @@ class Laragraph
             result: $data,
             executionMs: $executionMs,
             hasErrors: !empty($data['errors']),
+            cached: $cached,
         ));
 
         return $data;
@@ -291,8 +296,8 @@ class Laragraph
             DataLoaderRegistry::for($context)?->clear();
         }
 
-        $errorFormatter = config('laragraph.error_formatter', [static::class, 'formatError']);
-        $result->setErrorFormatter($errorFormatter);
+        $result->setErrorFormatter(config('laragraph.error_formatter', [static::class, 'formatError']));
+        $result->setErrorsHandler(config('laragraph.errors_handler', [static::class, 'handleErrors']));
 
         return $result;
     }
