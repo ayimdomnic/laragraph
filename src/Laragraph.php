@@ -335,8 +335,18 @@ class Laragraph
         // User-registered custom validation rules
         $registry = $this->container->make(ValidationRuleRegistry::class);
         if (!$registry->isEmpty()) {
+            $seen = [];
+
             foreach ($registry->resolve() as $rule) {
-                $rules[$rule::class] = $rule;
+                // The first custom rule of a class may replace the built-in rule
+                // of that class; further instances (e.g. differently configured)
+                // are added alongside instead of overwriting each other.
+                if (isset($seen[$rule::class])) {
+                    $rules[] = $rule;
+                } else {
+                    $rules[$rule::class] = $rule;
+                    $seen[$rule::class]  = true;
+                }
             }
         }
 
