@@ -14,6 +14,17 @@ use GraphQL\Type\Definition\Type;
  */
 class PageInfoType extends ObjectType
 {
+    private static ?self $instance = null;
+
+    /**
+     * The shared `PageInfo` type. A schema may contain only one type per
+     * name, so every connection must reference the same instance.
+     */
+    public static function instance(): self
+    {
+        return self::$instance ??= new self();
+    }
+
     public function __construct()
     {
         parent::__construct([
