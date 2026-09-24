@@ -37,10 +37,27 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 class ConnectionType extends ObjectType
 {
+    /** @var array<string, self> Connections by name and node type instance. */
+    private static array $instances = [];
+
+    /**
+     * A connection type, reused when several fields return the same
+     * connection (a schema may contain only one type per name).
+     *
+     *   public function type(): Type
+     *   {
+     *       return ConnectionType::make('PostConnection', Laragraph::type('Post'));
+     *   }
+     */
+    public static function make(string $name, Type $nodeType): self
+    {
+        return self::$instances[$name . '#' . spl_object_id($nodeType)] ??= new self($name, $nodeType);
+    }
+
     public function __construct(string $name, Type $nodeType)
     {
         $edgeType    = new EdgeType("{$name}Edge", $nodeType);
-        $pageInfo    = new PageInfoType();
+        $pageInfo    = PageInfoType::instance();
 
         parent::__construct([
             'name'        => $name,
