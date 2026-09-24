@@ -8,11 +8,11 @@
     "packages": [
         {
             "name": "ayimdomnic/laragraph",
-            "version": "dev-feat/example-app-and-docs",
+            "version": "dev-master",
             "dist": {
                 "type": "path",
                 "url": "..",
-                "reference": "6ae7869244884a4d6ba388b4fcc75ca99f9b4133"
+                "reference": "adc2bed6a7128745981db6d369b2c28abc6a0552"
             },
             "require": {
                 "ext-json": "*",
