@@ -17,10 +17,14 @@ use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Illuminate\Auth\GenericUser;
 use Illuminate\Broadcasting\BroadcastManager;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\UserProvider;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Gate;
 
 class InMemoryUserProvider implements UserProvider
 {
@@ -234,6 +238,39 @@ class SubscriptionIdentityTest extends TestCase
 
         $this->assertSame(99, Auth::id());
         $this->assertSame($request, request());
+    }
+
+    /**
+     * Octane handles each request in a clone of the worker's application,
+     * while the Gate was created once, in the original — and resolves users
+     * through the original's auth manager.
+     */
+    public function test_policies_answer_for_the_subscriber_when_the_request_runs_in_a_cloned_application(): void
+    {
+        Gate::define('is-subscriber-7', fn(?Authenticatable $user): bool => $user?->getAuthIdentifier() === 7);
+        app(GateContract::class); // resolved in the "worker" application
+
+        $sandbox = clone $this->app;
+        Container::setInstance($sandbox);
+        Facade::setFacadeApplication($sandbox);
+
+        try {
+            $this->actingAs(InMemoryUserProvider::add(99)); // the broadcaster
+            InMemoryUserProvider::add(7);
+
+            $asSubscriber = app(SubscriberSandbox::class)->run(['guard' => 'web', 'id' => 7, 'type' => null], static fn(): array => [
+                Gate::allows('is-subscriber-7'),
+                auth()->id(),
+            ]);
+            $asGuest = app(SubscriberSandbox::class)->run(null, static fn(): bool => Gate::allows('is-subscriber-7'));
+
+            $this->assertSame([true, 7], $asSubscriber);
+            $this->assertFalse($asGuest);
+            $this->assertFalse(Gate::allows('is-subscriber-7'), 'the original Gate is restored');
+        } finally {
+            Container::setInstance($this->app);
+            Facade::setFacadeApplication($this->app);
+        }
     }
 
     public function test_identity_uses_the_configured_laragraph_guard(): void

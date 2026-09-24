@@ -6,6 +6,8 @@ namespace Ayimdomnic\Laragraph\Subscriptions;
 
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Illuminate\Auth\AuthManager;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Session\ArraySessionHandler;
@@ -25,7 +27,9 @@ use Illuminate\Support\Facades\Facade;
  *    broadcaster's token, cookies or session;
  *  - a clone of the auth manager (custom guards such as Sanctum's survive)
  *    with no resolved guards, logged in as the subscriber on the guard they
- *    subscribed through — or as a guest.
+ *    subscribed through — or as a guest;
+ *  - a Gate bound to that same user, so policies and Gate::allows() answer
+ *    for the subscriber too.
  *
  * Everything is restored afterwards, even if the callback throws.
  *
@@ -33,9 +37,20 @@ use Illuminate\Support\Facades\Facade;
  */
 final readonly class SubscriberSandbox
 {
-    private const SWAPPED = ['request', 'auth', 'session.store'];
+    private const SWAPPED = ['request', 'auth', 'session.store', Gate::class];
 
-    public function __construct(private Application $app) {}
+    /**
+     * The application handling the current request or job — resolved on
+     * every use, never captured: under Octane each request runs in its own
+     * clone of the application, while this object may outlive it.
+     */
+    private function app(): Application
+    {
+        $app = Container::getInstance();
+        assert($app instanceof Application);
+
+        return $app;
+    }
 
     /**
      * The identity of the user making the current request, to be stored with a subscriber.
@@ -71,8 +86,8 @@ final readonly class SubscriberSandbox
         $originalGuard = config('auth.defaults.guard');
 
         foreach (self::SWAPPED as $abstract) {
-            if ($this->app->bound($abstract)) {
-                $original[$abstract] = $this->app->make($abstract);
+            if ($this->app()->bound($abstract)) {
+                $original[$abstract] = $this->app()->make($abstract);
             }
         }
 
@@ -102,6 +117,15 @@ final readonly class SubscriberSandbox
             }
 
             $request->setUserResolver(static fn(?string $guard = null): ?Authenticatable => $auth->guard($guard)->user());
+
+            // The Gate resolves users through the auth manager of the
+            // application it was created in. Under Octane that is the
+            // worker's base application — not the clone whose auth manager
+            // was swapped above — so it would still authorize as the
+            // broadcaster. A Gate bound to the subscriber closes that gap.
+            if (isset($original[Gate::class])) {
+                $this->swap([Gate::class => $original[Gate::class]->forUser($auth->guard()->user())]);
+            }
 
             return $callback($request);
         } finally {
@@ -134,13 +158,13 @@ final readonly class SubscriberSandbox
     private function swap(array $instances): void
     {
         foreach ($instances as $abstract => $instance) {
-            $this->app->instance($abstract, $instance);
+            $this->app()->instance($abstract, $instance);
             Facade::clearResolvedInstance($abstract);
         }
     }
 
     private function auth(): AuthManager
     {
-        return $this->app->make('auth');
+        return $this->app()->make('auth');
     }
 }
