@@ -20,7 +20,11 @@ final class Operation
     public const MUTATION     = 'mutation';
     public const SUBSCRIPTION = 'subscription';
 
-    /** Parsed documents are memoised briefly; one request typically asks several times. */
+    /**
+     * Parsed documents are memoised briefly (one request typically asks
+     * several times). Eviction is first-in-first-out, not least-recently-used:
+     * the memo only needs to survive the handful of lookups within a request.
+     */
     private const MEMO_SIZE = 32;
 
     /** @var array<string, array<string|int, self::QUERY|self::MUTATION|self::SUBSCRIPTION>> query hash => [operation name|index => type] */
