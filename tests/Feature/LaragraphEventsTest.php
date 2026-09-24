@@ -80,7 +80,7 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ eventPing }');
 
-        Event::assertDispatched(QueryExecuting::class, fn($e) => $e->query       === '{ eventPing }'
+        Event::assertDispatched(QueryExecuting::class, fn($e): bool => $e->query       === '{ eventPing }'
             && $e->schemaName  === 'default'
             && $e->variables   === []
             && $e->operationName === null);
@@ -96,7 +96,7 @@ class LaragraphEventsTest extends TestCase
             'operationName' => 'GetPing',
         ]);
 
-        Event::assertDispatched(QueryExecuting::class, fn($e) => $e->variables     === ['v' => 'test']
+        Event::assertDispatched(QueryExecuting::class, fn($e): bool => $e->variables     === ['v' => 'test']
             && $e->operationName === 'GetPing');
     }
 
@@ -110,7 +110,7 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ eventPing }');
 
-        Event::assertDispatched(QueryExecuted::class, fn($e) => $e->schemaName  === 'default'
+        Event::assertDispatched(QueryExecuted::class, fn($e): bool => $e->schemaName  === 'default'
             && $e->hasErrors   === false
             && ($e->result['data']['eventPing'] ?? null) === 'pong'
             && $e->executionMs >= 0.0);
@@ -135,7 +135,7 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ nonExistentField }');
 
-        Event::assertDispatched(QueryError::class, fn($e) => $e->schemaName === 'default'
+        Event::assertDispatched(QueryError::class, fn($e): bool => $e->schemaName === 'default'
             && !empty($e->errors));
     }
 
@@ -154,6 +154,6 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ nonExistentField }');
 
-        Event::assertDispatched(QueryError::class, fn($e) => isset($e->errors[0]['message']));
+        Event::assertDispatched(QueryError::class, fn($e): bool => isset($e->errors[0]['message']));
     }
 }

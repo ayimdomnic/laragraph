@@ -80,8 +80,16 @@ class SchemaBuilder
         }
 
         $schemaConfig['types']      = $this->resolveAllTypeInstances();
-        $schemaConfig['typeLoader'] = fn(string $name): ?Type
-            => $this->manager->hasType($name) ? $this->manager->type($name) : null;
+        // The loader is asked by GraphQL name for every type — including the
+        // root operation types, which live outside the Laragraph registry.
+        $rootTypes = [];
+        foreach (['query', 'mutation', 'subscription'] as $operation) {
+            if (isset($schemaConfig[$operation])) {
+                $rootTypes[$schemaConfig[$operation]->name] = $schemaConfig[$operation];
+            }
+        }
+
+        $schemaConfig['typeLoader'] = fn(string $name): ?Type => $rootTypes[$name] ?? $this->manager->typeByName($name);
 
         return $schemaConfig;
     }
@@ -147,7 +155,17 @@ class SchemaBuilder
             (string) config('laragraph.discover.types', ''),
         );
 
-        foreach (array_merge($discoveredTypes, $typeClasses) as $alias => $class) {
+        // A class registered explicitly (possibly under a different alias) must
+        // not also be registered by discovery, or it would be instantiated twice.
+        $explicit = array_flip(array_filter($typeClasses, is_string(...)));
+
+        foreach ($discoveredTypes as $alias => $class) {
+            if (!isset($explicit[$class])) {
+                $this->manager->addType($class, $alias);
+            }
+        }
+
+        foreach ($typeClasses as $alias => $class) {
             $this->manager->addType($class, is_string($alias) ? $alias : null);
         }
     }

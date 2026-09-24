@@ -53,7 +53,7 @@ abstract class Type extends ObjectType
             ['name' => class_basename(static::class)],
             $this->attributes,
             [
-                'fields' => fn(): array => $this->buildFields(),
+                'fields' => $this->buildFields(...),
             ],
         );
 
@@ -129,7 +129,7 @@ abstract class Type extends ObjectType
     {
         $dataLoaders = DataLoaderRegistry::for($context);
 
-        if ($dataLoaders === null) {
+        if (!$dataLoaders instanceof DataLoaderRegistry) {
             throw new \RuntimeException(
                 'batchRelation() requires a DataLoaderRegistry on the execution context. '
                 . 'This is attached automatically by Laragraph::executeQuery() — '

@@ -9,6 +9,8 @@ use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Support\Subscription;
 use Ayimdomnic\Laragraph\Support\Type;
 use Composer\Autoload\ClassLoader;
+use GraphQL\Type\Definition\NamedType;
+use GraphQL\Type\Definition\Type as GraphQLType;
 use Illuminate\Support\Str;
 
 /**
@@ -31,26 +33,9 @@ class Discover
      */
     public static function scan(string $path, string $baseClass): array
     {
-        if (empty($path)) {
-            return [];
-        }
+        $results = [];
 
-        $absolutePath = base_path($path);
-
-        if (!is_dir($absolutePath)) {
-            return [];
-        }
-
-        $namespace = static::namespaceForDirectory($absolutePath);
-        $results   = [];
-
-        foreach (glob("{$absolutePath}/*.php") ?: [] as $file) {
-            $class = $namespace . '\\' . pathinfo($file, PATHINFO_FILENAME);
-
-            if (!class_exists($class)) {
-                continue;
-            }
-
+        foreach (static::classesIn($path) as $class) {
             $ref = new \ReflectionClass($class);
 
             if ($ref->isAbstract() || !$ref->isSubclassOf($baseClass)) {
@@ -63,14 +48,73 @@ class Discover
         return $results;
     }
 
+    /**
+     * Every loadable class (or enum) defined by a PHP file directly inside $path.
+     *
+     * @param string $path Path relative to base_path()
+     * @return list<class-string>
+     */
+    protected static function classesIn(string $path): array
+    {
+        if ($path === '') {
+            return [];
+        }
+
+        $absolutePath = base_path($path);
+
+        if (!is_dir($absolutePath)) {
+            return [];
+        }
+
+        $namespace = static::namespaceForDirectory($absolutePath);
+        $classes   = [];
+
+        foreach (glob("{$absolutePath}/*.php") ?: [] as $file) {
+            $class = $namespace . '\\' . pathinfo($file, PATHINFO_FILENAME);
+
+            if (class_exists($class) || enum_exists($class)) {
+                $classes[] = $class;
+            }
+        }
+
+        return $classes;
+    }
+
     // -------------------------------------------------------------------------
     // Typed helpers
     // -------------------------------------------------------------------------
 
-    /** @return array<string, string> */
+    /**
+     * Discover every GraphQL named type in $path: object types, input types,
+     * enums, interfaces, unions and scalars built on the Laragraph (or
+     * webonyx) base classes, plus native PHP enums, which are exposed as
+     * GraphQL enum types.
+     *
+     * @return array<string, string>
+     */
     public static function types(string $path): array
     {
-        return static::scan($path, Type::class);
+        $results = [];
+
+        foreach (static::classesIn($path) as $class) {
+            if (enum_exists($class)) {
+                $results[static::aliasFor($class, Type::class)] = $class;
+
+                continue;
+            }
+
+            $ref = new \ReflectionClass($class);
+
+            if ($ref->isAbstract()
+                || !$ref->isSubclassOf(GraphQLType::class)
+                || !$ref->implementsInterface(NamedType::class)) {
+                continue;
+            }
+
+            $results[static::aliasFor($class, Type::class)] = $class;
+        }
+
+        return $results;
     }
 
     /** @return array<string, string> */

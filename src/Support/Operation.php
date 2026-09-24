@@ -80,7 +80,7 @@ final class Operation
 
         foreach ($document->definitions as $index => $definition) {
             if ($definition instanceof OperationDefinitionNode) {
-                $operations[$definition->name?->value ?? $index] = $definition->operation;
+                $operations[$definition->name->value ?? $index] = $definition->operation;
             }
         }
 

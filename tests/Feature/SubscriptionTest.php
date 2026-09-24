@@ -190,7 +190,7 @@ class SubscriptionTest extends TestCase
 
         $this->assertSame(1, $notified);
 
-        Event::assertDispatched(SubscriptionMessage::class, fn(SubscriptionMessage $message) => $message->subscriberId === $subscriberId
+        Event::assertDispatched(SubscriptionMessage::class, fn(SubscriptionMessage $message): bool => $message->subscriberId === $subscriberId
             && $message->payload['data']['ping'] === 'hello world');
     }
 

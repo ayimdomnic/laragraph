@@ -33,6 +33,7 @@ use GraphQL\Executor\ExecutionResult;
 use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
 use GraphQL\Type\Definition\NamedType;
+use GraphQL\Type\Definition\PhpEnumType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Validator\DocumentValidator;
@@ -394,10 +395,42 @@ class Laragraph
             );
         }
 
-        $type = $this->container->make($this->types[$name]);
+        $class = $this->types[$name];
+        $type  = enum_exists($class)
+            ? new PhpEnumType($class, $name)
+            : $this->container->make($class);
+
         $this->typesInstances[$name] = $type;
 
         return $type;
+    }
+
+    /**
+     * Resolve a registered type by its GraphQL name rather than its alias.
+     *
+     * Aliases usually match the GraphQL name, but need not (e.g. an alias of
+     * `UserInput` for an input type named `CreateUserInput`). The schema's
+     * type loader is always asked by GraphQL name, so it goes through here.
+     */
+    public function typeByName(string $graphqlName): ?Type
+    {
+        if ($this->hasType($graphqlName)) {
+            $type = $this->type($graphqlName);
+
+            if ($type instanceof NamedType && $type->name() === $graphqlName) {
+                return $type;
+            }
+        }
+
+        foreach (array_unique([...array_keys($this->types), ...array_keys($this->typesInstances)]) as $alias) {
+            $type = $this->type((string) $alias);
+
+            if ($type instanceof NamedType && $type->name() === $graphqlName) {
+                return $type;
+            }
+        }
+
+        return null;
     }
 
     /** Return all registered type class aliases.
@@ -514,6 +547,11 @@ class Laragraph
 
     protected function resolveTypeName(string $class): string
     {
+        // Native PHP enums are exposed under their short class name.
+        if (enum_exists($class)) {
+            return class_basename($class);
+        }
+
         // Try to get the name without instantiating (cheaper)
         if (defined("{$class}::NAME")) {
             return $class::NAME;

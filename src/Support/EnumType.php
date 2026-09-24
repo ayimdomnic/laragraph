@@ -28,12 +28,16 @@ use GraphQL\Type\Definition\EnumType as GraphQLEnumType;
  *       }
  *   }
  *
- * You can also use PHP 8.1 backed enums:
+ * You can also return the cases of a native PHP enum; each case becomes a
+ * GraphQL value named after the case, and resolvers receive the case itself:
  *
  *   public function values(): array
  *   {
- *       return UserStatus::cases(); // backed enum
+ *       return UserStatus::cases();
  *   }
+ *
+ * (Or skip the wrapper class entirely and register the enum directly —
+ * `'types' => ['UserStatus' => UserStatus::class]` — see the README.)
  */
 abstract class EnumType extends GraphQLEnumType
 {
@@ -47,7 +51,7 @@ abstract class EnumType extends GraphQLEnumType
         $config = array_merge(
             ['name' => class_basename(static::class)],
             $this->attributes,
-            ['values' => $this->values()],
+            ['values' => $this->normalizeValues($this->values())],
         );
 
         parent::__construct($config);
@@ -62,4 +66,27 @@ abstract class EnumType extends GraphQLEnumType
      * @return array<string, mixed>
      */
     abstract public function values(): array;
+
+    /**
+     * Expand a list of native enum cases into GraphQL value definitions.
+     *
+     * @param  array<mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function normalizeValues(array $values): array
+    {
+        $normalized = [];
+
+        foreach ($values as $key => $value) {
+            if (is_int($key) && $value instanceof \UnitEnum) {
+                $normalized[$value->name] = ['value' => $value];
+
+                continue;
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        return $normalized;
+    }
 }

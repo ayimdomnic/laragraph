@@ -36,7 +36,7 @@ class LaragraphServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/laragraph.php', 'laragraph');
 
-        $this->app->singleton('laragraph', fn($app) => new Laragraph($app));
+        $this->app->singleton('laragraph', fn($app): Laragraph => new Laragraph($app));
 
         $this->app->alias('laragraph', Laragraph::class);
 
@@ -69,7 +69,7 @@ class LaragraphServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(SubscriberStoreInterface::class, fn($app) => new CacheSubscriberStore(
+        $this->app->singleton(SubscriberStoreInterface::class, fn($app): CacheSubscriberStore => new CacheSubscriberStore(
             $app['cache']->store(config('laragraph.subscriptions.cache_store')),
             (int) config('laragraph.subscriptions.ttl', 3600) ?: null,
         ));

@@ -49,7 +49,7 @@ abstract class InterfaceType extends GraphQLInterfaceType
             ['name' => class_basename(static::class)],
             $this->attributes,
             [
-                'fields' => fn(): array => $this->fields(),
+                'fields' => $this->fields(...),
                 'resolveType' => fn(mixed $value, mixed $context, ResolveInfo $info): mixed => $this->resolveType($value, $context, $info),
             ],
         );
