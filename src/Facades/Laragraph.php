@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static array<int, array<string, mixed>> executeBatch(array<int, array<string, mixed>> $operations, mixed $context = null, string $schemaName = 'default')
  * @method static Type|null typeByName(string $graphqlName)
  * @method static int broadcast(string $channel, mixed $payload = null)
- * @method static void addType(string|Type $class, ?string $alias = null)
+ * @method static string addType(string|Type $class, ?string $alias = null)
  * @method static Type type(string $name, bool $fresh = false)
  * @method static bool hasType(string $name)
  * @method static void addValidationRule(string|ValidationRule $rule)

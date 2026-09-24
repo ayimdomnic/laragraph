@@ -362,8 +362,10 @@ class Laragraph
 
     /**
      * Register a type class (or instance) with an optional alias.
+     *
+     * @return string The alias the type was registered under.
      */
-    public function addType(string|Type $class, ?string $alias = null): void
+    public function addType(string|Type $class, ?string $alias = null): string
     {
         if ($class instanceof Type) {
             if ($alias === null) {
@@ -375,12 +377,15 @@ class Laragraph
             }
 
             $this->typesInstances[$alias] = $class;
-            return;
+
+            return $alias;
         }
 
         $alias ??= $this->resolveTypeName($class);
         $this->types[$alias] = $class;
         unset($this->typesInstances[$alias]); // invalidate cached instance
+
+        return $alias;
     }
 
     /**
