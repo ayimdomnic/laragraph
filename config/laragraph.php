@@ -207,7 +207,9 @@ return [
     |
     */
     'pagination' => [
-        'per_page' => 15,
+        'per_page'     => 15,
+        // Largest page a client may request via first/last/per_page (null: no cap).
+        'max_per_page' => 100,
     ],
 
     /*

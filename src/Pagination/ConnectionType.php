@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Pagination;
 
+use GraphQL\Error\Error;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * Relay-spec cursor pagination — Connection type.
@@ -73,41 +77,73 @@ class ConnectionType extends ObjectType
     }
 
     /**
-     * Paginate an Eloquent builder using cursor (offset-encoded) pagination
-     * and return a Connection-shaped array.
+     * Relay cursor pagination.
+     *
+     * Cursors identify an item's 1-based position in the full result set, and
+     * the window follows the Relay spec: `after`/`before` narrow the list,
+     * then `first` keeps the leading and `last` the trailing N items. Page
+     * sizes are capped at `laragraph.pagination.max_per_page`.
+     *
+     * Eloquent builders, query builders and relations are paged with exact
+     * offsets. Any other object exposing Laravel's `paginate()` signature is
+     * supported for page-aligned windows (a constant `first`, moving forward).
      *
      * @param  array<string, mixed>  $args
-     * @return array{edges: array<int, array{node: mixed, cursor: string}>, pageInfo: array<string, mixed>}
+     * @return array{edges: list<array{node: mixed, cursor: string}>, pageInfo: array{hasNextPage: bool, hasPreviousPage: bool, startCursor: string|null, endCursor: string|null, total: int}}
+     *
+     * @throws Error When `first` or `last` is negative.
      */
     public static function paginate(object $query, array $args): array
     {
-        $perPage = (int) ($args['first'] ?? $args['last'] ?? config('laragraph.pagination.per_page', 15));
-        $page    = 1;
+        $first = self::limit($args, 'first');
+        $last  = self::limit($args, 'last');
 
-        if (!empty($args['after'])) {
-            $page = self::decodeCursor($args['after']) + 1;
-        } elseif (!empty($args['before'])) {
-            $page = max(1, self::decodeCursor($args['before']) - 1);
+        if ($first === null && $last === null) {
+            $first = self::clamp((int) config('laragraph.pagination.per_page', 15));
         }
 
-        $paginator = self::paginator($query, $perPage, $page);
-        $items     = $paginator->items();
-        $total     = $paginator->total();
-        $offset    = ($page - 1) * $perPage;
+        $after  = empty($args['after']) ? 0 : self::decodeCursor((string) $args['after']);
+        $before = empty($args['before']) ? null : self::decodeCursor((string) $args['before']);
+
+        if ($query instanceof EloquentBuilder || $query instanceof QueryBuilder || $query instanceof Relation) {
+            $total = (clone $query)->count();
+            $start = $after;
+            $end   = $before === null ? $total : min($total, max(0, $before - 1));
+
+            if ($first !== null) {
+                $end = min($end, $start + $first);
+            }
+
+            if ($last !== null) {
+                $start = max($start, $end - $last);
+            }
+
+            $limit = max(0, $end - $start);
+            $items = $limit === 0 ? [] : (clone $query)->skip($start)->take($limit)->get()->all();
+        } else {
+            // paginate()-only objects: translate the window to a page of $size items.
+            $size      = max(1, $first ?? $last);
+            $start     = $before !== null && $first === null ? max(0, $before - 1 - $size) : $after;
+            $paginator = self::paginator($query, $size, intdiv($start, $size) + 1);
+            $items     = $paginator->items();
+            $total     = $paginator->total();
+            $start     = ($paginator->currentPage() - 1) * $size;
+            $end       = $start + count($items);
+        }
 
         $edges = [];
         foreach (array_values($items) as $index => $item) {
             $edges[] = [
                 'node'   => $item,
-                'cursor' => self::encodeCursor($offset + $index + 1),
+                'cursor' => self::encodeCursor($start + $index + 1),
             ];
         }
 
         return [
             'edges'    => $edges,
             'pageInfo' => [
-                'hasNextPage'     => $paginator->hasMorePages(),
-                'hasPreviousPage' => $page > 1,
+                'hasNextPage'     => $end < $total,
+                'hasPreviousPage' => $start > 0,
                 'startCursor'     => $edges !== [] ? $edges[0]['cursor'] : null,
                 'endCursor'       => $edges !== [] ? $edges[array_key_last($edges)]['cursor'] : null,
                 'total'           => $total,
@@ -125,8 +161,8 @@ class ConnectionType extends ObjectType
      */
     public static function simplePaginate(object $query, array $args): array
     {
-        $perPage = (int) ($args['per_page'] ?? config('laragraph.pagination.per_page', 15));
-        $page    = (int) ($args['page'] ?? 1);
+        $perPage = self::clamp((int) ($args['per_page'] ?? config('laragraph.pagination.per_page', 15)));
+        $page    = max(1, (int) ($args['page'] ?? 1));
 
         $paginator = self::paginator($query, $perPage, $page);
 
@@ -156,6 +192,36 @@ class ConnectionType extends ObjectType
             return 0;
         }
         return (int) substr($decoded, 7);
+    }
+
+    /**
+     * @param array<string, mixed> $args
+     *
+     * @throws Error
+     */
+    private static function limit(array $args, string $name): ?int
+    {
+        if (!isset($args[$name])) {
+            return null;
+        }
+
+        $value = (int) $args[$name];
+
+        if ($value < 0) {
+            throw new Error("`{$name}` must not be negative.");
+        }
+
+        return self::clamp($value);
+    }
+
+    /**
+     * Cap a page size at `laragraph.pagination.max_per_page` (null: no cap).
+     */
+    private static function clamp(int $size): int
+    {
+        $max = config('laragraph.pagination.max_per_page', 100);
+
+        return $max === null ? max(0, $size) : max(0, min($size, (int) $max));
     }
 
     /**
