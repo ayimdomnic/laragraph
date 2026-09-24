@@ -7,6 +7,7 @@ namespace Ayimdomnic\Laragraph\Tests\Unit\Middleware;
 use Ayimdomnic\Laragraph\Middleware\ThrottleMiddleware;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Error\Error;
+use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -20,7 +21,8 @@ class ThrottleMiddlewareTest extends TestCase
 
         /** @var ResolveInfo $info */
         $info = \Mockery::mock(ResolveInfo::class);
-        $info->fieldName = 'throttledField';
+        $info->fieldName  = 'throttledField';
+        $info->parentType = new ObjectType(['name' => 'Query', 'fields' => []]);
         $this->info = $info;
     }
 
@@ -97,5 +99,15 @@ class ThrottleMiddlewareTest extends TestCase
         }
 
         $this->assertFalse($called);
+    }
+
+    public function test_the_key_includes_the_parent_type(): void
+    {
+        RateLimiter::shouldReceive('tooManyAttempts')->once()->with('laragraph_throttle:Query.throttledField:127.0.0.1', 5)->andReturn(false);
+        RateLimiter::shouldReceive('hit')->once();
+
+        (new ThrottleMiddleware(maxAttempts: 5))->handle(null, [], null, $this->info, fn(): string => 'ok');
+
+        $this->addToAssertionCount(1);
     }
 }
