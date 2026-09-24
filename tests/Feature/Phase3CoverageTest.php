@@ -9,6 +9,7 @@ use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
 
 // ---------------------------------------------------------------------------
@@ -18,7 +19,10 @@ use Illuminate\Support\Facades\Gate;
 /** Always resolves — used for cache and wrapContext tests. */
 class Phase3PingQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -35,10 +39,16 @@ class Phase3PingQuery extends Query
  */
 class PolicyRestrictedQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     /** Return any non-null string to activate the policy check block. */
-    public function policy(): ?string { return 'SomeResourcePolicy'; }
+    public function policy(): ?string
+    {
+        return 'SomeResourcePolicy';
+    }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -94,12 +104,12 @@ class Phase3CoverageTest extends TestCase
     public function test_policy_field_allows_authenticated_user_when_gate_permits(): void
     {
         // Authenticate a user so can() proceeds past the null-user guard
-        $user = new \Illuminate\Foundation\Auth\User();
+        $user = new User();
         $user->forceFill(['id' => 1]);
         $this->actingAs($user);
 
         // Define the 'view' ability so the Gate returns true
-        Gate::define('view', fn ($u, $argument) => true);
+        Gate::define('view', fn($u, $argument): true => true);
 
         // PolicyRestrictedQuery → can('view', 'SomeResourcePolicy') → true
         // → policy passes → resolver runs

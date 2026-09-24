@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Validation;
 
+use Ayimdomnic\Laragraph\Laragraph;
 use GraphQL\Validator\Rules\ValidationRule;
 
 /**
  * Stores user-defined (and config-declared) GraphQL validation rules.
  *
  * Rules registered here are merged into every execution's rule set by
- * {@see \Ayimdomnic\Laragraph\Laragraph::buildValidationRules()}.
+ * {@see Laragraph::buildValidationRules()}.
  *
  * Usage:
  *
@@ -45,7 +46,7 @@ class ValidationRuleRegistry
     public function resolve(): array
     {
         return array_values(array_map(
-            fn (string|ValidationRule $rule) => is_string($rule) ? app($rule) : $rule,
+            fn(string|ValidationRule $rule) => is_string($rule) ? app($rule) : $rule,
             $this->rules,
         ));
     }
@@ -61,6 +62,6 @@ class ValidationRuleRegistry
 
     public function isEmpty(): bool
     {
-        return empty($this->rules);
+        return $this->rules === [];
     }
 }

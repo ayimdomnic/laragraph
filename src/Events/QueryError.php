@@ -13,18 +13,18 @@ namespace Ayimdomnic\Laragraph\Events;
  * `$errors` is the serialised `errors` array from the GraphQL response —
  * each element is an array with at minimum a `"message"` key.
  */
-final class QueryError
+final readonly class QueryError
 {
     public function __construct(
         /** The raw GraphQL query string. */
-        public readonly string $query,
+        public string $query,
         /** @var array<string, mixed> Resolved variable values. */
-        public readonly array $variables,
+        public array $variables,
         /** The operation name, or `null` when not specified. */
-        public readonly ?string $operationName,
+        public ?string $operationName,
         /** The resolved schema name. */
-        public readonly string $schemaName,
+        public string $schemaName,
         /** @var array<int, array<string, mixed>> The serialised errors array from the GraphQL response. */
-        public readonly array $errors,
+        public array $errors,
     ) {}
 }

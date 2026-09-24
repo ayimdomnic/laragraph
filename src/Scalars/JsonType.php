@@ -49,7 +49,7 @@ class JsonType extends ScalarType
             $node instanceof FloatValueNode  => (float) $node->value,
             $node instanceof NullValueNode   => null,
             $node instanceof ListValueNode   => array_map(
-                fn (Node $item) => $this->parseLiteralNode($item),
+                $this->parseLiteralNode(...),
                 iterator_to_array($node->values),
             ),
             $node instanceof ObjectValueNode => array_reduce(

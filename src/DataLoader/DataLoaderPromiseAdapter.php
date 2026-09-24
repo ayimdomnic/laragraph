@@ -21,7 +21,7 @@ use Overblog\DataLoader\DataLoader;
  * usage of {@see DataLoaderRegistry}) never resolves and
  * `SyncPromiseAdapter::wait()` spins forever.
  *
- * {@see \GraphQL\Executor\Promise\Adapter\SyncPromiseAdapter::onWait()} is the
+ * {@see SyncPromiseAdapter::onWait()} is the
  * extension point webonyx provides for exactly this: it runs on every
  * iteration of the wait loop while a promise is still pending.
  */

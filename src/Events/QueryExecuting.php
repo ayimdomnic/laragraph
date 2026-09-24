@@ -11,16 +11,16 @@ namespace Ayimdomnic\Laragraph\Events;
  * Use this event for audit logging, per-query rate-limiting, or request
  * correlation.
  */
-final class QueryExecuting
+final readonly class QueryExecuting
 {
     public function __construct(
         /** The raw GraphQL query string. */
-        public readonly string $query,
+        public string $query,
         /** @var array<string, mixed> Resolved variable values (empty array when none supplied). */
-        public readonly array $variables,
+        public array $variables,
         /** The operation name, or `null` when not specified. */
-        public readonly ?string $operationName,
+        public ?string $operationName,
         /** The resolved schema name (never null -- defaults to the configured default). */
-        public readonly string $schemaName,
+        public string $schemaName,
     ) {}
 }

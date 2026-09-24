@@ -13,12 +13,12 @@ use GraphQL\Type\Schema;
  *
  * Listen to this event to inspect, validate, or warm-up a just-built schema.
  */
-final class SchemaBuilt
+final readonly class SchemaBuilt
 {
     public function __construct(
         /** The name of the schema as defined in `laragraph.schemas`. */
-        public readonly string $schemaName,
+        public string $schemaName,
         /** The compiled schema instance. */
-        public readonly Schema $schema,
+        public Schema $schema,
     ) {}
 }

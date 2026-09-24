@@ -6,6 +6,7 @@ namespace Ayimdomnic\Laragraph\Validation;
 
 use GraphQL\Error\Error;
 use GraphQL\Language\AST\FieldNode;
+use GraphQL\Language\AST\NameNode;
 use GraphQL\Language\AST\Node;
 use GraphQL\Language\AST\NodeKind;
 use GraphQL\Validator\Rules\ValidationRule;
@@ -48,7 +49,7 @@ class MaxAliasesRule extends ValidationRule
         return [
             NodeKind::FIELD => [
                 'enter' => function (Node $node) use ($context, &$count): void {
-                    if (!$node instanceof FieldNode || $node->alias === null) {
+                    if (!$node instanceof FieldNode || !$node->alias instanceof NameNode) {
                         return;
                     }
 

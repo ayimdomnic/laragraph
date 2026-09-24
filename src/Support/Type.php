@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Support;
 
+use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
 use Illuminate\Database\Eloquent\Model;
@@ -52,9 +53,7 @@ abstract class Type extends ObjectType
             ['name' => class_basename(static::class)],
             $this->attributes,
             [
-                'fields' => function (): array {
-                    return $this->buildFields();
-                },
+                'fields' => $this->buildFields(...),
             ],
         );
 
@@ -128,13 +127,13 @@ abstract class Type extends ObjectType
      */
     protected function batchRelation(string $modelClass, string $relation, Model $root, mixed $context): mixed
     {
-        $dataLoaders = is_array($context) ? ($context['dataLoaders'] ?? null) : ($context->dataLoaders ?? null);
+        $dataLoaders = DataLoaderRegistry::for($context);
 
-        if (!$dataLoaders instanceof \Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry) {
+        if (!$dataLoaders instanceof DataLoaderRegistry) {
             throw new \RuntimeException(
                 'batchRelation() requires a DataLoaderRegistry on the execution context. '
                 . 'This is attached automatically by Laragraph::executeQuery() — '
-                . 'make sure $context is the value passed into resolve().'
+                . 'make sure $context is the value passed into resolve().',
             );
         }
 

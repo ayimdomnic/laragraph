@@ -36,7 +36,8 @@ class ExportSchemaCommand extends Command
 
     public function handle(Laragraph $laragraph): int
     {
-        $schemaName = (string) ($this->option('schema') ?: 'default');
+        $schemaOption = $this->option('schema');
+        $schemaName   = is_string($schemaOption) && $schemaOption !== '' ? $schemaOption : 'default';
 
         try {
             $schema = $laragraph->schema($schemaName);
@@ -49,13 +50,13 @@ class ExportSchemaCommand extends Command
 
         $outputPath = $this->option('output');
 
-        if ($outputPath) {
-            $dir = dirname((string) $outputPath);
+        if (is_string($outputPath) && $outputPath !== '') {
+            $dir = dirname($outputPath);
             if ($dir !== '.' && !is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
 
-            file_put_contents((string) $outputPath, $sdl);
+            file_put_contents($outputPath, $sdl);
             $this->components->info("Schema [{$schemaName}] exported to {$outputPath}");
         } else {
             $this->line($sdl);

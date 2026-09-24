@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Extensions;
 
+use Ayimdomnic\Laragraph\Laragraph;
+
 /**
  * Per-request registry of user-defined {@see GraphQLExtensionInterface} implementations.
  *
@@ -17,7 +19,7 @@ namespace Ayimdomnic\Laragraph\Extensions;
  *
  * Built-in extensions (`request_id`, `query_timing`) are configured via
  * `laragraph.extensions` in your config and are applied automatically by
- * {@see \Ayimdomnic\Laragraph\Laragraph::execute()}.
+ * {@see Laragraph::execute()}.
  */
 final class ExtensionRegistry
 {

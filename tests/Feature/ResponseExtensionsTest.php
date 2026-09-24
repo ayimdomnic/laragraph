@@ -17,14 +17,26 @@ use GraphQL\Type\Definition\Type;
 
 class RePingQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'pong'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'pong';
+    }
 }
 
 class CustomExtension implements GraphQLExtensionInterface
 {
-    public function key(): string { return 'custom'; }
-    public function get(array $context = []): array { return ['hello' => 'world']; }
+    public function key(): string
+    {
+        return 'custom';
+    }
+    public function get(array $context = []): array
+    {
+        return ['hello' => 'world'];
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +87,7 @@ class ResponseExtensionsTest extends TestCase
         $result = $this->postJson(
             '/graphql',
             ['query' => '{ rePing }'],
-            ['X-Request-ID' => 'trace-abc-123']
+            ['X-Request-ID' => 'trace-abc-123'],
         )->json();
 
         $this->assertSame('trace-abc-123', $result['extensions']['requestId']['id'] ?? null);
@@ -90,7 +102,7 @@ class ResponseExtensionsTest extends TestCase
 
         $this->assertMatchesRegularExpression(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/',
-            (string) $id
+            (string) $id,
         );
     }
 
@@ -151,7 +163,10 @@ class ResponseExtensionsTest extends TestCase
     {
         $contextCapture = new class implements GraphQLExtensionInterface {
             public array $capturedContext = [];
-            public function key(): string { return 'capture'; }
+            public function key(): string
+            {
+                return 'capture';
+            }
             public function get(array $context = []): array
             {
                 $this->capturedContext = $context;

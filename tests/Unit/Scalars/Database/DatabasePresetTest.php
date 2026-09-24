@@ -36,13 +36,13 @@ class DatabasePresetTest extends TestCase
     {
         $types = DatabasePreset::types('postgres');
 
-        $this->assertSame(UuidType::class,      $types['UUID']);
-        $this->assertSame(BigIntType::class,    $types['BigInt']);
-        $this->assertSame(JsonbType::class,     $types['JSONB']);
-        $this->assertSame(MoneyType::class,     $types['Money']);
-        $this->assertSame(TsvectorType::class,  $types['TSVector']);
-        $this->assertSame(IntervalType::class,  $types['Interval']);
-        $this->assertSame(InetType::class,      $types['Inet']);
+        $this->assertSame(UuidType::class, $types['UUID']);
+        $this->assertSame(BigIntType::class, $types['BigInt']);
+        $this->assertSame(JsonbType::class, $types['JSONB']);
+        $this->assertSame(MoneyType::class, $types['Money']);
+        $this->assertSame(TsvectorType::class, $types['TSVector']);
+        $this->assertSame(IntervalType::class, $types['Interval']);
+        $this->assertSame(InetType::class, $types['Inet']);
         $this->assertCount(7, $types);
     }
 
@@ -54,10 +54,10 @@ class DatabasePresetTest extends TestCase
     {
         $types = DatabasePreset::types('cockroachdb');
 
-        $this->assertSame(UuidType::class,   $types['UUID']);
+        $this->assertSame(UuidType::class, $types['UUID']);
         $this->assertSame(BigIntType::class, $types['BigInt']);
-        $this->assertSame(JsonbType::class,  $types['JSONB']);
-        $this->assertSame(InetType::class,   $types['Inet']);
+        $this->assertSame(JsonbType::class, $types['JSONB']);
+        $this->assertSame(InetType::class, $types['Inet']);
         $this->assertCount(4, $types);
     }
 
@@ -69,9 +69,9 @@ class DatabasePresetTest extends TestCase
     {
         $types = DatabasePreset::types('mssql');
 
-        $this->assertSame(UuidType::class,   $types['UUID']);
+        $this->assertSame(UuidType::class, $types['UUID']);
         $this->assertSame(BigIntType::class, $types['BigInt']);
-        $this->assertSame(MoneyType::class,  $types['Money']);
+        $this->assertSame(MoneyType::class, $types['Money']);
         $this->assertCount(3, $types);
     }
 
@@ -83,9 +83,9 @@ class DatabasePresetTest extends TestCase
     {
         $types = DatabasePreset::types('oracle');
 
-        $this->assertSame(UuidType::class,      $types['UUID']);
-        $this->assertSame(BigIntType::class,    $types['BigInt']);
-        $this->assertSame(IntervalType::class,  $types['Interval']);
+        $this->assertSame(UuidType::class, $types['UUID']);
+        $this->assertSame(BigIntType::class, $types['BigInt']);
+        $this->assertSame(IntervalType::class, $types['Interval']);
         $this->assertCount(3, $types);
     }
 

@@ -4,20 +4,25 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tracing;
 
+use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
+use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\LaragraphServiceProvider;
+use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Support\Type;
 use GraphQL\Type\Definition\ResolveInfo;
 
 /**
  * Records per-field resolver spans for a single GraphQL execution, in the
  * shape needed to build an Apollo Tracing (`extensions.tracing`) response.
  *
- * Bound as a container singleton (see {@see \Ayimdomnic\Laragraph\LaragraphServiceProvider})
- * and reset at the start of every {@see \Ayimdomnic\Laragraph\Laragraph::execute()}
+ * Bound as a container singleton (see {@see LaragraphServiceProvider})
+ * and reset at the start of every {@see Laragraph::execute()}
  * call — the same "per-request, container-scoped" shape already used by
- * {@see \Ayimdomnic\Laragraph\Extensions\ExtensionRegistry}. A container
+ * {@see ExtensionRegistry}. A container
  * singleton (rather than something attached to the execution context) is
  * necessary here because field resolvers are wrapped once, at schema-build
- * time, in code ({@see \Ayimdomnic\Laragraph\Support\Type},
- * {@see \Ayimdomnic\Laragraph\Schema\SchemaBuilder}) that has no access to
+ * time, in code ({@see Type},
+ * {@see SchemaBuilder}) that has no access to
  * the per-request context object.
  */
 final class TracingCollector
@@ -83,7 +88,7 @@ final class TracingCollector
             return;
         }
 
-        $this->spans[$spanId]['duration'] = (hrtime(true) - $this->startNs) - $this->spans[$spanId]['startOffset'];
+        $this->spans[$spanId]['duration'] = (int) ((hrtime(true) - $this->startNs) - $this->spans[$spanId]['startOffset']);
     }
 
     /**

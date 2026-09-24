@@ -43,9 +43,7 @@ abstract class InputType extends InputObjectType
             ['name' => class_basename(static::class)],
             $this->attributes,
             [
-                'fields' => function (): array {
-                    return $this->fields();
-                },
+                'fields' => $this->fields(...),
             ],
         );
 

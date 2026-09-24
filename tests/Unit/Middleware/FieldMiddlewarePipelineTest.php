@@ -54,7 +54,7 @@ class FieldMiddlewarePipelineTest extends TestCase
     public function test_runs_resolver_when_middleware_list_is_empty(): void
     {
         $pipeline = new FieldMiddlewarePipeline([]);
-        $result   = $pipeline->run(null, [], null, $this->info, fn () => 'resolved');
+        $result   = $pipeline->run(null, [], null, $this->info, fn(): string => 'resolved');
 
         $this->assertSame('resolved', $result);
     }
@@ -62,7 +62,7 @@ class FieldMiddlewarePipelineTest extends TestCase
     public function test_single_middleware_wraps_resolver(): void
     {
         $pipeline = new FieldMiddlewarePipeline([new TraceMiddleware('A')]);
-        $result   = $pipeline->run(null, [], null, $this->info, fn () => 'base');
+        $result   = $pipeline->run(null, [], null, $this->info, fn(): string => 'base');
 
         $this->assertSame('A>base', $result);
     }
@@ -75,7 +75,7 @@ class FieldMiddlewarePipelineTest extends TestCase
             new TraceMiddleware('A'),
             new TraceMiddleware('B'),
         ]);
-        $result = $pipeline->run(null, [], null, $this->info, fn () => 'base');
+        $result = $pipeline->run(null, [], null, $this->info, fn(): string => 'base');
 
         $this->assertSame('A>B>base', $result);
     }
@@ -85,7 +85,7 @@ class FieldMiddlewarePipelineTest extends TestCase
         $resolverCalled = false;
         $pipeline       = new FieldMiddlewarePipeline([new ShortCircuitMiddleware()]);
 
-        $result = $pipeline->run(null, [], null, $this->info, function () use (&$resolverCalled) {
+        $result = $pipeline->run(null, [], null, $this->info, function () use (&$resolverCalled): string {
             $resolverCalled = true;
             return 'never';
         });
@@ -104,8 +104,11 @@ class FieldMiddlewarePipelineTest extends TestCase
 
         $pipeline = new FieldMiddlewarePipeline([]);
         $pipeline->run($root, $args, $context, $this->info, function ($r, $a, $c, $i) use (
-            &$capturedRoot, &$capturedArgs, &$capturedContext, &$capturedInfo
-        ) {
+            &$capturedRoot,
+            &$capturedArgs,
+            &$capturedContext,
+            &$capturedInfo
+        ): string {
             $capturedRoot    = $r;
             $capturedArgs    = $a;
             $capturedContext = $c;
@@ -125,8 +128,6 @@ class FieldMiddlewarePipelineTest extends TestCase
         $args    = ['key' => 'value'];
         $context = new \stdClass();
 
-        $capturedArgs = $capturedInfo = null;
-
         $recorder = new class implements FieldMiddlewareInterface {
             public mixed $capturedRoot    = null;
             public mixed $capturedArgs    = null;
@@ -144,7 +145,7 @@ class FieldMiddlewarePipelineTest extends TestCase
         };
 
         $pipeline = new FieldMiddlewarePipeline([$recorder]);
-        $pipeline->run($root, $args, $context, $this->info, fn () => null);
+        $pipeline->run($root, $args, $context, $this->info, fn(): null => null);
 
         $this->assertSame($root, $recorder->capturedRoot);
         $this->assertSame($args, $recorder->capturedArgs);

@@ -25,8 +25,8 @@ class MaxAliasesRuleTest extends TestCase
             'query' => new ObjectType([
                 'name'   => 'Query',
                 'fields' => [
-                    'hello' => ['type' => Type::string(), 'resolve' => fn () => 'world'],
-                    'ping'  => ['type' => Type::string(), 'resolve' => fn () => 'pong'],
+                    'hello' => ['type' => Type::string(), 'resolve' => fn(): string => 'world'],
+                    'ping'  => ['type' => Type::string(), 'resolve' => fn(): string => 'pong'],
                 ],
             ]),
         ]);

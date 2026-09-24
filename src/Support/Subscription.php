@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Support;
 
+use Ayimdomnic\Laragraph\Controllers\LaragraphController;
+use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriptionRegistrar;
 use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Definition\Type;
 
 /**
  * Base class for GraphQL Subscription fields.
@@ -45,6 +47,8 @@ abstract class Subscription extends Field
     /**
      * Return the channel or topic name the client should subscribe to.
      * By default returns null (no subscription channel wiring).
+     *
+     * @param array<string, mixed> $args
      */
     public function subscribe(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -57,7 +61,7 @@ abstract class Subscription extends Field
     public function toArray(): array
     {
         return array_merge(parent::toArray(), [
-            'subscribe' => fn (mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+            'subscribe' => fn(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
                 => $this->subscribe($root, $args, $context, $info),
         ]);
     }
@@ -66,15 +70,17 @@ abstract class Subscription extends Field
      * Branches between registering a subscriber and resolving a live update.
      *
      * webonyx/graphql-php has no dedicated subscription-execution entrypoint
-     * of its own — {@see \Ayimdomnic\Laragraph\Controllers\LaragraphController}
+     * of its own — {@see LaragraphController}
      * drives this by flagging the execution context (`$context->subscribing`)
      * for the initial HTTP request that registers a subscriber. On that pass,
      * this calls {@see subscribe()} to resolve the channel and hands it to the
-     * {@see \Ayimdomnic\Laragraph\Subscriptions\SubscriptionRegistrar} attached
+     * {@see SubscriptionRegistrar} attached
      * to the context, instead of running the field's normal resolver. Later,
-     * when {@see \Ayimdomnic\Laragraph\Laragraph::broadcast()} re-executes this
+     * when {@see Laragraph::broadcast()} re-executes this
      * subscriber's original query with the event payload as $root, `subscribing`
      * is absent/false and {@see resolve()} runs as usual.
+     *
+     * @param array<string, mixed> $args
      */
     protected function handleField(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {

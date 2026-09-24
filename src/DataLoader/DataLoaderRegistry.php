@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\DataLoader;
 
+use Illuminate\Database\Eloquent\Model;
 use Overblog\DataLoader\DataLoader;
 use Overblog\PromiseAdapter\Adapter\WebonyxGraphQLSyncPromiseAdapter;
 
@@ -40,12 +41,83 @@ use Overblog\PromiseAdapter\Adapter\WebonyxGraphQLSyncPromiseAdapter;
  * }
  * ```
  *
+ * Or, for any kind of context (including custom objects that forbid dynamic
+ * properties), look the registry up explicitly:
+ *
+ * ```php
+ * DataLoaderRegistry::for($context)?->get(UserLoader::class)->load($root->user_id);
+ * ```
+ *
  * @see BatchResolver
  */
 final class DataLoaderRegistry
 {
     /** @var array<string, DataLoader> */
     private array $loaders = [];
+
+    /** @var \WeakMap<object, self>|null Registries attached to object contexts. */
+    private static ?\WeakMap $attached = null;
+
+    /** @var array<class-string, bool> Memoised "may this class take a dataLoaders property?" checks. */
+    private static array $writable = [];
+
+    /**
+     * Attach $registry to an object execution context.
+     *
+     * The registry is always retrievable through {@see for()}. It is also
+     * exposed as `$context->dataLoaders` when the context declares that
+     * property or permits dynamic properties (stdClass, #[AllowDynamicProperties]);
+     * other objects are never given a dynamic property, which PHP 8.2+ deprecates.
+     */
+    public static function attach(object $context, self $registry): void
+    {
+        self::$attached ??= new \WeakMap();
+        self::$attached[$context] = $registry;
+
+        if (self::acceptsProperty($context)) {
+            // acceptsProperty() guarantees the property is declared or dynamic properties are allowed.
+            $context->dataLoaders = $registry; // @phpstan-ignore property.notFound
+        }
+    }
+
+    /**
+     * The registry attached to an execution context, or null when there is none.
+     */
+    public static function for(mixed $context): ?self
+    {
+        if (is_array($context)) {
+            $registry = $context['dataLoaders'] ?? null;
+
+            return $registry instanceof self ? $registry : null;
+        }
+
+        if (!is_object($context)) {
+            return null;
+        }
+
+        return self::$attached[$context] ?? null;
+    }
+
+    private static function acceptsProperty(object $context): bool
+    {
+        $class = $context::class;
+
+        if (isset(self::$writable[$class])) {
+            return self::$writable[$class];
+        }
+
+        if (property_exists($context, 'dataLoaders')) {
+            return self::$writable[$class] = true;
+        }
+
+        for ($reflection = new \ReflectionClass($context); $reflection !== false; $reflection = $reflection->getParentClass()) {
+            if ($reflection->getName() === \stdClass::class || $reflection->getAttributes(\AllowDynamicProperties::class) !== []) {
+                return self::$writable[$class] = true;
+            }
+        }
+
+        return self::$writable[$class] = false;
+    }
 
     /**
      * Retrieve (or lazily create) a named DataLoader.
@@ -57,7 +129,7 @@ final class DataLoaderRegistry
      */
     public function get(string $class): DataLoader
     {
-        return $this->getOrRegister($class, fn () => app($class));
+        return $this->getOrRegister($class, fn() => app($class));
     }
 
     /**
@@ -77,9 +149,7 @@ final class DataLoaderRegistry
             $adapter  = new WebonyxGraphQLSyncPromiseAdapter();
 
             $this->loaders[$key] = new DataLoader(
-                function (array $keys) use ($resolver, $adapter) {
-                    return $adapter->createAll($resolver->batch($keys));
-                },
+                fn(array $keys) => $adapter->createAll($resolver->batch($keys)),
                 $adapter,
             );
         }
@@ -92,13 +162,13 @@ final class DataLoaderRegistry
      * relation via the model's own eager-loading machinery, keyed by parent
      * primary key. See {@see EloquentRelationLoader}.
      *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param class-string<Model> $modelClass
      */
     public function relation(string $modelClass, string $relation): DataLoader
     {
         return $this->getOrRegister(
             "relation::{$modelClass}::{$relation}",
-            fn () => new EloquentRelationLoader($modelClass, $relation),
+            fn(): EloquentRelationLoader => new EloquentRelationLoader($modelClass, $relation),
         );
     }
 

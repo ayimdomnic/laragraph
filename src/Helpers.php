@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph;
 
-use Closure;
-
 /**
  * This file is part of the Laragraph package.
  *
@@ -21,7 +19,7 @@ class Helpers
      * @param  mixed  $valueOrValues
      * @return mixed
      */
-    public static function applyEach(Closure $callback, $valueOrValues)
+    public static function applyEach(\Closure $callback, $valueOrValues)
     {
         if (is_array($valueOrValues)) {
             return array_map($callback, $valueOrValues);

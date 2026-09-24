@@ -30,7 +30,7 @@ class ThrottleMiddlewareTest extends TestCase
         RateLimiter::shouldReceive('hit')->once();
 
         $mw     = new ThrottleMiddleware(maxAttempts: 5, decaySeconds: 30);
-        $result = $mw->handle(null, [], null, $this->info, fn () => 'ok');
+        $result = $mw->handle(null, [], null, $this->info, fn(): string => 'ok');
 
         $this->assertSame('ok', $result);
     }
@@ -43,7 +43,7 @@ class ThrottleMiddlewareTest extends TestCase
         $this->expectException(Error::class);
         $this->expectExceptionMessageMatches('/throttledField/');
 
-        (new ThrottleMiddleware())->handle(null, [], null, $this->info, fn () => 'never');
+        (new ThrottleMiddleware())->handle(null, [], null, $this->info, fn(): string => 'never');
     }
 
     public function test_error_message_includes_retry_seconds(): void
@@ -52,7 +52,7 @@ class ThrottleMiddlewareTest extends TestCase
         RateLimiter::shouldReceive('availableIn')->once()->andReturn(42);
 
         try {
-            (new ThrottleMiddleware())->handle(null, [], null, $this->info, fn () => null);
+            (new ThrottleMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
             $this->fail('Expected Error to be thrown');
         } catch (Error $e) {
             $this->assertStringContainsString('42s', $e->getMessage());
@@ -63,11 +63,11 @@ class ThrottleMiddlewareTest extends TestCase
     {
         RateLimiter::shouldReceive('tooManyAttempts')
             ->once()
-            ->withArgs(fn (string $key) => str_contains($key, 'throttledField'))
+            ->withArgs(fn(string $key): bool => str_contains($key, 'throttledField'))
             ->andReturn(false);
         RateLimiter::shouldReceive('hit')->once();
 
-        (new ThrottleMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new ThrottleMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_custom_decay_seconds_forwarded_to_rate_limiter(): void
@@ -75,10 +75,10 @@ class ThrottleMiddlewareTest extends TestCase
         RateLimiter::shouldReceive('tooManyAttempts')->once()->andReturn(false);
         RateLimiter::shouldReceive('hit')
             ->once()
-            ->withArgs(fn (string $key, int $decay) => $decay === 120);
+            ->withArgs(fn(string $key, int $decay): bool => $decay === 120);
 
         (new ThrottleMiddleware(maxAttempts: 10, decaySeconds: 120))
-            ->handle(null, [], null, $this->info, fn () => null);
+            ->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_resolver_is_not_called_when_throttled(): void
@@ -88,7 +88,7 @@ class ThrottleMiddlewareTest extends TestCase
 
         $called = false;
         try {
-            (new ThrottleMiddleware())->handle(null, [], null, $this->info, function () use (&$called) {
+            (new ThrottleMiddleware())->handle(null, [], null, $this->info, function () use (&$called): null {
                 $called = true;
                 return null;
             });

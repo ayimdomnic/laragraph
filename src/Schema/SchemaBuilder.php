@@ -6,8 +6,13 @@ namespace Ayimdomnic\Laragraph\Schema;
 
 use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Support\Field;
+use Ayimdomnic\Laragraph\Support\Mutation;
+use Ayimdomnic\Laragraph\Support\Query;
+use Ayimdomnic\Laragraph\Support\Subscription;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use Illuminate\Contracts\Container\Container;
 
@@ -29,6 +34,8 @@ class SchemaBuilder
      *   'mutation'     => ['fieldName' => FQCN, ...]
      *   'subscription' => ['fieldName' => FQCN, ...]
      *   'types'        => ['Alias' => FQCN, ...]
+     *
+     * @param array<string, mixed> $config
      */
     public function build(array $config): Schema
     {
@@ -51,32 +58,40 @@ class SchemaBuilder
 
         // Discovered fields are merged with (and overridden by) explicit config
         $queryFields = $this->buildFields(array_merge(
-            $this->discoverFields('queries', \Ayimdomnic\Laragraph\Support\Query::class),
+            $this->discoverFields('queries', Query::class),
             $config['query'] ?? [],
         ));
-        if (!empty($queryFields)) {
+        if ($queryFields !== []) {
             $schemaConfig['query'] = new ObjectType(['name' => 'Query', 'fields' => $queryFields]);
         }
 
         $mutationFields = $this->buildFields(array_merge(
-            $this->discoverFields('mutations', \Ayimdomnic\Laragraph\Support\Mutation::class),
+            $this->discoverFields('mutations', Mutation::class),
             $config['mutation'] ?? [],
         ));
-        if (!empty($mutationFields)) {
+        if ($mutationFields !== []) {
             $schemaConfig['mutation'] = new ObjectType(['name' => 'Mutation', 'fields' => $mutationFields]);
         }
 
         $subscriptionFields = $this->buildFields(array_merge(
-            $this->discoverFields('subscriptions', \Ayimdomnic\Laragraph\Support\Subscription::class),
+            $this->discoverFields('subscriptions', Subscription::class),
             $config['subscription'] ?? [],
         ));
-        if (!empty($subscriptionFields)) {
+        if ($subscriptionFields !== []) {
             $schemaConfig['subscription'] = new ObjectType(['name' => 'Subscription', 'fields' => $subscriptionFields]);
         }
 
         $schemaConfig['types']      = $this->resolveAllTypeInstances();
-        $schemaConfig['typeLoader'] = fn (string $name): ?\GraphQL\Type\Definition\Type
-            => $this->manager->hasType($name) ? $this->manager->type($name) : null;
+        // The loader is asked by GraphQL name for every type — including the
+        // root operation types, which live outside the Laragraph registry.
+        $rootTypes = [];
+        foreach (['query', 'mutation', 'subscription'] as $operation) {
+            if (isset($schemaConfig[$operation])) {
+                $rootTypes[$schemaConfig[$operation]->name] = $schemaConfig[$operation];
+            }
+        }
+
+        $schemaConfig['typeLoader'] = fn(string $name): ?Type => $rootTypes[$name] ?? $this->manager->typeByName($name);
 
         return $schemaConfig;
     }
@@ -88,11 +103,9 @@ class SchemaBuilder
      */
     protected function discoverFields(string $type, string $baseClass): array
     {
-        $path = config("laragraph.discover.{$type}", '');
-        if (empty($path)) {
-            return [];
-        }
-        return Discover::scan(is_array($path) ? ($path['path'] ?? '') : (string) $path, $baseClass);
+        $path = Discover::configuredPath($type);
+
+        return $path === '' ? [] : Discover::scan($path, $baseClass);
     }
 
     // -------------------------------------------------------------------------
@@ -103,19 +116,20 @@ class SchemaBuilder
      * Build a GraphQL field map from a [fieldName => FQCN] config array.
      *
      * @return array<string, mixed>
+     * @param array<string, class-string<Field>> $fieldClasses
      */
     protected function buildFields(array $fieldClasses): array
     {
         $fields = [];
 
         foreach ($fieldClasses as $name => $class) {
-            /** @var \Ayimdomnic\Laragraph\Support\Field $instance */
+            /** @var Field $instance */
             $instance = $this->container->make($class);
             $field    = $instance->toArray();
 
             $cost = $instance->complexity();
             if ($cost !== null) {
-                $field['complexity'] = fn (int $childrenComplexity) => $childrenComplexity + $cost;
+                $field['complexity'] = fn(int $childrenComplexity): int => $childrenComplexity + $cost;
             }
 
             if (config('laragraph.tracing.enabled')) {
@@ -138,22 +152,30 @@ class SchemaBuilder
     protected function registerTypes(array $typeClasses): void
     {
         // Auto-discover types first, then merge with explicit config (explicit wins)
-        $discoveredTypes = Discover::types(
-            (string) config('laragraph.discover.types', '')
-        );
+        $discoveredTypes = Discover::types(Discover::configuredPath('types'));
 
-        foreach (array_merge($discoveredTypes, $typeClasses) as $alias => $class) {
+        // A class registered explicitly (possibly under a different alias) must
+        // not also be registered by discovery, or it would be instantiated twice.
+        $explicit = array_flip(array_filter($typeClasses, is_string(...)));
+
+        foreach ($discoveredTypes as $alias => $class) {
+            if (!isset($explicit[$class])) {
+                $this->manager->addType($class, $alias);
+            }
+        }
+
+        foreach ($typeClasses as $alias => $class) {
             $this->manager->addType($class, is_string($alias) ? $alias : null);
         }
     }
 
     /**
-     * @return array<\GraphQL\Type\Definition\Type>
+     * @return array<Type>
      */
     protected function resolveAllTypeInstances(): array
     {
         return array_map(
-            fn (string $name) => $this->manager->type($name),
+            fn(string $name): Type => $this->manager->type($name),
             array_keys($this->manager->getTypes()),
         );
     }

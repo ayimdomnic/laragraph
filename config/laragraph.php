@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Ayimdomnic\Laragraph\Laragraph;
+
 return [
 
     /*
@@ -140,7 +142,7 @@ return [
     | custom extensions or transform error messages.
     |
     */
-    'error_formatter' => [\Ayimdomnic\Laragraph\Laragraph::class, 'formatError'],
+    'error_formatter' => [Laragraph::class, 'formatError'],
 
     /*
     |--------------------------------------------------------------------------
@@ -151,7 +153,7 @@ return [
     | may use this to log, filter, or transform the errors array.
     |
     */
-    'errors_handler' => [\Ayimdomnic\Laragraph\Laragraph::class, 'handleErrors'],
+    'errors_handler' => [Laragraph::class, 'handleErrors'],
 
     /*
     |--------------------------------------------------------------------------
@@ -211,11 +213,17 @@ return [
     | store — any Laravel cache driver (redis, file, array, memcached …)
     | ttl   — time-to-live in seconds
     |
-    | Cache is keyed by the query string + variables + operation name, so
-    | different variable combinations produce separate entries.
+    | scope — 'user' (default) partitions entries per authenticated user (on
+    |   laragraph.auth.default_guard), with guests sharing one partition, so a
+    |   user's data is never served to someone else. Use 'global' only when
+    |   every caller receives identical responses.
+    |
+    | Cache is keyed by schema + scope + query string + variables + operation
+    | name, so different variable combinations produce separate entries.
     |
     | To invalidate from code:
-    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::forget($key)
+    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::flush()       // everything
+    |   \Ayimdomnic\Laragraph\Performance\ResponseCache::forget($key)  // one entry
     |
     */
     'cache' => [
@@ -223,6 +231,7 @@ return [
             'enabled' => false,
             'store'   => 'default',
             'ttl'     => 60,
+            'scope'   => 'user',
         ],
     ],
 
@@ -251,6 +260,16 @@ return [
     |       'GetAllUsers' => '{ users { id name } }',
     |   ],
     |
+    | apq — Automatic Persisted Queries: when a client sends the full query
+    |   together with its sha256Hash, the query is stored so later requests
+    |   can send the hash alone. Mismatched hashes are rejected.
+    |
+    | only — Trusted-documents mode: execute query text only if it is already
+    |   in the store under its SHA-256 hash; everything else is rejected with
+    |   PERSISTED_QUERY_REQUIRED. Pair it with the 'array' store (or a cache
+    |   store you pre-populate at deploy time) to lock the API down to the
+    |   operations your own clients ship.
+    |
     | Clients may send the ID via:
     |   { "queryId": "<id>", "variables": {} }
     | Or the Apollo APQ format:
@@ -262,6 +281,8 @@ return [
         'store'   => 'cache',
         'ttl'     => 3600,
         'map'     => [],
+        'apq'     => true,
+        'only'    => false,
     ],
 
     /*

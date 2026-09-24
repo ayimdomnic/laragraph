@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Support;
 
-use GraphQL\Language\AST\Node;
 use GraphQL\Type\Definition\ScalarType as GraphQLScalarType;
 
 /**

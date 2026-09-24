@@ -12,13 +12,13 @@ class QueryExecutedTest extends TestCase
     private function makeEvent(array $overrides = []): QueryExecuted
     {
         return new QueryExecuted(
-            query:         $overrides['query']         ?? '{ ping }',
-            variables:     $overrides['variables']     ?? [],
+            query: $overrides['query']         ?? '{ ping }',
+            variables: $overrides['variables']     ?? [],
             operationName: $overrides['operationName'] ?? null,
-            schemaName:    $overrides['schemaName']    ?? 'default',
-            result:        $overrides['result']        ?? ['data' => ['ping' => 'pong']],
-            executionMs:   $overrides['executionMs']   ?? 12.5,
-            hasErrors:     $overrides['hasErrors']     ?? false,
+            schemaName: $overrides['schemaName']    ?? 'default',
+            result: $overrides['result']        ?? ['data' => ['ping' => 'pong']],
+            executionMs: $overrides['executionMs']   ?? 12.5,
+            hasErrors: $overrides['hasErrors']     ?? false,
         );
     }
 

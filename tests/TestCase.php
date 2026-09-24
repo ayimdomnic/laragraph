@@ -4,11 +4,22 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests;
 
+use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\LaragraphServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Laravel normally routes PHP deprecations to a log channel; surface
+        // them as exceptions so the suite fails on e.g. dynamic properties
+        // (deprecated since PHP 8.2) instead of silently passing.
+        $this->withoutDeprecationHandling();
+    }
+
     /**
      * Load the Laragraph service provider.
      */
@@ -25,7 +36,7 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageAliases($app): array
     {
         return [
-            'Laragraph' => \Ayimdomnic\Laragraph\Facades\Laragraph::class,
+            'Laragraph' => Laragraph::class,
         ];
     }
 

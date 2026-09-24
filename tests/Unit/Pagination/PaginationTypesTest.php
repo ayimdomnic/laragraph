@@ -100,13 +100,36 @@ class PaginationTypesTest extends TestCase
     // ConnectionType::paginate()
     // -------------------------------------------------------------------------
 
+    public function test_paginate_rejects_objects_without_a_paginate_method(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('has no paginate() method');
+
+        ConnectionType::paginate(new \stdClass(), []);
+    }
+
+    public function test_paginate_rejects_paginators_without_totals(): void
+    {
+        $builder = new class {
+            public function paginate(int $perPage, array $cols, string $name, int $page): array
+            {
+                return [];
+            }
+        };
+
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('must return a');
+
+        ConnectionType::simplePaginate($builder, []);
+    }
+
     public function test_paginate_returns_connection_shape(): void
     {
         $items     = [['id' => 1, 'name' => 'Alice'], ['id' => 2, 'name' => 'Bob']];
         $paginator = new LengthAwarePaginator($items, 10, 2, 1);
 
         $builder = new class ($paginator) {
-            public function __construct(private LengthAwarePaginator $p) {}
+            public function __construct(private readonly LengthAwarePaginator $p) {}
             public function paginate(int $perPage, array $cols, string $name, int $page): LengthAwarePaginator
             {
                 return $this->p;
@@ -128,7 +151,7 @@ class PaginationTypesTest extends TestCase
     {
         $paginator = new LengthAwarePaginator([['id' => 3]], 10, 1, 2);
         $builder   = new class ($paginator) {
-            public function __construct(private LengthAwarePaginator $p) {}
+            public function __construct(private readonly LengthAwarePaginator $p) {}
             public function paginate(int $perPage, array $cols, string $name, int $page): LengthAwarePaginator
             {
                 return $this->p;
@@ -146,7 +169,7 @@ class PaginationTypesTest extends TestCase
     {
         $paginator = new LengthAwarePaginator([['id' => 1]], 5, 1, 1);
         $builder   = new class ($paginator) {
-            public function __construct(private LengthAwarePaginator $p) {}
+            public function __construct(private readonly LengthAwarePaginator $p) {}
             public function paginate(int $perPage, array $cols, string $name, int $page): LengthAwarePaginator
             {
                 return $this->p;
@@ -163,7 +186,7 @@ class PaginationTypesTest extends TestCase
     {
         $paginator = new LengthAwarePaginator([], 0, 10, 1);
         $builder   = new class ($paginator) {
-            public function __construct(private LengthAwarePaginator $p) {}
+            public function __construct(private readonly LengthAwarePaginator $p) {}
             public function paginate(int $perPage, array $cols, string $name, int $page): LengthAwarePaginator
             {
                 return $this->p;
@@ -185,7 +208,7 @@ class PaginationTypesTest extends TestCase
     {
         $paginator = new LengthAwarePaginator([['id' => 1]], 1, 10, 1);
         $builder   = new class ($paginator) {
-            public function __construct(private LengthAwarePaginator $p) {}
+            public function __construct(private readonly LengthAwarePaginator $p) {}
             public function paginate(int $perPage, array $cols, string $name, int $page): LengthAwarePaginator
             {
                 return $this->p;

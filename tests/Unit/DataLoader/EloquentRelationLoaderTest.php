@@ -30,7 +30,7 @@ class EloquentRelationLoaderTest extends TestCase
     {
         parent::setUp();
 
-        Schema::create('users', function ($table) {
+        Schema::create('users', function ($table): void {
             $table->id();
             $table->string('name');
             $table->string('email');
@@ -39,7 +39,7 @@ class EloquentRelationLoaderTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('posts', function ($table) {
+        Schema::create('posts', function ($table): void {
             $table->id();
             $table->foreignId('user_id');
             $table->string('title');
@@ -51,7 +51,7 @@ class EloquentRelationLoaderTest extends TestCase
 
     public function test_batches_a_hasmany_relation_in_a_constant_number_of_queries(): void
     {
-        $users = collect(range(1, 5))->map(fn (int $i) => User::create([
+        $users = collect(range(1, 5))->map(fn(int $i) => User::create([
             'name'  => "User {$i}",
             'email' => "user{$i}@example.com",
         ]));
@@ -66,8 +66,8 @@ class EloquentRelationLoaderTest extends TestCase
 
         DB::enableQueryLog();
 
-        $promises = $users->map(fn (User $user) => $loader->load($user->id));
-        $results  = $promises->map(fn ($promise) => DataLoader::await($promise));
+        $promises = $users->map(fn(User $user) => $loader->load($user->id));
+        $results  = $promises->map(fn($promise) => DataLoader::await($promise));
 
         $queryCount = count(DB::getQueryLog());
         DB::disableQueryLog();

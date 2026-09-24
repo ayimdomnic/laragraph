@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
+use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
@@ -22,7 +23,10 @@ use GraphQL\Validator\ValidationContext;
 
 class ValidationHelloQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -98,7 +102,7 @@ class ValidationRulesTest extends TestCase
         config(['laragraph.security.max_aliases' => null]);
 
         // 10 aliases — should be fine when limit is null
-        $aliases = implode(' ', array_map(fn ($i) => "a{$i}: hello", range(1, 10)));
+        $aliases = implode(' ', array_map(fn(int $i): string => "a{$i}: hello", range(1, 10)));
         $result  = $this->graphql("{ {$aliases} }");
 
         $this->assertArrayNotHasKey('errors', $result);
@@ -133,7 +137,7 @@ class ValidationRulesTest extends TestCase
 
     public function test_facade_add_validation_rule(): void
     {
-        \Ayimdomnic\Laragraph\Facades\Laragraph::addValidationRule(new ForbidForbiddenFieldRule());
+        Laragraph::addValidationRule(new ForbidForbiddenFieldRule());
 
         $result = $this->graphql('{ forbidden }');
 
@@ -170,7 +174,7 @@ class ValidationRulesTest extends TestCase
     public function test_rules_are_scoped_to_the_laragraph_instance(): void
     {
         // Fresh instance via container — no extra rules
-        $laragraph = $this->app->make('laragraph');
+        $this->app->make('laragraph');
         $result    = $this->graphql('{ hello }');
 
         $this->assertArrayNotHasKey('errors', $result);

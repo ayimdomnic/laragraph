@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of the Laragraph package.
  *
@@ -14,7 +16,7 @@ $routeConfig = array_filter([
     'middleware' => config('laragraph.route.middleware', []),
 ]);
 
-Route::group($routeConfig, function () {
+Route::group($routeConfig, function (): void {
     $methods = config('laragraph.route.methods', ['GET', 'POST']);
 
     // Default schema endpoint
@@ -24,7 +26,7 @@ Route::group($routeConfig, function () {
     // GraphiQL browser IDE
     if (config('laragraph.graphiql.enabled', true)) {
         Route::get('/graphiql', [LaragraphController::class, 'graphiql'])
-            ->middleware(config('laragraph.graphiql.middleware', []))
+            ->middleware((array) config('laragraph.graphiql.middleware', []))
             ->name('laragraph.graphiql');
     }
 

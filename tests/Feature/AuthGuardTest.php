@@ -6,11 +6,12 @@ namespace Ayimdomnic\Laragraph\Tests\Feature;
 
 use Ayimdomnic\Laragraph\Auth\AuthorizationContext;
 use Ayimdomnic\Laragraph\Auth\GuardResolver;
-use Ayimdomnic\Laragraph\Support\Mutation;
+use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Http\Request;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -19,7 +20,10 @@ use GraphQL\Type\Definition\Type;
 /** Public field — no auth required. */
 class PublicQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
         return 'public';
@@ -29,7 +33,10 @@ class PublicQuery extends Query
 /** Blocked via authorizeWithContext(). */
 class ContextBlockedQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function authorizeWithContext(AuthorizationContext $ctx): bool
     {
@@ -45,7 +52,10 @@ class ContextBlockedQuery extends Query
 /** Allowed via authorizeWithContext(). */
 class ContextAllowedQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
     public function authorizeWithContext(AuthorizationContext $ctx): bool
     {
@@ -61,9 +71,15 @@ class ContextAllowedQuery extends Query
 /** Field with a specific guard declared. */
 class GuardedQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
-    public function guards(): array { return ['web']; }
+    public function guards(): array
+    {
+        return ['web'];
+    }
 
     public function authorizeWithContext(AuthorizationContext $ctx): bool
     {
@@ -80,9 +96,15 @@ class GuardedQuery extends Query
 /** Field with a deprecated notice. */
 class DeprecatedQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
+    public function type(): Type
+    {
+        return Type::string();
+    }
 
-    public function deprecated(): ?string { return 'Use `newQuery` instead.'; }
+    public function deprecated(): ?string
+    {
+        return 'Use `newQuery` instead.';
+    }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -158,7 +180,7 @@ class AuthGuardTest extends TestCase
 
     public function test_deprecated_field_carries_deprecation_reason(): void
     {
-        $schema = $this->app->make(\Ayimdomnic\Laragraph\Laragraph::class)->schema();
+        $schema = $this->app->make(Laragraph::class)->schema();
         $field  = $schema->getQueryType()->getField('deprecated');
 
         $this->assertSame('Use `newQuery` instead.', $field->deprecationReason);
@@ -177,13 +199,13 @@ class AuthGuardTest extends TestCase
     public function test_guard_resolver_falls_back_to_config_default(): void
     {
         config(['laragraph.auth.default_guard' => 'api']);
-        $this->assertSame('api', GuardResolver::resolve(null));
+        $this->assertSame('api', GuardResolver::resolve());
     }
 
     public function test_guard_resolver_returns_null_when_no_guard_configured(): void
     {
         config(['laragraph.auth.default_guard' => null]);
-        $this->assertNull(GuardResolver::resolve(null));
+        $this->assertNull(GuardResolver::resolve());
     }
 
     // -------------------------------------------------------------------------
@@ -192,14 +214,14 @@ class AuthGuardTest extends TestCase
 
     public function test_authorization_context_check_returns_false_for_guest(): void
     {
-        $ctx = GuardResolver::buildContext(null);
+        $ctx = GuardResolver::buildContext();
         $this->assertFalse($ctx->check());
         $this->assertNull($ctx->user());
     }
 
     public function test_authorization_context_can_returns_false_for_guest(): void
     {
-        $ctx = GuardResolver::buildContext(null);
+        $ctx = GuardResolver::buildContext();
         $this->assertFalse($ctx->can('view', 'SomeModel'));
     }
 
@@ -211,7 +233,7 @@ class AuthGuardTest extends TestCase
 
     public function test_authorization_context_exposes_request(): void
     {
-        $ctx = GuardResolver::buildContext(null);
-        $this->assertInstanceOf(\Illuminate\Http\Request::class, $ctx->request());
+        $ctx = GuardResolver::buildContext();
+        $this->assertInstanceOf(Request::class, $ctx->request());
     }
 }

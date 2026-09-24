@@ -31,32 +31,65 @@ class MwTagMiddleware implements FieldMiddlewareInterface
 
 class MwPlainQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'pong'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'pong';
+    }
 }
 
 class MwSingleQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'base'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'base';
+    }
     /** @return list<FieldMiddlewareInterface> */
-    public function middleware(): array { return [new MwTagMiddleware('A')]; }
+    public function middleware(): array
+    {
+        return [new MwTagMiddleware('A')];
+    }
 }
 
 class MwDoubleQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'base'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'base';
+    }
     /** @return list<FieldMiddlewareInterface> */
-    public function middleware(): array { return [new MwTagMiddleware('A'), new MwTagMiddleware('B')]; }
+    public function middleware(): array
+    {
+        return [new MwTagMiddleware('A'), new MwTagMiddleware('B')];
+    }
 }
 
 class MwThrottledQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'throttle-pong'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'throttle-pong';
+    }
     /** @return list<FieldMiddlewareInterface> */
-    public function middleware(): array { return [new ThrottleMiddleware(maxAttempts: 1, decaySeconds: 60)]; }
+    public function middleware(): array
+    {
+        return [new ThrottleMiddleware(maxAttempts: 1, decaySeconds: 60)];
+    }
 }
 
 // ---------------------------------------------------------------------------

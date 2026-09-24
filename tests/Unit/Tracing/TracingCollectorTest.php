@@ -6,29 +6,32 @@ namespace Ayimdomnic\Laragraph\Tests\Unit\Tracing;
 
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
+use GraphQL\Language\Parser;
+use GraphQL\Type\Definition\FieldDefinition;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Schema;
 
 class TracingCollectorTest extends TestCase
 {
     private function makeResolveInfo(string $parentTypeName, string $fieldName, array $path): ResolveInfo
     {
-        $fieldDef = new \GraphQL\Type\Definition\FieldDefinition([
+        $fieldDef = new FieldDefinition([
             'name' => $fieldName,
             'type' => Type::string(),
         ]);
 
         $parentType = new ObjectType(['name' => $parentTypeName, 'fields' => []]);
 
-        $operation = \GraphQL\Language\Parser::parse('{ hello }')->definitions[0];
+        $operation = Parser::parse('{ hello }')->definitions[0];
 
         return new ResolveInfo(
             $fieldDef,
             new \ArrayObject(),
             $parentType,
             $path,
-            new \GraphQL\Type\Schema(['query' => $parentType]),
+            new Schema(['query' => $parentType]),
             [],
             null,
             $operation,
@@ -128,7 +131,7 @@ class TracingCollectorTest extends TestCase
 
         $info = $this->makeResolveInfo('Query', 'hello', ['hello']);
 
-        $wrapped = TracingCollector::wrap(fn (mixed $root, array $args, mixed $context, ResolveInfo $i) => 'resolved:' . $i->fieldName);
+        $wrapped = TracingCollector::wrap(fn(mixed $root, array $args, mixed $context, ResolveInfo $i): string => 'resolved:' . $i->fieldName);
 
         $result = $wrapped(null, [], null, $info);
 

@@ -8,6 +8,7 @@ use Ayimdomnic\Laragraph\Middleware\LoggingMiddleware;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Type\Definition\ResolveInfo;
 use Illuminate\Support\Facades\Log;
+use Psr\Log\LoggerInterface;
 
 class LoggingMiddlewareTest extends TestCase
 {
@@ -28,7 +29,7 @@ class LoggingMiddlewareTest extends TestCase
         Log::shouldReceive('debug')->once();
 
         $mw     = new LoggingMiddleware();
-        $result = $mw->handle(null, [], null, $this->info, fn () => 'logging-result');
+        $result = $mw->handle(null, [], null, $this->info, fn(): string => 'logging-result');
 
         $this->assertSame('logging-result', $result);
     }
@@ -37,34 +38,34 @@ class LoggingMiddlewareTest extends TestCase
     {
         Log::shouldReceive('debug')
             ->once()
-            ->withArgs(fn (string $msg) => str_contains($msg, 'loggedField'));
+            ->withArgs(fn(string $msg): bool => str_contains($msg, 'loggedField'));
 
-        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_log_context_contains_elapsed_ms(): void
     {
         Log::shouldReceive('debug')
             ->once()
-            ->withArgs(fn (string $msg, array $ctx) => isset($ctx['elapsed_ms']) && is_float($ctx['elapsed_ms']));
+            ->withArgs(fn(string $msg, array $ctx): bool => isset($ctx['elapsed_ms']) && is_float($ctx['elapsed_ms']));
 
-        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_log_context_contains_field_key(): void
     {
         Log::shouldReceive('debug')
             ->once()
-            ->withArgs(fn (string $msg, array $ctx) => ($ctx['field'] ?? null) === 'loggedField');
+            ->withArgs(fn(string $msg, array $ctx): bool => ($ctx['field'] ?? null) === 'loggedField');
 
-        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_uses_configured_log_channel(): void
     {
         $this->app['config']->set('laragraph.logging.channel', 'custom-channel');
 
-        $channelLogger = \Mockery::mock(\Psr\Log\LoggerInterface::class);
+        $channelLogger = \Mockery::mock(LoggerInterface::class);
         $channelLogger->shouldReceive('debug')->once();
 
         Log::shouldReceive('channel')
@@ -72,7 +73,7 @@ class LoggingMiddlewareTest extends TestCase
             ->with('custom-channel')
             ->andReturn($channelLogger);
 
-        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_uses_default_channel_when_config_is_null(): void
@@ -81,7 +82,7 @@ class LoggingMiddlewareTest extends TestCase
 
         Log::shouldReceive('debug')->once();
 
-        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 
     public function test_uses_default_channel_when_config_is_empty_string(): void
@@ -90,6 +91,6 @@ class LoggingMiddlewareTest extends TestCase
 
         Log::shouldReceive('debug')->once();
 
-        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn () => null);
+        (new LoggingMiddleware())->handle(null, [], null, $this->info, fn(): null => null);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Support;
 
 use GraphQL\Type\Definition\InterfaceType as GraphQLInterfaceType;
+use GraphQL\Type\Definition\ResolveInfo;
 
 /**
  * Base class for GraphQL Interface Types.
@@ -48,10 +49,8 @@ abstract class InterfaceType extends GraphQLInterfaceType
             ['name' => class_basename(static::class)],
             $this->attributes,
             [
-                'fields' => function (): array {
-                    return $this->fields();
-                },
-                'resolveType' => fn (mixed $value, mixed $context, \GraphQL\Type\Definition\ResolveInfo $info): mixed => $this->resolveType($value, $context, $info),
+                'fields' => $this->fields(...),
+                'resolveType' => fn(mixed $value, mixed $context, ResolveInfo $info): mixed => $this->resolveType($value, $context, $info),
             ],
         );
 
@@ -70,9 +69,8 @@ abstract class InterfaceType extends GraphQLInterfaceType
      *
      * @param  mixed  $value    The resolved field value
      * @param  mixed  $context  Shared execution context
-     * @param  \GraphQL\Type\Definition\ResolveInfo  $info
      */
-    public function resolveType(mixed $value, mixed $context, \GraphQL\Type\Definition\ResolveInfo $info): mixed
+    public function resolveType(mixed $value, mixed $context, ResolveInfo $info): mixed
     {
         return null;
     }

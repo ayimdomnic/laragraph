@@ -21,8 +21,14 @@ use Illuminate\Support\Facades\Event;
 
 class EventPingQuery extends Query
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'pong'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'pong';
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +55,7 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ eventPing }');
 
-        Event::assertDispatched(SchemaBuilt::class, fn ($e) => $e->schemaName === 'default');
+        Event::assertDispatched(SchemaBuilt::class, fn($e): bool => $e->schemaName === 'default');
     }
 
     public function test_schema_built_event_fires_only_once_for_the_same_schema(): void
@@ -74,12 +80,10 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ eventPing }');
 
-        Event::assertDispatched(QueryExecuting::class, function ($e) {
-            return $e->query       === '{ eventPing }'
-                && $e->schemaName  === 'default'
-                && $e->variables   === []
-                && $e->operationName === null;
-        });
+        Event::assertDispatched(QueryExecuting::class, fn($e): bool => $e->query       === '{ eventPing }'
+            && $e->schemaName  === 'default'
+            && $e->variables   === []
+            && $e->operationName === null);
     }
 
     public function test_query_executing_includes_variables(): void
@@ -92,10 +96,8 @@ class LaragraphEventsTest extends TestCase
             'operationName' => 'GetPing',
         ]);
 
-        Event::assertDispatched(QueryExecuting::class, function ($e) {
-            return $e->variables     === ['v' => 'test']
-                && $e->operationName === 'GetPing';
-        });
+        Event::assertDispatched(QueryExecuting::class, fn($e): bool => $e->variables     === ['v' => 'test']
+            && $e->operationName === 'GetPing');
     }
 
     // -------------------------------------------------------------------------
@@ -108,12 +110,10 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ eventPing }');
 
-        Event::assertDispatched(QueryExecuted::class, function ($e) {
-            return $e->schemaName  === 'default'
-                && $e->hasErrors   === false
-                && ($e->result['data']['eventPing'] ?? null) === 'pong'
-                && $e->executionMs >= 0.0;
-        });
+        Event::assertDispatched(QueryExecuted::class, fn($e): bool => $e->schemaName  === 'default'
+            && $e->hasErrors   === false
+            && ($e->result['data']['eventPing'] ?? null) === 'pong'
+            && $e->executionMs >= 0.0);
     }
 
     public function test_query_executed_has_errors_true_when_query_fails(): void
@@ -122,7 +122,7 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ nonExistentField }');
 
-        Event::assertDispatched(QueryExecuted::class, fn ($e) => $e->hasErrors === true);
+        Event::assertDispatched(QueryExecuted::class, fn($e): bool => $e->hasErrors === true);
     }
 
     // -------------------------------------------------------------------------
@@ -135,10 +135,8 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ nonExistentField }');
 
-        Event::assertDispatched(QueryError::class, function ($e) {
-            return $e->schemaName === 'default'
-                && !empty($e->errors);
-        });
+        Event::assertDispatched(QueryError::class, fn($e): bool => $e->schemaName === 'default'
+            && !empty($e->errors));
     }
 
     public function test_query_error_event_not_fired_on_successful_query(): void
@@ -156,8 +154,6 @@ class LaragraphEventsTest extends TestCase
 
         $this->graphql('{ nonExistentField }');
 
-        Event::assertDispatched(QueryError::class, function ($e) {
-            return isset($e->errors[0]['message']);
-        });
+        Event::assertDispatched(QueryError::class, fn($e): bool => isset($e->errors[0]['message']));
     }
 }

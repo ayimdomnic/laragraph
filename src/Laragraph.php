@@ -7,16 +7,19 @@ namespace Ayimdomnic\Laragraph;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderPromiseAdapter;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Events\QueryError;
-use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
-use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
-use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Events\QueryExecuted;
 use Ayimdomnic\Laragraph\Events\QueryExecuting;
 use Ayimdomnic\Laragraph\Events\SchemaBuilt;
+use Ayimdomnic\Laragraph\Exceptions\AuthorizationException;
+use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
+use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\SchemaException;
+use Ayimdomnic\Laragraph\Exceptions\ValidationException;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
+use Ayimdomnic\Laragraph\Http\BatchProcessor;
+use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
@@ -30,13 +33,16 @@ use GraphQL\Executor\ExecutionResult;
 use GraphQL\Executor\Executor;
 use GraphQL\GraphQL;
 use GraphQL\Type\Definition\NamedType;
+use GraphQL\Type\Definition\PhpEnumType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Validator\DocumentValidator;
 use GraphQL\Validator\Rules\DisableIntrospection;
 use GraphQL\Validator\Rules\QueryComplexity;
 use GraphQL\Validator\Rules\QueryDepth;
+use GraphQL\Validator\Rules\ValidationRule;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
 /**
@@ -102,7 +108,7 @@ class Laragraph
      * @param  array<int, array{query?: string, variables?: mixed, operationName?: string|null}> $operations
      * @param  mixed  $context    Passed through to each individual execute() call.
      * @param  string $schemaName Schema to run all operations against.
-     * @return array<int, array>  One result per input operation, preserving order.
+     * @return array<int, array<string, mixed>> One result per input operation, preserving order.
      *
      * @throws BatchingDisabledException
      * @throws BatchLimitExceededException
@@ -120,6 +126,9 @@ class Laragraph
      *
      * Response caching (configurable via `laragraph.cache.response`) is applied
      * to read-only query operations. Mutations and subscriptions bypass the cache.
+     *
+     * @param array<string, mixed> $variables
+     * @return array<string, mixed>
      */
     public function execute(
         string $query,
@@ -137,8 +146,14 @@ class Laragraph
         }
 
         // Response cache — only for read-only queries
-        if (ResponseCache::enabled() && ResponseCache::isCacheable($query)) {
-            $cacheKey = ResponseCache::key($query, $variables, $operationName);
+        if (ResponseCache::enabled() && ResponseCache::isCacheable($query, $operationName)) {
+            $cacheKey = ResponseCache::key(
+                $query,
+                $variables,
+                $operationName,
+                $resolvedSchemaName,
+                ResponseCache::scope(),
+            );
             $cached   = ResponseCache::get($cacheKey);
 
             if ($cached !== null) {
@@ -165,7 +180,7 @@ class Laragraph
         $executionMs   = round(microtime(true) * 1000 - $startMs, 2);
         $extensionData = $this->buildResponseExtensions($executionMs);
 
-        if (!empty($extensionData)) {
+        if ($extensionData !== []) {
             $data['extensions'] = array_merge($data['extensions'] ?? [], $extensionData);
         }
 
@@ -175,13 +190,13 @@ class Laragraph
         }
 
         event(new QueryExecuted(
-            query:         $query,
-            variables:     $variables,
+            query: $query,
+            variables: $variables,
             operationName: $operationName,
-            schemaName:    $resolvedSchemaName,
-            result:        $data,
-            executionMs:   $executionMs,
-            hasErrors:     !empty($data['errors']),
+            schemaName: $resolvedSchemaName,
+            result: $data,
+            executionMs: $executionMs,
+            hasErrors: !empty($data['errors']),
         ));
 
         return $data;
@@ -227,6 +242,8 @@ class Laragraph
      *
      * A fresh {@see DataLoaderRegistry} is attached to the context for each
      * execution so resolvers can batch N+1 database calls.
+     *
+     * @param array<string, mixed> $variables
      */
     public function executeQuery(
         string $query,
@@ -255,14 +272,14 @@ class Laragraph
             : null;
 
         $promise = GraphQL::promiseToExecute(
-            promiseAdapter:  $promiseAdapter,
-            schema:          $schema,
-            source:          $query,
-            rootValue:       $rootValue,
-            context:         $context,
-            variableValues:  $variables ?: null,
-            operationName:   $operationName,
-            fieldResolver:   $fieldResolver,
+            promiseAdapter: $promiseAdapter,
+            schema: $schema,
+            source: $query,
+            rootValue: $rootValue,
+            context: $context,
+            variableValues: $variables ?: null,
+            operationName: $operationName,
+            fieldResolver: $fieldResolver,
             validationRules: $this->buildValidationRules(),
         );
 
@@ -280,7 +297,7 @@ class Laragraph
      * Rules are composed per-execution rather than mutating global state, so
      * different schemas / requests can have different security settings.
      *
-     * @return array<\GraphQL\Validator\Rules\ValidationRule>
+     * @return array<ValidationRule>
      */
     protected function buildValidationRules(): array
     {
@@ -307,7 +324,7 @@ class Laragraph
         $registry = $this->container->make(ValidationRuleRegistry::class);
         if (!$registry->isEmpty()) {
             foreach ($registry->resolve() as $rule) {
-                $rules[get_class($rule)] = $rule;
+                $rules[$rule::class] = $rule;
             }
         }
 
@@ -332,9 +349,9 @@ class Laragraph
      * The rule is added to the {@see ValidationRuleRegistry} singleton and will
      * be applied to every subsequent execution.
      *
-     * @param  string|\GraphQL\Validator\Rules\ValidationRule $rule  FQCN or instance.
+     * @param string|ValidationRule $rule FQCN or instance.
      */
-    public function addValidationRule(string|\GraphQL\Validator\Rules\ValidationRule $rule): void
+    public function addValidationRule(string|ValidationRule $rule): void
     {
         $this->container->make(ValidationRuleRegistry::class)->add($rule);
     }
@@ -379,14 +396,46 @@ class Laragraph
 
         if (!isset($this->types[$name])) {
             throw new \InvalidArgumentException(
-                "Type [{$name}] is not registered. Add it to laragraph.types in your config."
+                "Type [{$name}] is not registered. Add it to laragraph.types in your config.",
             );
         }
 
-        $type = $this->container->make($this->types[$name]);
+        $class = $this->types[$name];
+        $type  = enum_exists($class)
+            ? new PhpEnumType($class, $name)
+            : $this->container->make($class);
+
         $this->typesInstances[$name] = $type;
 
         return $type;
+    }
+
+    /**
+     * Resolve a registered type by its GraphQL name rather than its alias.
+     *
+     * Aliases usually match the GraphQL name, but need not (e.g. an alias of
+     * `UserInput` for an input type named `CreateUserInput`). The schema's
+     * type loader is always asked by GraphQL name, so it goes through here.
+     */
+    public function typeByName(string $graphqlName): ?Type
+    {
+        if ($this->hasType($graphqlName)) {
+            $type = $this->type($graphqlName);
+
+            if ($type instanceof NamedType && $type->name() === $graphqlName) {
+                return $type;
+            }
+        }
+
+        foreach (array_unique([...array_keys($this->types), ...array_keys($this->typesInstances)]) as $alias) {
+            $type = $this->type((string) $alias);
+
+            if ($type instanceof NamedType && $type->name() === $graphqlName) {
+                return $type;
+            }
+        }
+
+        return null;
     }
 
     /** Return all registered type class aliases.
@@ -410,6 +459,8 @@ class Laragraph
 
     /**
      * Default error formatter — exposed via config('laragraph.error_formatter').
+     *
+     * @return array<string, mixed>
      */
     public static function formatError(Error $error): array
     {
@@ -417,7 +468,7 @@ class Laragraph
             'message'   => $error->getMessage() ?: 'An unexpected error occurred.',
             'locations' => $error->getLocations()
                 ? array_map(
-                    fn ($loc) => ['line' => $loc->line, 'column' => $loc->column],
+                    fn($loc): array => ['line' => $loc->line, 'column' => $loc->column],
                     $error->getLocations(),
                 )
                 : null,
@@ -427,10 +478,10 @@ class Laragraph
 
         $previous = $error->getPrevious();
 
-        if ($previous instanceof \Ayimdomnic\Laragraph\Exceptions\ValidationException) {
+        if ($previous instanceof ValidationException) {
             $formatted['extensions']['category']   = 'validation';
             $formatted['extensions']['validation'] = $previous->getValidationErrors();
-        } elseif ($previous instanceof \Ayimdomnic\Laragraph\Exceptions\AuthorizationException) {
+        } elseif ($previous instanceof AuthorizationException) {
             $formatted['extensions']['category'] = 'authorization';
         } elseif ($error->isClientSafe()) {
             $formatted['extensions']['category'] = 'graphql';
@@ -438,22 +489,22 @@ class Laragraph
             $formatted['extensions']['category'] = 'internal';
         }
 
-        if (config('app.debug') && $previous !== null) {
+        if (config('app.debug') && $previous instanceof \Throwable) {
             $formatted['extensions']['debugMessage'] = $previous->getMessage();
             $formatted['extensions']['trace'] = array_map(
-                fn ($frame) => Arr::only($frame, ['file', 'line', 'function', 'class']),
+                fn(array $frame) => Arr::only($frame, ['file', 'line', 'function', 'class']),
                 array_slice($previous->getTrace(), 0, 10),
             );
         }
 
-        return array_filter($formatted, fn ($v) => $v !== null);
+        return array_filter($formatted, fn(string|array|null $v): bool => $v !== null);
     }
 
     /**
      * Default errors handler — called once with the full errors array.
      *
-     * @param  array<int, \GraphQL\Error\Error>  $errors
-     * @param  callable(\GraphQL\Error\Error): array<string, mixed>  $formatter
+     * @param array<int, Error> $errors
+     * @param callable(Error):array<string, mixed> $formatter
      * @return array<int, array<string, mixed>>
      */
     public static function handleErrors(array $errors, callable $formatter): array
@@ -467,31 +518,35 @@ class Laragraph
 
     protected function getSchemaBuilder(): SchemaBuilder
     {
-        if ($this->schemaBuilder === null) {
-            $this->schemaBuilder = new SchemaBuilder($this, $this->container);
-        }
+        $this->schemaBuilder ??= new SchemaBuilder($this, $this->container);
 
         return $this->schemaBuilder;
     }
 
     /**
-     * Attach a DataLoaderRegistry to the execution context.
+     * Prepare the execution context and attach a fresh DataLoaderRegistry.
      *
-     * If $context is a plain object, the `dataLoaders` property is added
-     * directly. If it is an array, the key is added. Otherwise a lightweight
-     * anonymous object carrying both the original context and the registry is
-     * returned.
+     * - An HTTP {@see Request} is wrapped in a {@see GraphQLContext}, which
+     *   declares `dataLoaders` (and the subscription slots) instead of adding
+     *   dynamic properties to the framework's Request.
+     * - An array gets a `dataLoaders` key.
+     * - Any other object is registered via {@see DataLoaderRegistry::attach()}.
+     * - Scalars pass through untouched.
      */
     protected function wrapContext(mixed $context): mixed
     {
-        if (is_object($context)) {
-            $context->dataLoaders = new DataLoaderRegistry();
-            return $context;
+        if ($context instanceof Request) {
+            $context = GraphQLContext::fromRequest($context);
         }
 
         if (is_array($context)) {
             $context['dataLoaders'] = new DataLoaderRegistry();
+
             return $context;
+        }
+
+        if (is_object($context)) {
+            DataLoaderRegistry::attach($context, new DataLoaderRegistry());
         }
 
         return $context;
@@ -499,6 +554,11 @@ class Laragraph
 
     protected function resolveTypeName(string $class): string
     {
+        // Native PHP enums are exposed under their short class name.
+        if (enum_exists($class)) {
+            return class_basename($class);
+        }
+
         // Try to get the name without instantiating (cheaper)
         if (defined("{$class}::NAME")) {
             return $class::NAME;

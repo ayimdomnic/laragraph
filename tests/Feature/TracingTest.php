@@ -99,7 +99,7 @@ class TracingTest extends TestCase
         $result = $this->graphql('{ books { title author { name } } }');
 
         $resolvers = $result['extensions']['tracing']['execution']['resolvers'];
-        $fieldPaths = array_map(fn (array $r) => implode('.', $r['path']), $resolvers);
+        $fieldPaths = array_map(fn(array $r): string => implode('.', $r['path']), $resolvers);
 
         $this->assertContains('books', $fieldPaths);
         $this->assertContains('books.0.title', $fieldPaths);

@@ -6,6 +6,8 @@ namespace Ayimdomnic\Laragraph\Support;
 
 use Ayimdomnic\Laragraph\Auth\AuthorizationContext;
 use Ayimdomnic\Laragraph\Auth\GuardResolver;
+use Ayimdomnic\Laragraph\Exceptions\AuthorizationException;
+use Ayimdomnic\Laragraph\Exceptions\ValidationException;
 use Ayimdomnic\Laragraph\Middleware\FieldMiddlewareInterface;
 use Ayimdomnic\Laragraph\Middleware\FieldMiddlewarePipeline;
 use GraphQL\Type\Definition\ResolveInfo;
@@ -81,6 +83,8 @@ abstract class Field
     /**
      * Resolver — receives the parent value, arguments, shared context, and
      * resolve info.
+     *
+     * @param array<string, mixed> $args
      */
     abstract public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed;
 
@@ -107,6 +111,7 @@ abstract class Field
      * Return an empty array to skip validation.
      *
      * @return array<string, mixed>
+     * @param array<string, mixed> $args
      */
     public function rules(array $args = []): array
     {
@@ -138,6 +143,8 @@ abstract class Field
      *
      * Return `false` to throw an {@see AuthorizationException}.
      * For guard-aware checks, override {@see authorizeWithContext()} instead.
+     *
+     * @param array<string, mixed> $args
      */
     public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
     {
@@ -285,8 +292,8 @@ abstract class Field
         return function (mixed $root, array $args, mixed $context, ResolveInfo $info): mixed {
             // 1. Simple boolean authorization (backward-compatible)
             if (!$this->authorize($root, $args, $context, $info)) {
-                throw new \Ayimdomnic\Laragraph\Exceptions\AuthorizationException(
-                    'You are not authorized to access ' . class_basename(static::class) . '.'
+                throw new AuthorizationException(
+                    'You are not authorized to access ' . class_basename(static::class) . '.',
                 );
             }
 
@@ -295,8 +302,8 @@ abstract class Field
             $ctx       = GuardResolver::buildContext($guardName);
 
             if (!$this->authorizeWithContext($ctx)) {
-                throw new \Ayimdomnic\Laragraph\Exceptions\AuthorizationException(
-                    'You are not authorized to access ' . class_basename(static::class) . '.'
+                throw new AuthorizationException(
+                    'You are not authorized to access ' . class_basename(static::class) . '.',
                 );
             }
 
@@ -304,18 +311,18 @@ abstract class Field
             $policy = $this->policy();
             if ($policy !== null) {
                 if (!$ctx->can($this->policyAbility(), $policy)) {
-                    throw new \Ayimdomnic\Laragraph\Exceptions\AuthorizationException(
-                        'Policy check failed for ' . class_basename(static::class) . '.'
+                    throw new AuthorizationException(
+                        'Policy check failed for ' . class_basename(static::class) . '.',
                     );
                 }
             }
 
             // 4. Validate arguments
             $rules = $this->rules($args);
-            if (!empty($rules)) {
+            if ($rules !== []) {
                 $validator = Validator::make($args, $rules, $this->messages(), $this->attributes());
                 if ($validator->fails()) {
-                    throw new \Ayimdomnic\Laragraph\Exceptions\ValidationException($validator);
+                    throw new ValidationException($validator);
                 }
             }
 
@@ -324,12 +331,12 @@ abstract class Field
                 array_merge(
                     (array) config('laragraph.middleware', []),
                     $this->middleware(),
-                )
+                ),
             );
 
-            if (!empty($middleware)) {
+            if ($middleware !== []) {
                 return (new FieldMiddlewarePipeline($middleware))
-                    ->run($root, $args, $context, $info, fn ($r, $a, $c, $i) => $this->handleField($r, $a, $c, $i));
+                    ->run($root, $args, $context, $info, fn($r, array $a, $c, ResolveInfo $i): mixed => $this->handleField($r, $a, $c, $i));
             }
 
             // 6. Resolve (no middleware)
@@ -342,6 +349,8 @@ abstract class Field
      * have all passed. Defaults to calling {@see resolve()} — overridden by
      * {@see Subscription} to branch between registering a subscriber and
      * resolving a live update, without duplicating the pipeline above.
+     *
+     * @param array<string, mixed> $args
      */
     protected function handleField(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
     {
@@ -357,10 +366,9 @@ abstract class Field
      */
     private function resolveMiddlewareInstances(array $middleware): array
     {
-        return array_map(
-            fn ($mw) => is_string($mw) ? app($mw) : $mw,
+        return array_values(array_map(
+            fn(string|FieldMiddlewareInterface $mw): FieldMiddlewareInterface => is_string($mw) ? app($mw) : $mw,
             $middleware,
-        );
+        ));
     }
 }
-

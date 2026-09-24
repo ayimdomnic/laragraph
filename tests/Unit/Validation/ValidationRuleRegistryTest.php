@@ -6,14 +6,14 @@ namespace Ayimdomnic\Laragraph\Tests\Unit\Validation;
 
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
+use GraphQL\Validator\Rules\QueryDepth;
 use GraphQL\Validator\Rules\ValidationRule;
-use Mockery;
 
 class ValidationRuleRegistryTest extends TestCase
 {
     protected function tearDown(): void
     {
-        Mockery::close();
+        \Mockery::close();
         parent::tearDown();
     }
 
@@ -27,7 +27,7 @@ class ValidationRuleRegistryTest extends TestCase
     public function test_add_instance(): void
     {
         $registry = new ValidationRuleRegistry();
-        $rule     = Mockery::mock(ValidationRule::class);
+        $rule     = \Mockery::mock(ValidationRule::class);
 
         $registry->add($rule);
 
@@ -40,17 +40,17 @@ class ValidationRuleRegistryTest extends TestCase
     {
         $registry = new ValidationRuleRegistry();
 
-        $registry->add(\GraphQL\Validator\Rules\QueryDepth::class);
+        $registry->add(QueryDepth::class);
 
         $this->assertCount(1, $registry->all());
-        $this->assertSame(\GraphQL\Validator\Rules\QueryDepth::class, $registry->all()[0]);
+        $this->assertSame(QueryDepth::class, $registry->all()[0]);
     }
 
     public function test_add_multiple_rules(): void
     {
         $registry = new ValidationRuleRegistry();
-        $ruleA    = Mockery::mock(ValidationRule::class);
-        $ruleB    = Mockery::mock(ValidationRule::class);
+        $ruleA    = \Mockery::mock(ValidationRule::class);
+        $ruleB    = \Mockery::mock(ValidationRule::class);
 
         $registry->add($ruleA);
         $registry->add($ruleB);
@@ -61,7 +61,7 @@ class ValidationRuleRegistryTest extends TestCase
     public function test_resolve_returns_instances(): void
     {
         $registry = new ValidationRuleRegistry();
-        $rule     = Mockery::mock(ValidationRule::class);
+        $rule     = \Mockery::mock(ValidationRule::class);
 
         $registry->add($rule);
         $resolved = $registry->resolve();
@@ -76,20 +76,20 @@ class ValidationRuleRegistryTest extends TestCase
 
         // QueryDepth can be constructed by the container (no constructor args issue
         // since we just need it resolvable in the test app)
-        $this->app->bind(\GraphQL\Validator\Rules\QueryDepth::class, fn () => new \GraphQL\Validator\Rules\QueryDepth(10));
-        $registry->add(\GraphQL\Validator\Rules\QueryDepth::class);
+        $this->app->bind(QueryDepth::class, fn(): QueryDepth => new QueryDepth(10));
+        $registry->add(QueryDepth::class);
 
         $resolved = $registry->resolve();
 
         $this->assertCount(1, $resolved);
-        $this->assertInstanceOf(\GraphQL\Validator\Rules\QueryDepth::class, $resolved[0]);
+        $this->assertInstanceOf(QueryDepth::class, $resolved[0]);
     }
 
     public function test_resolve_returns_zero_indexed_array(): void
     {
         $registry = new ValidationRuleRegistry();
-        $ruleA    = Mockery::mock(ValidationRule::class);
-        $ruleB    = Mockery::mock(ValidationRule::class);
+        $ruleA    = \Mockery::mock(ValidationRule::class);
+        $ruleB    = \Mockery::mock(ValidationRule::class);
 
         $registry->add($ruleA);
         $registry->add($ruleB);
@@ -104,7 +104,7 @@ class ValidationRuleRegistryTest extends TestCase
         $registry = new ValidationRuleRegistry();
         $this->assertTrue($registry->isEmpty());
 
-        $registry->add(Mockery::mock(ValidationRule::class));
+        $registry->add(\Mockery::mock(ValidationRule::class));
 
         $this->assertFalse($registry->isEmpty());
     }
@@ -120,7 +120,7 @@ class ValidationRuleRegistryTest extends TestCase
     public function test_service_provider_loads_rules_from_config(): void
     {
         $this->app['config']->set('laragraph.validation.rules', [
-            \GraphQL\Validator\Rules\QueryDepth::class,
+            QueryDepth::class,
         ]);
 
         // Clear the cached instance so the service provider factory re-runs
@@ -130,6 +130,6 @@ class ValidationRuleRegistryTest extends TestCase
         $registry = $this->app->make(ValidationRuleRegistry::class);
 
         $this->assertCount(1, $registry->all());
-        $this->assertSame(\GraphQL\Validator\Rules\QueryDepth::class, $registry->all()[0]);
+        $this->assertSame(QueryDepth::class, $registry->all()[0]);
     }
 }

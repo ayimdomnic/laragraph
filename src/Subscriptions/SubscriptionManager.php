@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Subscriptions;
 
+use Ayimdomnic\Laragraph\Controllers\LaragraphController;
 use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Support\Subscription;
 use GraphQL\Error\DebugFlag;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -13,24 +15,26 @@ use Illuminate\Support\Str;
  * Registers subscribers and re-executes their queries when application code
  * reports a subscription event.
  *
- * @see \Ayimdomnic\Laragraph\Support\Subscription  for how a subscriber's
+ * @see Subscription  for how a subscriber's
  *   channel is resolved during registration
- * @see \Ayimdomnic\Laragraph\Controllers\LaragraphController  for the HTTP
+ * @see LaragraphController  for the HTTP
  *   flow that calls register()
+ *
+ * @phpstan-import-type SubscriberRecord from SubscriberStoreInterface
  */
-final class SubscriptionManager
+final readonly class SubscriptionManager
 {
     public function __construct(
-        private readonly SubscriberStoreInterface $store,
-        private readonly Laragraph $laragraph,
+        private SubscriberStoreInterface $store,
+        private Laragraph $laragraph,
     ) {}
 
     /**
      * Register a new subscriber on one or more channels.
      *
      * @param  mixed  $channel  A channel name, or a list of channel names —
-     *   whatever {@see \Ayimdomnic\Laragraph\Support\Subscription::subscribe()} returned.
-     * @param  array{query: string, variables: array, operationName: ?string, schemaName: string}  $record
+     *   whatever {@see Subscription::subscribe()} returned.
+     * @param SubscriberRecord $record
      * @return string  The generated subscriber id.
      */
     public function register(mixed $channel, array $record): string
@@ -61,12 +65,12 @@ final class SubscriptionManager
             $context = (object) ['subscribing' => false];
 
             $result = $this->laragraph->executeQuery(
-                query:         $record['query'],
-                context:       $context,
-                variables:     $record['variables'],
+                query: $record['query'],
+                context: $context,
+                variables: $record['variables'],
                 operationName: $record['operationName'],
-                schemaName:    $record['schemaName'],
-                rootValue:     $payload,
+                schemaName: $record['schemaName'],
+                rootValue: $payload,
             );
 
             $debug = config('app.debug')

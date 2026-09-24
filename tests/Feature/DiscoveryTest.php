@@ -10,8 +10,6 @@ use Ayimdomnic\Laragraph\Support\Query;
 use Ayimdomnic\Laragraph\Support\Subscription;
 use Ayimdomnic\Laragraph\Support\Type;
 use Ayimdomnic\Laragraph\Tests\TestCase;
-use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Definition\Type as GType;
 use Illuminate\Support\Facades\File;
 
 class DiscoveryTest extends TestCase
@@ -116,7 +114,7 @@ PHP);
 
         $result = Discover::scan('app/GraphQL/Types', Type::class);
         // MismatchedFile → tries App\GraphQL\Types\MismatchedFile, which doesn't exist
-        $this->assertSame([], array_filter($result, fn ($v) => $v === 'App\\GraphQL\\Types\\MismatchedFile'));
+        $this->assertSame([], array_filter($result, fn(string $v): bool => $v === 'App\\GraphQL\\Types\\MismatchedFile'));
     }
 
     // -------------------------------------------------------------------------
@@ -147,7 +145,6 @@ PHP);
     {
         $reflect = new \ReflectionClass(Discover::class);
         $method  = $reflect->getMethod('matchPsr4Map');
-        $method->setAccessible(true);
 
         // A PSR-4 map with a directory that doesn't exist — realpath() returns false
         $result = $method->invoke(null, '/some/path/', [

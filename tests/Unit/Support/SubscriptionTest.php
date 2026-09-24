@@ -11,15 +11,30 @@ use GraphQL\Type\Definition\Type;
 
 class ConcreteSubscription extends Subscription
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return $root; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return $root;
+    }
 }
 
 class SubscriptionWithChannel extends Subscription
 {
-    public function type(): Type { return Type::string(); }
-    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return $root; }
-    public function subscribe(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed { return 'my-channel'; }
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return $root;
+    }
+    public function subscribe(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        return 'my-channel';
+    }
 }
 
 class SubscriptionTest extends TestCase
@@ -36,7 +51,7 @@ class SubscriptionTest extends TestCase
         $sub   = new SubscriptionWithChannel();
         $field = $sub->toArray();
 
-        $result = ($field['subscribe'])(null, [], null, $this->createMock(ResolveInfo::class));
+        $result = ($field['subscribe'])(null, [], null, $this->createStub(ResolveInfo::class));
         $this->assertSame('my-channel', $result);
     }
 
@@ -45,7 +60,7 @@ class SubscriptionTest extends TestCase
         $sub   = new ConcreteSubscription();
         $field = $sub->toArray();
 
-        $result = ($field['subscribe'])(null, [], null, $this->createMock(ResolveInfo::class));
+        $result = ($field['subscribe'])(null, [], null, $this->createStub(ResolveInfo::class));
         $this->assertNull($result);
     }
 }

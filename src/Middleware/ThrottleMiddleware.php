@@ -22,13 +22,16 @@ use Illuminate\Support\Facades\RateLimiter;
  * The rate-limit key is scoped to the field name and the authenticated user ID
  * (or the client IP address for guest requests).
  */
-final class ThrottleMiddleware implements FieldMiddlewareInterface
+final readonly class ThrottleMiddleware implements FieldMiddlewareInterface
 {
     public function __construct(
-        private readonly int $maxAttempts = 60,
-        private readonly int $decaySeconds = 60,
+        private int $maxAttempts = 60,
+        private int $decaySeconds = 60,
     ) {}
 
+    /**
+     * @param array<string, mixed> $args
+     */
     public function handle(
         mixed $root,
         array $args,
@@ -41,7 +44,7 @@ final class ThrottleMiddleware implements FieldMiddlewareInterface
         if (RateLimiter::tooManyAttempts($key, $this->maxAttempts)) {
             $availableIn = RateLimiter::availableIn($key);
             throw new Error(
-                "Too many requests for field [{$info->fieldName}]. Retry after {$availableIn}s."
+                "Too many requests for field [{$info->fieldName}]. Retry after {$availableIn}s.",
             );
         }
 

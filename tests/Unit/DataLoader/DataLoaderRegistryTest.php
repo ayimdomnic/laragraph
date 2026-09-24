@@ -17,7 +17,7 @@ class StubBatchResolver extends BatchResolver
 {
     public function batch(array $keys): array
     {
-        return array_map(fn (mixed $k): string => "resolved:{$k}", $keys);
+        return array_map(fn(mixed $k): string => "resolved:{$k}", $keys);
     }
 }
 
@@ -25,7 +25,7 @@ class AnotherStubBatchResolver extends BatchResolver
 {
     public function batch(array $keys): array
     {
-        return array_map(fn (mixed $k): string => "other:{$k}", $keys);
+        return array_map(fn(mixed $k): string => "other:{$k}", $keys);
     }
 }
 

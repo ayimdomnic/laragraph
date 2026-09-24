@@ -30,6 +30,9 @@ use Illuminate\Support\Facades\Log;
  */
 final class LoggingMiddleware implements FieldMiddlewareInterface
 {
+    /**
+     * @param array<string, mixed> $args
+     */
     public function handle(
         mixed $root,
         array $args,

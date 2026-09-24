@@ -16,6 +16,7 @@ interface FieldMiddlewareInterface
      * useful for throttling, per-field caching, or access control layers.
      *
      * @param callable(): mixed $next
+     * @param array<string, mixed> $args
      */
     public function handle(
         mixed $root,

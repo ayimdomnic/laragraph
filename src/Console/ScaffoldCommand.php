@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Attribute\AsCommand;
 
@@ -17,7 +19,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 class ScaffoldCommand extends Command
 {
     protected $signature = 'laragraph:scaffold
-                            {model       : Model class name — short (User) or FQCN (App\\Models\\User)}
+                            {model?      : Model class name — short (User) or FQCN (App\\Models\\User)}
                             {--all       : Scaffold every model found in app/Models/}
                             {--with-crud : Also generate create / update / delete mutations}
                             {--register  : Append generated classes to config/laragraph.php}
@@ -35,7 +37,15 @@ class ScaffoldCommand extends Command
             return $this->scaffoldAll();
         }
 
-        return $this->scaffold($this->argument('model'));
+        $model = $this->argument('model');
+
+        if (!is_string($model) || $model === '') {
+            $this->components->error('Pass a model name, or use --all to scaffold every model in app/Models.');
+
+            return self::FAILURE;
+        }
+
+        return $this->scaffold($model);
     }
 
     // -------------------------------------------------------------------------
@@ -81,14 +91,14 @@ class ScaffoldCommand extends Command
         $modelsPath = app_path('Models');
 
         if (!is_dir($modelsPath)) {
-            $this->components->error("No app/Models directory found.");
+            $this->components->error('No app/Models directory found.');
             return self::FAILURE;
         }
 
         $models = glob("{$modelsPath}/*.php") ?: [];
 
-        if (empty($models)) {
-            $this->components->warn("No models found in app/Models/.");
+        if ($models === []) {
+            $this->components->warn('No models found in app/Models/.');
             return self::SUCCESS;
         }
 
@@ -104,13 +114,16 @@ class ScaffoldCommand extends Command
     // File generation
     // -------------------------------------------------------------------------
 
+    /**
+     * @param array<string, string> $fields
+     */
     protected function generateType(string $model, array $fields): void
     {
         $path = app_path("GraphQL/Types/{$model}Type.php");
         $this->ensureDirectory(dirname($path));
 
         $fieldLines = collect($fields)
-            ->map(fn ($type, $name) => "            '{$name}' => ['type' => {$type}],")
+            ->map(fn($type, $name): string => "            '{$name}' => ['type' => {$type}],")
             ->implode("\n");
 
         $this->writeFile($path, $this->render('type', [
@@ -141,6 +154,7 @@ class ScaffoldCommand extends Command
 
     /**
      * @param  'create'|'update'|'delete'  $variant
+     * @param array<string, string> $fields
      */
     protected function generateMutation(string $model, string $variant, array $fields = []): void
     {
@@ -154,8 +168,8 @@ class ScaffoldCommand extends Command
         $this->ensureDirectory(dirname($path));
 
         $fillableLines = collect($fields)
-            ->reject(fn ($type, $name) => $name === 'id')
-            ->map(fn ($type, $name) => "            '{$name}' => ['type' => {$type}],")
+            ->reject(fn($type, $name): bool => $name === 'id')
+            ->map(fn($type, $name): string => "            '{$name}' => ['type' => {$type}],")
             ->implode("\n");
 
         $this->writeFile($path, $this->render("mutation-{$variant}", [
@@ -190,7 +204,7 @@ class ScaffoldCommand extends Command
         }
 
         throw new \InvalidArgumentException(
-            "Model [{$model}] not found. Tried: " . implode(', ', $candidates)
+            "Model [{$model}] not found. Tried: " . implode(', ', $candidates),
         );
     }
 
@@ -204,7 +218,7 @@ class ScaffoldCommand extends Command
         $fields = ['id' => 'GType::nonNull(GType::id())'];
 
         try {
-            /** @var \Illuminate\Database\Eloquent\Model $instance */
+            /** @var Model $instance */
             $instance = new $modelClass();
             $fillable = $instance->getFillable();
             $casts    = $instance->getCasts();
@@ -243,22 +257,23 @@ class ScaffoldCommand extends Command
         $configPath = config_path('laragraph.php');
 
         if (!file_exists($configPath)) {
-            $this->components->warn("config/laragraph.php not found — skipping --register.");
+            $this->components->warn('config/laragraph.php not found — skipping --register.');
             return;
         }
 
         // Append entries as a comment block (safe, non-destructive)
-        $entries = "    // Auto-registered by laragraph:scaffold\n"
-            . "    // 'query'    => ['types' => [\App\GraphQL\Types\\{$model}Type::class]],\n"
-            . "    // 'queries'  => ['" . Str::camel($model) . "s' => \App\GraphQL\Queries\\{$model}sQuery::class],\n";
+        Str::camel($model);
 
-        $this->components->info("Tip: add the generated classes to config/laragraph.php or enable auto-discovery.");
+        $this->components->info('Tip: add the generated classes to config/laragraph.php or enable auto-discovery.');
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * @param array<string, string> $replacements
+     */
     protected function render(string $stub, array $replacements): string
     {
         $path = __DIR__ . "/stubs/scaffold/{$stub}.stub";
@@ -267,7 +282,7 @@ class ScaffoldCommand extends Command
             throw new \RuntimeException("Scaffold stub [{$stub}.stub] not found at {$path}.");
         }
 
-        $content = file_get_contents($path);
+        $content = File::get($path);
 
         foreach ($replacements as $key => $value) {
             $content = str_replace("{{ {$key} }}", $value, $content);
@@ -291,6 +306,6 @@ class ScaffoldCommand extends Command
         }
 
         file_put_contents($path, $content);
-        $this->components->info("Created: " . str_replace(base_path() . '/', '', $path));
+        $this->components->info('Created: ' . str_replace(base_path() . '/', '', $path));
     }
 }

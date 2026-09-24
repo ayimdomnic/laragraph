@@ -41,7 +41,7 @@ final class GuardResolver
     {
         return new AuthorizationContext(
             request: request(),
-            guardName: static::resolve($fieldGuard),
+            guardName: self::resolve($fieldGuard),
         );
     }
 }
