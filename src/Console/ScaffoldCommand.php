@@ -66,7 +66,8 @@ class ScaffoldCommand extends Command
 
         $this->components->info("Scaffolding GraphQL for [{$shortName}]…");
 
-        $this->generateType($shortName, $fields);
+        // Never expose attributes the model hides from serialisation (passwords, tokens, …).
+        $this->generateType($shortName, array_diff_key($fields, array_flip($this->hiddenAttributes($modelClass))));
         $this->generateQuery($shortName, 'single');
         $this->generateQuery($shortName, 'list');
 
@@ -186,6 +187,9 @@ class ScaffoldCommand extends Command
     // Model introspection
     // -------------------------------------------------------------------------
 
+    /**
+     * @return class-string
+     */
     protected function resolveModel(string $model): string
     {
         if (class_exists($model)) {
@@ -233,6 +237,22 @@ class ScaffoldCommand extends Command
         }
 
         return $fields;
+    }
+
+    /**
+     * @param class-string $modelClass
+     * @return list<string>
+     */
+    protected function hiddenAttributes(string $modelClass): array
+    {
+        try {
+            /** @var Model $instance */
+            $instance = new $modelClass();
+
+            return array_values($instance->getHidden());
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     protected function castToGraphQLType(string $cast): string

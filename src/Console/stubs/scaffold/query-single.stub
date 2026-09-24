@@ -8,6 +8,7 @@ use Ayimdomnic\Laragraph\Support\Query;
 use App\Models\{{ MODEL }};
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Support\Facades\Gate;
 
 class {{ CLASS }} extends Query
 {
@@ -26,6 +27,17 @@ class {{ CLASS }} extends Query
     public function description(): ?string
     {
         return 'Fetch a single {{ MODEL_LOWER }} by ID.';
+    }
+
+    /**
+     * Denied by default: allowed only when a {{ MODEL }}Policy (or a Gate
+     * ability) grants `view` to the current user. Guests are denied.
+     */
+    public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
+    {
+        $record = {{ MODEL }}::find($args['id']);
+
+        return $record !== null && Gate::allows('view', $record);
     }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed

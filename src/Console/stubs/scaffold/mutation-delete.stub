@@ -8,6 +8,7 @@ use Ayimdomnic\Laragraph\Support\Mutation;
 use App\Models\{{ MODEL }};
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Support\Facades\Gate;
 
 class {{ CLASS }} extends Mutation
 {
@@ -33,6 +34,17 @@ class {{ CLASS }} extends Mutation
     public function description(): ?string
     {
         return 'Permanently delete a {{ MODEL_LOWER }}.';
+    }
+
+    /**
+     * Denied by default: allowed only when a {{ MODEL }}Policy (or a Gate
+     * ability) grants `delete` to the current user. Guests are denied.
+     */
+    public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
+    {
+        $record = {{ MODEL }}::find($args['id']);
+
+        return $record !== null && Gate::allows('delete', $record);
     }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed

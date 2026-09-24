@@ -8,6 +8,8 @@ use Ayimdomnic\Laragraph\Support\Mutation;
 use App\Models\{{ MODEL }};
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Definition\Type as GType;
+use Illuminate\Support\Facades\Gate;
 
 class {{ CLASS }} extends Mutation
 {
@@ -33,6 +35,15 @@ class {{ CLASS }} extends Mutation
     public function description(): ?string
     {
         return 'Create a new {{ MODEL_LOWER }}.';
+    }
+
+    /**
+     * Denied by default: allowed only when a {{ MODEL }}Policy (or a Gate
+     * ability) grants `create` to the current user. Guests are denied.
+     */
+    public function authorize(mixed $root, array $args, mixed $context, ResolveInfo $info): bool
+    {
+        return Gate::allows('create', {{ MODEL }}::class);
     }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
