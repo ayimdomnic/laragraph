@@ -753,6 +753,8 @@ Enable per-field resolver timing in the [Apollo Tracing](https://github.com/apol
 
 Every resolved field is recorded — root Query/Mutation/Subscription fields and nested Type fields alike. Leave this off in production unless you're actively debugging performance; it adds a small wrapping cost to every resolver call.
 
+Set `'driver' => 'otel'` instead to export real OpenTelemetry spans (a root span per operation, a child per resolver) via `open-telemetry/api`'s global tracer provider — your app wires up its own OTel SDK/exporter. See [Observability → The `otel` driver](docs/12-observability.md#the-otel-driver).
+
 ---
 
 ## Development

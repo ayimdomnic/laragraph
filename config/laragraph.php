@@ -454,15 +454,26 @@ return [
     |--------------------------------------------------------------------------
     |
     | When enabled, every field resolution (root Query/Mutation/Subscription
-    | fields and nested Type fields alike) is timed and reported under
-    | `extensions.tracing`, following the Apollo Tracing format. Disabled by
-    | default — enabling it adds a small wrapping cost to every resolver call,
-    | so it's best turned on selectively (e.g. behind a debug/admin guard)
-    | rather than left on for a public production API.
+    | fields and nested Type fields alike) is timed. Disabled by default —
+    | enabling it adds a small wrapping cost to every resolver call, so it's
+    | best turned on selectively (e.g. behind a debug/admin guard) rather
+    | than left on for a public production API.
+    |
+    | driver — 'apollo' (default): reports timings under `extensions.tracing`
+    |   in the Apollo Tracing format. Nothing to configure beyond `enabled`.
+    | driver — 'otel': exports real OpenTelemetry spans (root span per
+    |   operation, one child per resolver) via `open-telemetry/api`'s global
+    |   tracer provider instead — the app wires up its own OTel SDK/exporter
+    |   the standard way. `extensions.tracing` is NOT added to the response
+    |   in this mode; span data leaves via the OTel pipeline, not the body.
     |
     */
     'tracing' => [
         'enabled' => false,
+        'driver'  => 'apollo',
+        'otel'    => [
+            'tracer_name' => 'laragraph',
+        ],
     ],
 
     /*

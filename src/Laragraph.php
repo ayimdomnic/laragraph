@@ -26,6 +26,7 @@ use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Support\DefaultFieldResolver;
 use Ayimdomnic\Laragraph\Support\DocumentCache;
 use Ayimdomnic\Laragraph\Support\ErrorLocaleResolver;
+use Ayimdomnic\Laragraph\Tracing\OtelSpanExporter;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
@@ -204,6 +205,16 @@ class Laragraph
                 }
             }
 
+            if (config('laragraph.tracing.enabled') && config('laragraph.tracing.driver', 'apollo') === 'otel') {
+                $this->container->make(OtelSpanExporter::class)->export(
+                    $this->container->make(TracingCollector::class),
+                    $query,
+                    $operationName,
+                    $resolvedSchemaName,
+                    !empty($data['errors']),
+                );
+            }
+
             if ($cacheKey !== null && empty($data['errors'])) {
                 ResponseCache::put($cacheKey, $data);
             }
@@ -259,7 +270,9 @@ class Laragraph
             $extensions[$ext->key()] = $ext->get($context);
         }
 
-        if (config('laragraph.tracing.enabled')) {
+        // The 'otel' driver exports real spans out-of-band (see execute()) instead
+        // of adding extensions.tracing to the response body.
+        if (config('laragraph.tracing.enabled') && config('laragraph.tracing.driver', 'apollo') !== 'otel') {
             $ext = new TracingExtension($this->container->make(TracingCollector::class));
             $extensions[$ext->key()] = $ext->get($context);
         }
@@ -356,7 +369,7 @@ class Laragraph
      */
     protected function prevalidate(Schema $schema, string $query, ?DocumentNode $document, array $static, array &$rules): ?ExecutionResult
     {
-        if ($document === null) {
+        if (!$document instanceof DocumentNode) {
             $rules = [...$static, ...$rules]; // webonyx reports the syntax error
 
             return null;

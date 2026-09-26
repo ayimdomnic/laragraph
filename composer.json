@@ -26,12 +26,14 @@
         "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/validation": "^10.0|^11.0|^12.0|^13.0",
+        "open-telemetry/api": "^1.0",
         "overblog/dataloader-php": "^1.0",
         "webonyx/graphql-php": "^15.0"
     },
     "require-dev": {
         "larastan/larastan": "^3.10",
         "laravel/pint": "^1.32",
+        "open-telemetry/sdk": "^1.0",
         "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
         "orchestra/workbench": "^8.0|^9.0|^10.0|^11.0",
         "phpbench/phpbench": "^1.4",
@@ -91,7 +93,11 @@
     "config": {
         "optimize-autoloader": true,
         "sort-packages": true,
-        "preferred-install": "dist"
+        "preferred-install": "dist",
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "tbachert/spi": true
+        }
     },
     "scripts-descriptions": {
         "lint": "Check code style (PER-CS via Laravel Pint).",
