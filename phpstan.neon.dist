@@ -8,3 +8,13 @@ parameters:
     level: 8
 
     tmpDir: build/phpstan
+
+    ignoreErrors:
+        # MakesGraphQLRequests is a public API trait meant to be `use`d by a
+        # CONSUMER app's own test base class — its only real usage site is
+        # necessarily outside these `paths` (its own package's src/), which is
+        # exactly the documented false-positive PHPStan's own linked blog post
+        # describes: https://phpstan.org/blog/how-phpstan-analyses-traits
+        -
+            identifier: trait.unused
+            path: src/Testing/MakesGraphQLRequests.php

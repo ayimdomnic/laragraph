@@ -27,6 +27,7 @@ use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
 use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
+use Ayimdomnic\Laragraph\Testing\TestResponseMacros;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Composer\InstalledVersions;
@@ -103,6 +104,7 @@ class LaragraphServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__ . '/routes.php');
         $this->loadViewsFrom(__DIR__ . '/views', 'laragraph');
         $this->loadTranslationsFrom(__DIR__ . '/../lang', 'laragraph');
+        TestResponseMacros::register();
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
