@@ -383,6 +383,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Unresolved Field Warnings
+    |--------------------------------------------------------------------------
+    |
+    | A field with no resolve{Field}Field() method and no matching model
+    | attribute / array key resolves to null with zero signal — the classic
+    | camelCase/snake_case mismatch. When this is true (or null, the default,
+    | meaning "follow app.debug"), that case logs a warning to logging.channel
+    | instead of resolving silently. Leave it null: loud in development,
+    | silent in production, without a stray warning per legitimately-null
+    | field on a public API.
+    |
+    */
+    'log_unresolved_fields' => null,
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Scalar Types
     |--------------------------------------------------------------------------
     |

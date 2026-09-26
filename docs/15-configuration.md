@@ -241,6 +241,18 @@ field's own `middleware()`. Entries are class names (resolved from the container
 The log channel used by `LoggingMiddleware` and by the `log` subscription driver. `null` means the
 default channel.
 
+## `log_unresolved_fields`
+
+```php
+'log_unresolved_fields' => null,
+```
+
+`null` (default): warn when a field with no `resolve{Field}Field()` method resolves to `null`
+because nothing matched — no model attribute, no array key — following `app.debug` (loud in
+development, silent in production). `true`/`false` overrides that either way. Logged to
+`logging.channel`, not thrown — a resolver mistake shouldn't turn into a 500. See
+[Types → Common mistakes](02-types.md#common-mistakes).
+
 ## `database_types`
 
 ```php
