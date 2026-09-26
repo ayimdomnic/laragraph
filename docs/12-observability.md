@@ -58,13 +58,14 @@ reporting `QueryError`s with category `internal` to your error tracker, and flus
 
 ## Response extensions
 
-Extensions add metadata under the response's top-level `extensions` key. Two are built in, both
+Extensions add metadata under the response's top-level `extensions` key. Three are built in, all
 off by default:
 
 ```php
 'extensions' => [
-    'request_id'   => true,   // extensions.requestId.id
-    'query_timing' => true,   // extensions.timing.execution_ms
+    'request_id'       => true,   // extensions.requestId.id
+    'query_timing'     => true,   // extensions.timing.execution_ms
+    'query_complexity' => true,   // extensions.queryComplexity.{cost,maxCost}
 ],
 ```
 
@@ -73,7 +74,8 @@ off by default:
   "data": { "me": { "name": "Ada" } },
   "extensions": {
     "requestId": { "id": "5f0c6f9e-3b4c-4a8e-9d0f-2b1e6c7a8d90" },
-    "timing": { "execution_ms": 4.12 }
+    "timing": { "execution_ms": 4.12 },
+    "queryComplexity": { "cost": 14, "maxCost": 500 }
   }
 }
 ```
@@ -82,6 +84,11 @@ off by default:
   digits, `.`, `_`, `-`, up to 128 characters). Otherwise it generates a UUID. It's the same for every
   operation in a batch, so you can correlate client reports with server logs.
 - **`timing`** is the wall-clock time of the operation, in milliseconds.
+- **`queryComplexity`** is the query's computed cost against
+  [`security.query_max_complexity`](10-security.md#complexity) — empty (`{}`) when that limit isn't
+  configured. Still populated when the query is rejected for exceeding the limit, so a client can
+  see exactly how far over budget it was, the same idea as GitHub's or Shopify's GraphQL APIs
+  exposing a rate-limit cost for clients to self-throttle against.
 
 ### Custom extensions
 

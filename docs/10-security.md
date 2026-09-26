@@ -53,6 +53,9 @@ public function complexity(): ?int
 Give expensive fields a higher cost: full-text searches, external API calls, aggregates. A query
 over the limit fails with "Max query complexity should be 500 but got 731."
 
+Turn on `extensions.query_complexity` (see [Observability](12-observability.md#response-extensions))
+to surface the computed cost in every response, so clients can self-throttle instead of guessing.
+
 ### Aliases
 
 Aliases let one document run the same field many times:

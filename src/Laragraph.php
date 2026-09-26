@@ -14,6 +14,7 @@ use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\SchemaException;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
+use Ayimdomnic\Laragraph\Extensions\QueryComplexityExtension;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
 use Ayimdomnic\Laragraph\Http\BatchProcessor;
@@ -70,6 +71,9 @@ class Laragraph
 
     /** @var array<string, true> Documents that passed the document-only validation rules, see prevalidate(). */
     protected array $validated = [];
+
+    /** This execution's QueryComplexity rule instance, if one ran — see partitionValidationRules(). */
+    protected ?QueryComplexity $lastQueryComplexity = null;
 
     public function __construct(protected readonly Container $container) {}
 
@@ -260,6 +264,11 @@ class Laragraph
             $extensions[$ext->key()] = $ext->get($context);
         }
 
+        if (!empty($config['query_complexity'])) {
+            $ext = new QueryComplexityExtension($this->lastQueryComplexity);
+            $extensions[$ext->key()] = $ext->get($context);
+        }
+
         // User-registered custom extensions
         foreach ($this->container->make(ExtensionRegistry::class)->collect($context) as $key => $data) {
             $extensions[$key] = $data;
@@ -444,6 +453,11 @@ class Laragraph
                 $seen[$rule::class]    = true;
             }
         }
+
+        // Captured for QueryComplexityExtension — whichever instance actually
+        // ends up in $dynamic, built-in or a user override of the same class.
+        $complexityRule = $dynamic[QueryComplexity::class] ?? null;
+        $this->lastQueryComplexity = $complexityRule instanceof QueryComplexity ? $complexityRule : null;
 
         return [array_values($static), array_values($dynamic)];
     }
