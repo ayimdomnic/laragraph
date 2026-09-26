@@ -326,17 +326,26 @@ alone. See [Performance → Octane](11-performance-and-caching.md#octane).
         'connection' => null,
         'queue'      => null,
     ],
+    'sse' => [
+        'max_duration'      => 30,
+        'poll_interval_ms'  => 500,
+        'heartbeat_seconds' => 15,
+    ],
 ],
 ```
 
 | Key | Meaning |
 |---|---|
 | `enabled` | Accept subscription operations. When off, they're rejected with an error. |
-| `driver` | `'broadcast'` (Laravel Broadcasting) or `'log'` (write updates to `logging.channel`) |
+| `driver` | `'broadcast'` (Laravel Broadcasting), `'log'` (write updates to `logging.channel`), or `'sse'` (plain HTTP Server-Sent Events, no broadcaster needed) |
 | `cache_store` | Where subscriber registrations are stored; must be shared between servers. `null` = default store. |
 | `ttl` | Lifetime of a registration in seconds |
-| `channel_prefix` | Private channel each subscriber listens on: `{prefix}.{subscriberId}` |
+| `channel_prefix` | Private channel each subscriber listens on: `{prefix}.{subscriberId}` (`'broadcast'` driver) |
 | `authorize_channel` | Register the rule that lets only the subscriber join their channel. `false` = write your own in `routes/channels.php`. |
 | `queue.connection` / `queue.queue` | Where `broadcastLater()` queues its job. `null` = application defaults. |
+| `sse.max_duration` | Seconds before an open `'sse'`-driver connection self-closes (the client's `EventSource` reconnects transparently) |
+| `sse.poll_interval_ms` | How often an open connection checks for a new pending message |
+| `sse.heartbeat_seconds` | How often an SSE comment is sent on an otherwise idle connection, so proxies don't time it out |
 
-See [Subscriptions](07-subscriptions.md).
+See [Subscriptions](07-subscriptions.md) — read the `'sse'` driver's capacity note before relying
+on it for more than a handful of concurrent subscribers.

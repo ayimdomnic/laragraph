@@ -9,6 +9,7 @@ use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
+use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionRegistrar;
 use Ayimdomnic\Laragraph\Support\Operation;
@@ -17,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * This file is part of the Laragraph package.
@@ -97,6 +99,73 @@ class LaragraphController extends BaseController
         $subscriptions->unsubscribe($subscriberId);
 
         return response()->noContent();
+    }
+
+    /**
+     * Stream a subscriber's updates over Server-Sent Events — only available
+     * when `laragraph.subscriptions.driver` is `'sse'`. Each connection
+     * self-closes after `sse.max_duration` seconds; the client's `EventSource`
+     * reconnects transparently. See docs/07-subscriptions.md for the capacity
+     * trade-offs of this transport before relying on it for many subscribers.
+     */
+    public function stream(string $subscriberId): StreamedResponse|JsonResponse
+    {
+        $subscriptions = app(SubscriptionManager::class);
+
+        if (
+            !config('laragraph.subscriptions.enabled', false)
+            || config('laragraph.subscriptions.driver', 'broadcast') !== 'sse'
+            || !$subscriptions->ownedByCurrentUser($subscriberId)
+        ) {
+            return response()->json(['errors' => [[
+                'message'    => 'Subscription not found.',
+                'extensions' => ['code' => 'SUBSCRIPTION_NOT_FOUND'],
+            ]]], 404);
+        }
+
+        $queue            = app(SsePendingQueue::class);
+        $maxDuration      = (int) config('laragraph.subscriptions.sse.max_duration', 30);
+        $pollIntervalUs   = (int) config('laragraph.subscriptions.sse.poll_interval_ms', 500) * 1000;
+        $heartbeatSeconds = (int) config('laragraph.subscriptions.sse.heartbeat_seconds', 15);
+
+        return response()->stream(function () use ($subscriberId, $queue, $maxDuration, $pollIntervalUs, $heartbeatSeconds): void {
+            $deadline      = microtime(true) + $maxDuration;
+            $lastHeartbeat = microtime(true);
+
+            while (microtime(true) < $deadline) {
+                if (connection_aborted()) {
+                    break;
+                }
+
+                $payload = $queue->pop($subscriberId);
+
+                if ($payload !== null) {
+                    echo "event: next\n";
+                    echo 'data: ' . json_encode($payload) . "\n\n";
+                    $lastHeartbeat = microtime(true);
+                } elseif (microtime(true) - $lastHeartbeat >= $heartbeatSeconds) {
+                    echo ": heartbeat\n\n";
+                    $lastHeartbeat = microtime(true);
+                } else {
+                    usleep($pollIntervalUs);
+
+                    continue;
+                }
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+
+                flush();
+            }
+        }, 200, [
+            'Content-Type'      => 'text/event-stream',
+            'Cache-Control'     => 'no-cache',
+            'Connection'        => 'keep-alive',
+            // nginx buffers proxied responses by default, which would hold
+            // every frame until the connection closes — defeating the point.
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     /**
@@ -287,14 +356,15 @@ class LaragraphController extends BaseController
             'schemaName'    => $schemaName,
         ]);
 
+        $subscription = ['channel' => $channel, 'subscriberId' => $subscriberId];
+
+        if (config('laragraph.subscriptions.driver', 'broadcast') === 'sse') {
+            $subscription['streamUrl'] = route('laragraph.subscriptions.stream', $subscriberId);
+        }
+
         return [
             'data'       => $result['data'] ?? null,
-            'extensions' => array_merge($result['extensions'] ?? [], [
-                'subscription' => [
-                    'channel'      => $channel,
-                    'subscriberId' => $subscriberId,
-                ],
-            ]),
+            'extensions' => array_merge($result['extensions'] ?? [], ['subscription' => $subscription]),
         ];
     }
 

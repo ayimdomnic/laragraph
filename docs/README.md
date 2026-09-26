@@ -21,7 +21,7 @@ this repository — so the samples are known to work.
 4. [Authentication & authorization](04-authentication-and-authorization.md) — guards, `authorize()`, policies, field-level privacy
 5. [Relations & DataLoaders](05-relations-and-dataloaders.md) — solving N+1 with `batchRelation()` and custom loaders
 6. [Pagination](06-pagination.md) — Relay cursor connections, simple pagination, and Node re-fetching
-7. [Subscriptions](07-subscriptions.md) — real-time updates over Laravel Broadcasting
+7. [Subscriptions](07-subscriptions.md) — real-time updates over Laravel Broadcasting, or plain HTTP SSE
 8. [The HTTP API](08-http-api.md) — GraphQL over HTTP, file uploads, batching, persisted queries, error codes
 9. [Multiple schemas](09-multiple-schemas.md) — separate public and admin APIs
 

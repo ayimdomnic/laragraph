@@ -723,6 +723,8 @@ original request. Laragraph also registers the private-channel rule for
 with `'subscriptions' => ['authorize_channel' => false]` to write your own in `routes/channels.php`).
 Because updates use private channels, subscribers must be authenticated to receive them. Set `'subscriptions' => ['driver' => 'log']` to write updates to the log instead, useful for local development without a broadcast server.
 
+**No broadcaster available?** Set `'subscriptions' => ['driver' => 'sse']` and clients get updates over a plain HTTP Server-Sent Events connection instead — just a stock `EventSource`, no Echo, no Reverb/Pusher. Read the capacity trade-offs in [Subscriptions → SSE transport](docs/07-subscriptions.md#sse-transport) before using it beyond a handful of subscribers: each open connection holds one worker for a bounded duration, unlike a dedicated WebSocket server.
+
 ---
 
 ## Tracing

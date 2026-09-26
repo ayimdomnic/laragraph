@@ -500,12 +500,28 @@ return [
     |                 false (default) they're rejected with a client error.
     | driver        — 'broadcast' pushes via Laravel Broadcasting (Reverb,
     |                 Pusher, ...); 'log' writes updates to the log instead,
-    |                 useful for local development without a broadcast server.
+    |                 useful for local development without a broadcast server;
+    |                 'sse' serves updates over a plain HTTP Server-Sent
+    |                 Events connection instead — no broadcaster or Echo
+    |                 needed, just a stock EventSource/graphql-sse client —
+    |                 see the 'sse' key below and docs/07-subscriptions.md.
     | cache_store   — Laravel cache store used to persist subscriber
     |                 registrations; null uses the application's default.
     | ttl           — Subscriber registration lifetime in seconds.
     | channel_prefix — Prefix for the private channel each subscriber is
-    |                 pushed to: "{prefix}.{subscriberId}".
+    |                 pushed to: "{prefix}.{subscriberId}" (driver: broadcast).
+    |
+    | sse — Only used when driver is 'sse'. Each open connection holds one
+    |   PHP-FPM/Octane worker for up to max_duration seconds — read
+    |   docs/07-subscriptions.md's capacity note before using this driver
+    |   for anything beyond a modest number of concurrent subscribers.
+    |   max_duration      — Seconds before a connection self-closes; the
+    |                        client's EventSource reconnects transparently.
+    |   poll_interval_ms  — How often the open connection checks for a new
+    |                        pending message.
+    |   heartbeat_seconds — How often an SSE comment is sent on an otherwise
+    |                        idle connection, so proxies/load balancers don't
+    |                        time it out.
     |
     */
     'subscriptions' => [
@@ -525,6 +541,12 @@ return [
         'queue' => [
             'connection' => null,
             'queue'      => null,
+        ],
+
+        'sse' => [
+            'max_duration'      => 30,
+            'poll_interval_ms'  => 500,
+            'heartbeat_seconds' => 15,
         ],
     ],
 

@@ -44,6 +44,11 @@ Route::group($routeConfig, function (): void {
     Route::delete('/subscriptions/{subscriberId}', [LaragraphController::class, 'unsubscribe'])
         ->name('laragraph.unsubscribe');
 
+    // Server-Sent Events transport: GET /graphql/subscriptions/{subscriberId}/stream
+    // (only reachable when laragraph.subscriptions.driver is 'sse').
+    Route::get('/subscriptions/{subscriberId}/stream', [LaragraphController::class, 'stream'])
+        ->name('laragraph.subscriptions.stream');
+
     // Named-schema endpoints: /graphql/{schemaName}, one route per configured
     // schema so that schema's middleware (e.g. ['auth:api']) guards it.
     foreach (array_keys($schemas) as $name) {

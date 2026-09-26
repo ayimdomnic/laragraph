@@ -23,6 +23,7 @@ use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
 use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
+use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
@@ -82,6 +83,10 @@ class LaragraphServiceProvider extends ServiceProvider
         $this->app->singleton(SubscriberStoreInterface::class, fn($app): CacheSubscriberStore => new CacheSubscriberStore(
             $app['cache']->store(config('laragraph.subscriptions.cache_store')),
             (int) config('laragraph.subscriptions.ttl', 3600) ?: null,
+        ));
+
+        $this->app->singleton(SsePendingQueue::class, fn($app): SsePendingQueue => new SsePendingQueue(
+            $app['cache']->store(config('laragraph.subscriptions.cache_store')),
         ));
     }
 
