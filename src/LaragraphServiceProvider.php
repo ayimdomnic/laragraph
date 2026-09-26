@@ -9,6 +9,7 @@ use Ayimdomnic\Laragraph\Console\ClearCommand;
 use Ayimdomnic\Laragraph\Console\ExceptionMakeCommand;
 use Ayimdomnic\Laragraph\Console\ExportSchemaCommand;
 use Ayimdomnic\Laragraph\Console\InputMakeCommand;
+use Ayimdomnic\Laragraph\Console\LoaderMakeCommand;
 use Ayimdomnic\Laragraph\Console\MutationMakeCommand;
 use Ayimdomnic\Laragraph\Console\QueryMakeCommand;
 use Ayimdomnic\Laragraph\Console\ScaffoldCommand;
@@ -125,6 +126,7 @@ class LaragraphServiceProvider extends ServiceProvider
                 MutationMakeCommand::class,
                 SubscriptionMakeCommand::class,
                 InputMakeCommand::class,
+                LoaderMakeCommand::class,
                 ExceptionMakeCommand::class,
                 ScaffoldCommand::class,
                 ExportSchemaCommand::class,
