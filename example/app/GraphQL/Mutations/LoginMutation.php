@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\GraphQL\Mutations;
 
+use App\GraphQL\Exceptions\InvalidCredentialsException;
 use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\Middleware\ThrottleMiddleware;
 use Ayimdomnic\Laragraph\Support\Mutation;
-use GraphQL\Error\Error;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -48,8 +48,10 @@ class LoginMutation extends Mutation
         $token = JWTAuth::attempt(['email' => $args['email'], 'password' => $args['password']]);
 
         if (! is_string($token)) {
-            // A GraphQL\Error\Error message is always shown to the client.
-            throw new Error('The provided credentials are incorrect.');
+            // A GraphQLException message is always shown to the client, and
+            // is localized via lang/{locale}/errors.php per the request's
+            // negotiated locale (see config/laragraph.php's errors.negotiate_locale).
+            throw new InvalidCredentialsException;
         }
 
         return [

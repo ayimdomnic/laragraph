@@ -1,5 +1,5 @@
 .idea
-vendor
+/vendor
 build
 coverage/
 node_modules/

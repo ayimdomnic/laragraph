@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Exceptions;
 
 use GraphQL\Error\ClientAware;
+use GraphQL\Error\ProvidesExtensions;
 use Illuminate\Contracts\Validation\Validator;
 
 /**
@@ -13,16 +14,26 @@ use Illuminate\Contracts\Validation\Validator;
  * The validation errors are exposed to the client via the GraphQL error
  * extensions under the 'validation' key.
  */
-class ValidationException extends \RuntimeException implements ClientAware
+class ValidationException extends \RuntimeException implements ClientAware, ProvidesExtensions
 {
     public function __construct(protected readonly Validator $validator)
     {
-        parent::__construct('Validation failed.');
+        parent::__construct(trans('laragraph::errors.validation.default'));
     }
 
     public function isClientSafe(): bool
     {
         return true;
+    }
+
+    /** @return array<string, mixed> */
+    public function getExtensions(): ?array
+    {
+        return [
+            'code'       => 'VALIDATION_FAILED',
+            'category'   => 'validation',
+            'validation' => $this->getValidationErrors(),
+        ];
     }
 
     /**

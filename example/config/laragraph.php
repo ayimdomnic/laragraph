@@ -174,6 +174,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Error Localization
+    |--------------------------------------------------------------------------
+    |
+    | Negotiated from the Accept-Language header, restricted to English and
+    | French — try `curl -H "Accept-Language: fr" ...` against the login
+    | mutation with bad credentials to see the translated error.
+    |
+    */
+    'errors' => [
+        'negotiate_locale'  => true,
+        'supported_locales' => ['en', 'fr'],
+        'locale_resolver'   => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Security
     |--------------------------------------------------------------------------
     |

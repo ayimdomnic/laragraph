@@ -191,22 +191,41 @@ Every error is formatted by `Laragraph::formatError()` (configurable, see below)
 
 | Category | Raised by | Message shown to clients |
 |---|---|---|
-| `validation` | `rules()` failing | `Validation failed.` plus `extensions.validation` |
+| `validation` | `rules()` failing | `Validation failed.` plus `extensions.code`/`extensions.validation` |
 | `authorization` | `authorize()`, `authorizeWithContext()` or `policy()` denying | `You are not authorized to access UserQuery.` / `Policy check failed for UsersQuery.` |
+| `application` (or your own) | A `GraphQLException` you throw | Your translated message plus `extensions.code` |
 | `graphql` | Syntax and validation errors in the document, and any `GraphQL\Error\Error` you throw | Your message |
 | `internal` | Any other exception | `Internal server error` |
 
 The last row is the important one. **Exceptions from your code are hidden by default**: a
-`QueryException` exposes neither SQL nor the table name. To send a message to the client, throw
-`GraphQL\Error\Error`, or an exception implementing `GraphQL\Error\ClientAware` whose
-`isClientSafe()` returns `true`:
+`QueryException` exposes neither SQL nor the table name. To send a message to the client, throw a
+[`GraphQLException`](17-error-handling-and-localization.md) — the recommended way to report a
+domain/business error, since it's always client-safe, carries a machine-readable `extensions.code`,
+and its message is resolved through Laravel's translator:
+
+```php
+// example/app/GraphQL/Exceptions/InvalidCredentialsException.php
+class InvalidCredentialsException extends GraphQLException
+{
+    public function __construct(array $replace = [], array $extra = [])
+    {
+        parent::__construct(key: 'errors.invalid_credentials', errorCode: 'INVALID_CREDENTIALS', replace: $replace, extra: $extra);
+    }
+}
+```
 
 ```php
 // example/app/GraphQL/Mutations/LoginMutation.php
 if (! is_string($token)) {
-    throw new Error('The provided credentials are incorrect.');
+    throw new InvalidCredentialsException();
 }
 ```
+
+Generate one with `php artisan laragraph:make:exception`. Any exception implementing graphql-php's
+`GraphQL\Error\ClientAware` (message shown) and `GraphQL\Error\ProvidesExtensions` (structured
+`extensions`) — `GraphQLException`, `ValidationException`, `AuthorizationException`, or your own —
+is picked up by `formatError()` automatically; there's no `instanceof` chain to maintain, so a
+plain `GraphQL\Error\Error` throw still works exactly as before too.
 
 While `APP_DEBUG=true`, every error also carries `extensions.debugMessage` and a short `trace`, so
 you can see the real exception while developing. Never run production with debug on.
@@ -217,8 +236,14 @@ the nearest nullable parent) and the other fields still resolve. The HTTP status
 
 ### Custom error formatting
 
-To add a field to every error, for example an error code for your clients, point
-`error_formatter` at your own static method and build on the default:
+Most error codes and extensions belong on the exception itself (see above) rather than in a custom
+formatter. Reach for a formatter override when you need to react to an exception you don't control
+— a third-party package's, or the framework's own:
+
+```php
+// config/laragraph.php
+'error_formatter' => [App\GraphQL\ErrorFormatter::class, 'format'],
+```
 
 ```php
 // config/laragraph.php

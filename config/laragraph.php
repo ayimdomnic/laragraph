@@ -152,6 +152,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Error Localization
+    |--------------------------------------------------------------------------
+    |
+    | negotiate_locale  — When true, the app locale is switched for the
+    |   duration of each request based on its Accept-Language header, so
+    |   GraphQLException messages and formatError() come back translated.
+    |   Off by default: leaves the app's current locale untouched.
+    |
+    | supported_locales — Allow-list negotiate_locale may switch to. Required
+    |   whenever negotiate_locale is on: an Accept-Language value is untrusted
+    |   input, and an unvalidated locale eventually becomes part of a
+    |   translation file path, so it is always checked against this list
+    |   (and a strict locale-tag format) before being applied.
+    |
+    | locale_resolver   — callable(?Request $request): ?string for full
+    |   control over locale resolution (e.g. from an authenticated user's
+    |   saved preference). Takes priority over negotiate_locale when set,
+    |   and its return value is still checked against supported_locales.
+    |
+    */
+    'errors' => [
+        'negotiate_locale'  => false,
+        'supported_locales' => ['en'],
+        'locale_resolver'   => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Security
     |--------------------------------------------------------------------------
     |

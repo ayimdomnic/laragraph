@@ -100,6 +100,19 @@ directories. See [Types → Registering types](02-types.md#registering-types).
 receives the whole list. Use array callables (not closures) so `config:cache` works. See
 [Custom error formatting](03-queries-and-mutations.md#custom-error-formatting).
 
+## `errors`
+
+```php
+'errors' => [
+    'negotiate_locale'  => false,
+    'supported_locales' => ['en'],
+    'locale_resolver'   => null,
+],
+```
+
+Controls per-request error localization; disabled by default (zero overhead — one `config()` call
+per request). See [Error Handling & Localization](17-error-handling-and-localization.md).
+
 ## `security`
 
 ```php

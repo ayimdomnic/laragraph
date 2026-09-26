@@ -37,6 +37,7 @@ this repository — so the samples are known to work.
 
 15. [Configuration reference](15-configuration.md) — every option in `config/laragraph.php`
 16. [Upgrading](16-upgrading.md) — behaviour changes between releases
+17. [Error handling & localization](17-error-handling-and-localization.md) — `GraphQLException`, error codes, and translating messages per request
 
 ## Conventions used in this guide
 

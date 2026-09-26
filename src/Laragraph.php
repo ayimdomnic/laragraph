@@ -10,11 +10,9 @@ use Ayimdomnic\Laragraph\Events\QueryError;
 use Ayimdomnic\Laragraph\Events\QueryExecuted;
 use Ayimdomnic\Laragraph\Events\QueryExecuting;
 use Ayimdomnic\Laragraph\Events\SchemaBuilt;
-use Ayimdomnic\Laragraph\Exceptions\AuthorizationException;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\SchemaException;
-use Ayimdomnic\Laragraph\Exceptions\ValidationException;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
@@ -26,6 +24,7 @@ use Ayimdomnic\Laragraph\Subscriptions\BroadcastSubscriptionUpdates;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Support\DefaultFieldResolver;
 use Ayimdomnic\Laragraph\Support\DocumentCache;
+use Ayimdomnic\Laragraph\Support\ErrorLocaleResolver;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
@@ -174,14 +173,32 @@ class Laragraph
         $cached = $data !== null;
 
         if ($data === null) {
-            $result = $this->executeQuery($query, $context, $variables, $operationName, $schemaName, $rootValue);
+            // Errors are localized at construction/formatting time via the
+            // ambient app locale — briefly switch to the negotiated one (if
+            // any) so GraphQLException messages and formatError() come back
+            // translated, then always restore it, even on failure.
+            $locale         = ErrorLocaleResolver::resolve($context);
+            $previousLocale = null;
 
-            $debug = DebugFlag::NONE;
-            if (config('app.debug')) {
-                $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE;
+            if ($locale !== null) {
+                $previousLocale = app()->getLocale();
+                app()->setLocale($locale);
             }
 
-            $data = $result->toArray($debug);
+            try {
+                $result = $this->executeQuery($query, $context, $variables, $operationName, $schemaName, $rootValue);
+
+                $debug = DebugFlag::NONE;
+                if (config('app.debug')) {
+                    $debug = DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE;
+                }
+
+                $data = $result->toArray($debug);
+            } finally {
+                if ($previousLocale !== null) {
+                    app()->setLocale($previousLocale);
+                }
+            }
 
             if ($cacheKey !== null && empty($data['errors'])) {
                 ResponseCache::put($cacheKey, $data);
@@ -594,32 +611,27 @@ class Laragraph
         // Only client-safe errors keep their message: anything else (a failed
         // query, a missing file…) could leak SQL, paths or secrets. In debug
         // mode the real message is still available as extensions.debugMessage.
-        $message = $error->isClientSafe() ? $error->getMessage() : 'Internal server error';
+        $message = $error->isClientSafe() ? $error->getMessage() : trans('laragraph::errors.internal.default');
 
         $formatted = [
-            'message'   => $message ?: 'An unexpected error occurred.',
+            'message'   => $message ?: trans('laragraph::errors.internal.unexpected'),
             'locations' => $error->getLocations()
                 ? array_map(
                     fn($loc): array => ['line' => $loc->line, 'column' => $loc->column],
                     $error->getLocations(),
                 )
                 : null,
-            'path'       => $error->getPath(),
-            'extensions' => [],
+            'path' => $error->getPath(),
+            // Any previous exception implementing GraphQL\Error\ProvidesExtensions
+            // (ValidationException, AuthorizationException, GraphQLException, or a
+            // developer's own) is already surfaced here — Error's own constructor
+            // pulls getExtensions() off $previous, so no instanceof chain is needed.
+            'extensions' => $error->getExtensions() ?? [],
         ];
 
-        $previous = $error->getPrevious();
+        $formatted['extensions']['category'] ??= $error->isClientSafe() ? 'graphql' : 'internal';
 
-        if ($previous instanceof ValidationException) {
-            $formatted['extensions']['category']   = 'validation';
-            $formatted['extensions']['validation'] = $previous->getValidationErrors();
-        } elseif ($previous instanceof AuthorizationException) {
-            $formatted['extensions']['category'] = 'authorization';
-        } elseif ($error->isClientSafe()) {
-            $formatted['extensions']['category'] = 'graphql';
-        } else {
-            $formatted['extensions']['category'] = 'internal';
-        }
+        $previous = $error->getPrevious();
 
         if (config('app.debug') && $previous instanceof \Throwable) {
             $formatted['extensions']['debugMessage'] = $previous->getMessage();

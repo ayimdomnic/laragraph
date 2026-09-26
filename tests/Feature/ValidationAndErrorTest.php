@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
+use Ayimdomnic\Laragraph\Exceptions\GraphQLException;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\LaragraphServiceProvider;
 use Ayimdomnic\Laragraph\Support\Mutation;
@@ -15,6 +16,7 @@ use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Type\Definition\Type;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Lang;
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -95,6 +97,18 @@ class ResolverErrorQuery extends Query
     }
 }
 
+class LocalizedErrorQuery extends Query
+{
+    public function type(): Type
+    {
+        return Type::string();
+    }
+    public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
+    {
+        throw new GraphQLException('errors.greeting', 'GREETING');
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -106,7 +120,11 @@ class ValidationAndErrorTest extends TestCase
         parent::defineEnvironment($app);
 
         $app['config']->set('laragraph.schemas.default', [
-            'query'    => ['authDenied' => AuthDeniedQuery::class, 'resolverError' => ResolverErrorQuery::class],
+            'query' => [
+                'authDenied'    => AuthDeniedQuery::class,
+                'resolverError' => ResolverErrorQuery::class,
+                'localizedError' => LocalizedErrorQuery::class,
+            ],
             'mutation' => ['validate' => ValidatedMutation::class],
         ]);
     }
@@ -198,6 +216,52 @@ class ValidationAndErrorTest extends TestCase
         $this->assertSame('Internal server error', $error['message']);
         $this->assertSame('boom', $error['extensions']['debugMessage']);
         $this->assertArrayHasKey('trace', $error['extensions']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Error localization
+    // -------------------------------------------------------------------------
+
+    public function test_graphql_exception_message_is_translated_per_negotiated_locale(): void
+    {
+        Lang::addLines(['errors.greeting' => 'Hello!'], 'en');
+        Lang::addLines(['errors.greeting' => 'Bonjour !'], 'fr');
+
+        config([
+            'laragraph.errors.negotiate_locale'  => true,
+            'laragraph.errors.supported_locales' => ['en', 'fr'],
+        ]);
+
+        $response = $this->postJson('/graphql', ['query' => '{ localizedError }'], ['Accept-Language' => 'fr']);
+
+        $response->assertJsonPath('errors.0.message', 'Bonjour !')
+                 ->assertJsonPath('errors.0.extensions.code', 'GREETING');
+    }
+
+    public function test_default_locale_is_used_when_negotiation_is_disabled(): void
+    {
+        Lang::addLines(['errors.greeting' => 'Hello!'], 'en');
+        Lang::addLines(['errors.greeting' => 'Bonjour !'], 'fr');
+
+        config(['laragraph.errors.negotiate_locale' => false]);
+
+        $response = $this->postJson('/graphql', ['query' => '{ localizedError }'], ['Accept-Language' => 'fr']);
+
+        $response->assertJsonPath('errors.0.message', 'Hello!');
+    }
+
+    public function test_the_app_locale_is_restored_after_a_negotiated_request(): void
+    {
+        $original = app()->getLocale();
+
+        config([
+            'laragraph.errors.negotiate_locale'  => true,
+            'laragraph.errors.supported_locales' => ['en', 'fr'],
+        ]);
+
+        $this->postJson('/graphql', ['query' => '{ localizedError }'], ['Accept-Language' => 'fr']);
+
+        $this->assertSame($original, app()->getLocale());
     }
 
     // -------------------------------------------------------------------------

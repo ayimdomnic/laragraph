@@ -266,6 +266,7 @@ while `app.debug` is on — never in production.
 | `laragraph:make:mutation CreateUserMutation` | `app/GraphQL/Mutations/CreateUserMutation.php` |
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
 | `laragraph:make:input CreateUserInput` | `app/GraphQL/Types/Inputs/CreateUserInput.php` |
+| `laragraph:make:exception InvalidCredentialsException` | `app/GraphQL/Exceptions/InvalidCredentialsException.php` |
 | `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model — deny-by-default (see below) |
 | `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
 
@@ -433,12 +434,51 @@ Errors appear in `extensions.validation`:
   "errors": [{
     "message": "Validation failed.",
     "extensions": {
+      "code": "VALIDATION_FAILED",
       "category": "validation",
       "validation": { "email": ["The email field is required."] }
     }
   }]
 }
 ```
+
+---
+
+## Error Handling & Localization
+
+Throw a `GraphQLException` for domain/business errors — it's always client-safe, comes with a
+machine-readable `extensions.code`, and its message is resolved through Laravel's translator:
+
+```php
+use Ayimdomnic\Laragraph\Exceptions\GraphQLException;
+
+throw new GraphQLException(
+    key: 'errors.out_of_stock',       // lang/en/errors.php
+    errorCode: 'OUT_OF_STOCK',
+    replace: ['product' => $product->name],
+);
+```
+
+Generate one with `php artisan laragraph:make:exception OutOfStockException`. Any exception
+implementing graphql-php's `ClientAware` + `ProvidesExtensions` (which `GraphQLException`,
+`ValidationException` and `AuthorizationException` all do) gets picked up by `formatError()`
+automatically — no `instanceof` chain to maintain.
+
+**Localization** is opt-in and off by default. Turn it on to translate messages per request based
+on the `Accept-Language` header, restricted to an allow-list:
+
+```php
+// config/laragraph.php
+'errors' => [
+    'negotiate_locale'  => true,
+    'supported_locales' => ['en', 'fr'],
+],
+```
+
+Publish and translate `lang/en/errors.php` (`php artisan vendor:publish --tag=laragraph-lang`), and
+add your app's own `lang/{locale}/errors.php` for messages passed to `GraphQLException`. See
+[Error Handling & Localization](docs/17-error-handling-and-localization.md) for the full guide,
+including the `supported_locales` allow-list security note.
 
 ---
 

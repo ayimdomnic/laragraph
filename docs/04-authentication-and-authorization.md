@@ -57,7 +57,7 @@ public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $i
     $token = JWTAuth::attempt(['email' => $args['email'], 'password' => $args['password']]);
 
     if (! is_string($token)) {
-        throw new Error('The provided credentials are incorrect.');   // client-safe
+        throw new InvalidCredentialsException();   // GraphQLException — client-safe and localized
     }
 
     return [

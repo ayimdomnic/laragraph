@@ -88,4 +88,35 @@ class MakeCommandsTest extends TestCase
 
         $this->assertFileExists(app_path('GraphQL/Types/Inputs/CreateArticleInput.php'));
     }
+
+    // -------------------------------------------------------------------------
+    // laragraph:make:exception
+    // -------------------------------------------------------------------------
+
+    public function test_make_exception_creates_file(): void
+    {
+        $this->artisan('laragraph:make:exception', ['name' => 'InvalidCredentialsException'])
+             ->assertSuccessful();
+
+        $this->assertFileExists(app_path('GraphQL/Exceptions/InvalidCredentialsException.php'));
+    }
+
+    public function test_make_exception_file_uses_correct_namespace_and_derived_code_and_key(): void
+    {
+        $this->artisan('laragraph:make:exception', ['name' => 'InvalidCredentialsException']);
+        $contents = file_get_contents(app_path('GraphQL/Exceptions/InvalidCredentialsException.php'));
+
+        $this->assertStringContainsString('namespace App\\GraphQL\\Exceptions', $contents);
+        $this->assertStringContainsString("'errors.invalid_credentials'", $contents);
+        $this->assertStringContainsString("'INVALID_CREDENTIALS'", $contents);
+    }
+
+    public function test_make_exception_derives_key_and_code_without_a_trailing_exception_suffix(): void
+    {
+        $this->artisan('laragraph:make:exception', ['name' => 'OutOfStock']);
+        $contents = file_get_contents(app_path('GraphQL/Exceptions/OutOfStock.php'));
+
+        $this->assertStringContainsString("'errors.out_of_stock'", $contents);
+        $this->assertStringContainsString("'OUT_OF_STOCK'", $contents);
+    }
 }

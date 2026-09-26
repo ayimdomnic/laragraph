@@ -294,7 +294,7 @@ abstract class Field
             // 1. Simple boolean authorization (backward-compatible)
             if (!$this->authorize($root, $args, $context, $info)) {
                 throw new AuthorizationException(
-                    'You are not authorized to access ' . class_basename(static::class) . '.',
+                    trans('laragraph::errors.authorization.field', ['field' => class_basename(static::class)]),
                 );
             }
 
@@ -303,7 +303,7 @@ abstract class Field
 
             if (!$this->authorizeWithContext($ctx)) {
                 throw new AuthorizationException(
-                    'You are not authorized to access ' . class_basename(static::class) . '.',
+                    trans('laragraph::errors.authorization.field', ['field' => class_basename(static::class)]),
                 );
             }
 
@@ -312,7 +312,7 @@ abstract class Field
             if ($policy !== null) {
                 if (!$ctx->allowsPolicy($policy, $this->policyAbility())) {
                     throw new AuthorizationException(
-                        'Policy check failed for ' . class_basename(static::class) . '.',
+                        trans('laragraph::errors.authorization.policy', ['field' => class_basename(static::class)]),
                     );
                 }
             }
