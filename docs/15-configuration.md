@@ -294,11 +294,13 @@ Accept a JSON list of operations per request. `max_operations` of `0` removes th
 ```php
 'tracing' => [
     'enabled' => false,
+    'driver'  => 'apollo',  // or 'otel'
+    'otel'    => ['tracer_name' => 'laragraph'],
 ],
 ```
 
-Apollo-format resolver timings under `extensions.tracing`. Development only. See
-[Tracing](12-observability.md#tracing).
+Resolver timings, `'apollo'` (default) under `extensions.tracing`, `'otel'` exported as real
+OpenTelemetry spans instead. Development only. See [Tracing](12-observability.md#tracing).
 
 ## `octane`
 

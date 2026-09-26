@@ -152,6 +152,44 @@ results in the [Apollo Tracing](https://github.com/apollographql/apollo-tracing)
 Durations are in nanoseconds. Tracing wraps every resolver, so it has a cost and exposes timing
 details. Enable it in development, or temporarily in staging, not on a public production API.
 
+### The `otel` driver
+
+Apollo deprecated the Apollo Tracing format years ago in favor of OpenTelemetry; `'otel'` is the
+recommended choice for new projects:
+
+```php
+'tracing' => [
+    'enabled' => true,
+    'driver'  => 'otel',
+    'otel'    => ['tracer_name' => 'laragraph'],
+],
+```
+
+This exports real OpenTelemetry spans instead — one root span per GraphQL operation
+(`graphql.operation.name`/`.type`, `graphql.document`, the schema name as attributes; `Error`
+status when the response has errors), and one child span per resolver
+(`graphql.field.name`/`.path`, `graphql.type.name`, `graphql.field.return_type`). Laragraph depends
+only on `open-telemetry/api` — the lightweight interfaces-plus-no-op package — and calls
+`OpenTelemetry\API\Globals::tracerProvider()`; your app wires up its own OTel SDK and exporter the
+standard way, e.g. in a service provider:
+
+```php
+use OpenTelemetry\API\Globals;
+use OpenTelemetry\SDK\Trace\SpanExporter\ConsoleSpanExporter; // or any real OTLP/Zipkin/etc. exporter
+use OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor;
+use OpenTelemetry\SDK\Trace\TracerProvider;
+
+Globals::registerInitializer(fn ($configurator) => $configurator->withTracerProvider(
+    new TracerProvider(new SimpleSpanProcessor(new ConsoleSpanExporter())),
+));
+```
+
+With no SDK configured, every call is a cheap no-op (the API package's default no-op tracer). On
+`'otel'`, `extensions.tracing` is **not** added to the response — span data leaves through the OTel
+pipeline, not the response body, so a client expecting the Apollo Tracing shape needs the
+`'apollo'` driver instead. Switching drivers doesn't touch the actual per-resolver timing
+instrumentation: both replay the same already-collected span data, just into a different shape.
+
 ## Field logging
 
 `LoggingMiddleware` logs each root field's resolution and its duration at `debug` level:
