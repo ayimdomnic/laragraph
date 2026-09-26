@@ -107,6 +107,43 @@ several fields return the same connection, and `PageInfo` is now a single shared
 - New: `Laragraph::broadcastLater()`, `Laragraph::unsubscribe()` and
   `DELETE /graphql/subscriptions/{id}`.
 - A subscription field's type must be **nullable** (it resolves to `null` when the client subscribes).
+- New, opt-in: `subscriptions.driver => 'sse'` serves updates over plain HTTP Server-Sent Events —
+  a stock `EventSource`, no Echo or broadcaster needed. Default stays `'broadcast'`; nothing changes
+  unless you opt in. Read the capacity trade-offs in
+  [Subscriptions → SSE transport](07-subscriptions.md#sse-transport) first.
+
+### Error handling & localization
+
+New, fully additive — nothing changes unless you opt in:
+
+- `GraphQLException` is the new recommended way to throw a coded, localizable domain error from a
+  resolver; `php artisan laragraph:make:exception` generates one. See
+  [Error handling & localization](17-error-handling-and-localization.md).
+- Any exception implementing graphql-php's `ClientAware` + `ProvidesExtensions` now gets structured
+  `extensions.code`/`extensions.category` automatically — `Laragraph::formatError()` no longer
+  hardcodes an `instanceof` chain for just `ValidationException`/`AuthorizationException`.
+  `extensions.code` is a new field alongside the existing `extensions.category` on both.
+- New `errors.negotiate_locale` config (off by default) translates error messages per request based
+  on `Accept-Language`, restricted to an `errors.supported_locales` allow-list.
+
+### Relay Node re-fetching
+
+New, fully additive: `Ayimdomnic\Laragraph\Relay\GlobalId` and a `node(id: ID!): Node` root field
+(`Ayimdomnic\Laragraph\Relay\NodeQuery`) for Relay clients. No existing type's `id` field changes —
+see [Pagination → Relay Node re-fetching](06-pagination.md#relay-node-re-fetching).
+
+### Schema diff in CI
+
+New `laragraph:schema:diff --against=schema.graphql` command classifies schema changes as breaking
+or dangerous (via webonyx's own `BreakingChangesFinder`) and fails CI on a breaking one. Opt-in —
+add it to your own pipeline when ready. See
+[Deployment → CI pipeline](14-deployment.md#ci-pipeline).
+
+### Query cost visibility
+
+New, opt-in `extensions.query_complexity => true` adds `extensions.queryComplexity.{cost,maxCost}`
+to every response, so clients can see how close a query is to `security.query_max_complexity`. See
+[Observability → Response extensions](12-observability.md#response-extensions).
 
 ### Scalars
 

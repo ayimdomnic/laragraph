@@ -246,11 +246,6 @@ formatter. Reach for a formatter override when you need to react to an exception
 ```
 
 ```php
-// config/laragraph.php
-'error_formatter' => [App\GraphQL\ErrorFormatter::class, 'format'],
-```
-
-```php
 namespace App\GraphQL;
 
 use Ayimdomnic\Laragraph\Laragraph;

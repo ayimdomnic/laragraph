@@ -300,10 +300,12 @@ use Ayimdomnic\Laragraph\Subscriptions\SubscriptionMessage;
 Event::fake([SubscriptionMessage::class]);
 
 // graphql($query, $variables, $as) is the example's helper: it sends a JWT for $as.
-$subscriberId = $this->graphql('subscription { postPublished(organizationId: 1) { title } }', [], $member)
+// $this->member / $this->admin are fixtures GraphQLTestCase's setUp() creates for every test.
+$subscriberId = $this->graphql('subscription ($org: ID!) { postPublished(organizationId: $org) { title } }', ['org' => $this->acme->id], $this->member)
     ->json('extensions.subscription.subscriberId');
 
-$this->graphql('mutation { publishPost(id: 7) { id } }', [], $author);
+$post = Post::factory()->by($this->admin)->create(['title' => 'Hello']);
+$this->graphql('mutation ($id: ID!) { publishPost(id: $id) { id } }', ['id' => $post->id], $this->admin);
 
 Event::assertDispatched(SubscriptionMessage::class, fn ($message) =>
     $message->subscriberId === $subscriberId
