@@ -80,6 +80,8 @@ Errors raised before GraphQL runs have a machine-readable `extensions.code`:
 | `PERSISTED_QUERY_NOT_FOUND` | 200* | The hash isn't stored yet, so the client should resend the full query |
 | `PERSISTED_QUERY_HASH_MISMATCH` | 400 | The sent hash doesn't match the sent query |
 | `PERSISTED_QUERY_REQUIRED` | 400 | Trusted-documents mode rejected unregistered query text |
+| `BATCHING_DISABLED` | 400 | A batch (a JSON array of operations) was sent but `batching.enabled` is false |
+| `BATCH_LIMIT_EXCEEDED` | 400 | The batch has more operations than `batching.max_operations` |
 | `SUBSCRIPTION_NOT_FOUND` | 404 | Unsubscribing from an unknown subscription, or someone else's |
 
 \* `400` for clients that accept `application/graphql-response+json`.

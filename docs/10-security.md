@@ -138,9 +138,17 @@ category `internal`. SQL, file paths and exception messages stay on the server. 
 `APP_DEBUG=true` does each error also carry `debugMessage` and `trace`. So:
 
 - **Never run production with `APP_DEBUG=true`.** It also turns GraphiQL and introspection on.
-- Throw `GraphQL\Error\Error` for messages that clients should see.
+- Throw a `GraphQLException` (or `GraphQL\Error\Error`) for messages that clients should see.
 - Report internal errors through Laravel's logging, or through the `QueryError` event
   (see [Observability](12-observability.md)).
+
+If you turn on `errors.negotiate_locale` (see
+[Error Handling & Localization](17-error-handling-and-localization.md)), the request's
+`Accept-Language` header is never used to build a translation-file path directly: it's always
+checked against `errors.supported_locales` and a strict locale-tag format first. Set
+`supported_locales` to exactly the locales you ship — an unvalidated, attacker-controlled locale
+string used to build a file path would otherwise be a path-traversal surface (Laravel's own
+translator doesn't sanitize it either).
 
 ## Authorization
 
@@ -180,3 +188,4 @@ parsing. See [persisted queries](08-http-api.md#trusted-documents).
 - [ ] Subscription `cache_store` is shared and private (Redis or the database, not `file` across servers).
 - [ ] CORS allows only your front-end origins.
 - [ ] Consider trusted documents for first-party-only APIs.
+- [ ] If `errors.negotiate_locale` is on, `errors.supported_locales` lists exactly the locales you ship.

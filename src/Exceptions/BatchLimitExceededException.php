@@ -7,10 +7,14 @@ namespace Ayimdomnic\Laragraph\Exceptions;
 /**
  * Thrown when a batch request contains more operations than the configured maximum.
  */
-class BatchLimitExceededException extends \RuntimeException
+class BatchLimitExceededException extends RequestException
 {
     public function __construct(int $limit)
     {
-        parent::__construct("Batch size exceeds the maximum of {$limit} operations.");
+        parent::__construct(
+            trans('laragraph::errors.batching.limit_exceeded', ['limit' => $limit]),
+            'BATCH_LIMIT_EXCEEDED',
+            400,
+        );
     }
 }

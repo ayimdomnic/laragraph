@@ -6,6 +6,7 @@ namespace Ayimdomnic\Laragraph;
 
 use Ayimdomnic\Laragraph\Console\CacheCommand;
 use Ayimdomnic\Laragraph\Console\ClearCommand;
+use Ayimdomnic\Laragraph\Console\ExceptionMakeCommand;
 use Ayimdomnic\Laragraph\Console\ExportSchemaCommand;
 use Ayimdomnic\Laragraph\Console\InputMakeCommand;
 use Ayimdomnic\Laragraph\Console\MutationMakeCommand;
@@ -94,6 +95,7 @@ class LaragraphServiceProvider extends ServiceProvider
 
         $this->loadRoutesFrom(__DIR__ . '/routes.php');
         $this->loadViewsFrom(__DIR__ . '/views', 'laragraph');
+        $this->loadTranslationsFrom(__DIR__ . '/../lang', 'laragraph');
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
@@ -104,6 +106,10 @@ class LaragraphServiceProvider extends ServiceProvider
                 __DIR__ . '/views' => resource_path('views/vendor/laragraph'),
             ], 'laragraph-views');
 
+            $this->publishes([
+                __DIR__ . '/../lang' => $this->app->langPath('vendor/laragraph'),
+            ], 'laragraph-lang');
+
             $this->commands([
                 CacheCommand::class,
                 ClearCommand::class,
@@ -113,6 +119,7 @@ class LaragraphServiceProvider extends ServiceProvider
                 MutationMakeCommand::class,
                 SubscriptionMakeCommand::class,
                 InputMakeCommand::class,
+                ExceptionMakeCommand::class,
                 ScaffoldCommand::class,
                 ExportSchemaCommand::class,
             ]);

@@ -7,10 +7,10 @@ namespace Ayimdomnic\Laragraph\Exceptions;
 /**
  * Thrown when a batch request is received but batching is disabled in config.
  */
-class BatchingDisabledException extends \RuntimeException
+class BatchingDisabledException extends RequestException
 {
     public function __construct()
     {
-        parent::__construct('GraphQL batch requests are disabled.');
+        parent::__construct(trans('laragraph::errors.batching.disabled'), 'BATCHING_DISABLED', 400);
     }
 }
