@@ -132,6 +132,54 @@ class ResponseExtensionsTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // query_complexity extension
+    // -------------------------------------------------------------------------
+
+    public function test_query_complexity_appears_when_enabled_and_a_limit_is_configured(): void
+    {
+        $this->app['config']->set('laragraph.extensions.query_complexity', true);
+        $this->app['config']->set('laragraph.security.query_max_complexity', 500);
+
+        $result = $this->graphql('{ rePing }');
+
+        $this->assertArrayHasKey('queryComplexity', $result['extensions'] ?? []);
+        $this->assertSame(500, $result['extensions']['queryComplexity']['maxCost']);
+        $this->assertGreaterThan(0, $result['extensions']['queryComplexity']['cost']);
+    }
+
+    public function test_query_complexity_is_empty_when_no_limit_is_configured(): void
+    {
+        $this->app['config']->set('laragraph.extensions.query_complexity', true);
+        $this->app['config']->set('laragraph.security.query_max_complexity', null);
+
+        $result = $this->graphql('{ rePing }');
+
+        $this->assertSame([], $result['extensions']['queryComplexity'] ?? null);
+    }
+
+    public function test_query_complexity_is_absent_when_disabled(): void
+    {
+        $this->app['config']->set('laragraph.security.query_max_complexity', 500);
+
+        $result = $this->graphql('{ rePing }');
+
+        $this->assertArrayNotHasKey('queryComplexity', $result['extensions'] ?? []);
+    }
+
+    public function test_query_complexity_is_reported_even_when_the_query_is_rejected(): void
+    {
+        $this->app['config']->set('laragraph.extensions.query_complexity', true);
+        $this->app['config']->set('laragraph.security.query_max_complexity', 1);
+
+        $result = $this->graphql('{ a: rePing b: rePing }');
+
+        $this->assertNotEmpty($result['errors'] ?? []);
+        $this->assertArrayHasKey('queryComplexity', $result['extensions'] ?? []);
+        $this->assertSame(1, $result['extensions']['queryComplexity']['maxCost']);
+        $this->assertGreaterThan(1, $result['extensions']['queryComplexity']['cost']);
+    }
+
+    // -------------------------------------------------------------------------
     // Both built-ins together
     // -------------------------------------------------------------------------
 

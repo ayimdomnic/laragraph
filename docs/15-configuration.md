@@ -209,13 +209,15 @@ See [Persisted queries](08-http-api.md#persisted-queries).
 
 ```php
 'extensions' => [
-    'request_id'   => false,
-    'query_timing' => false,
+    'request_id'       => false,
+    'query_timing'     => false,
+    'query_complexity' => false,
 ],
 ```
 
-Add `extensions.requestId.id` and `extensions.timing.execution_ms` to every response. Register
-custom extensions with `ExtensionRegistry::add()`. See
+Add `extensions.requestId.id`, `extensions.timing.execution_ms`, and
+`extensions.queryComplexity.{cost,maxCost}` (empty unless `security.query_max_complexity` is set)
+to every response. Register custom extensions with `ExtensionRegistry::add()`. See
 [Observability](12-observability.md#response-extensions).
 
 ## `middleware`

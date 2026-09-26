@@ -333,10 +333,16 @@ return [
     | query_timing — Adds `extensions.timing.execution_ms`; wall-clock time of
     |                Laragraph::execute() in milliseconds.
     |
+    | query_complexity — Adds `extensions.queryComplexity.{cost,maxCost}`, so
+    |                clients can see how close a query is to
+    |                security.query_max_complexity and self-throttle. Empty
+    |                when that limit isn't configured.
+    |
     */
     'extensions' => [
-        'request_id'   => false,
-        'query_timing' => false,
+        'request_id'       => false,
+        'query_timing'     => false,
+        'query_complexity' => false,
     ],
 
     /*
