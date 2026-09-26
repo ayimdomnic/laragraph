@@ -63,7 +63,7 @@ final class DocumentCache
         $length = strlen($query);
 
         while (self::$documents !== [] && (count(self::$documents) >= self::SIZE || self::$bytes + $length > self::MAX_BYTES)) {
-            $oldest = (string) array_key_first(self::$documents);
+            $oldest = array_key_first(self::$documents);
 
             self::$bytes -= self::$lengths[$oldest];
             unset(self::$documents[$oldest], self::$lengths[$oldest]);

@@ -48,6 +48,7 @@ class VcCountingRule extends ValidationRule
 
 class ValidationCacheTest extends TestCase
 {
+    public $validated;
     protected function defineEnvironment($app): void
     {
         parent::defineEnvironment($app);

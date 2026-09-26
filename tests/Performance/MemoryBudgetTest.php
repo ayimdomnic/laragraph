@@ -40,7 +40,7 @@ class MemoryBudgetTest extends PerformanceTestCase
     {
         Blog::seed(organizations: 10);
 
-        $retained = $this->retainedAfter(200, fn() => $this->execute(Blog::NESTED));
+        $retained = $this->retainedAfter(200, fn(): array => $this->execute(Blog::NESTED));
 
         $this->assertLessThan(self::TOLERANCE, $retained, "{$retained} bytes retained over 200 executions");
     }
