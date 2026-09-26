@@ -11,6 +11,7 @@ use Ayimdomnic\Laragraph\Tests\TestCase;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type as GType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class DfrModel extends Model
 {
@@ -37,6 +38,7 @@ class DfrThingType extends Type
             'shout'    => GType::string(),
             'missing'  => GType::string(),
             'computed' => GType::string(),
+            'age'      => GType::int(),
         ];
     }
 }
@@ -125,5 +127,78 @@ class DefaultFieldResolverTest extends TestCase
 
         $this->assertSame(['thing' => ['name' => 'traced']], $result['data']);
         $this->assertContains('name', array_column($result['extensions']['tracing']['execution']['resolvers'], 'fieldName'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Unresolved-field warning (config('app.debug') is true in every package
+    // test — see tests/TestCase.php — so it's on by default here unless a
+    // test overrides laragraph.log_unresolved_fields explicitly).
+    // -------------------------------------------------------------------------
+
+    public function test_warns_when_an_eloquent_model_has_no_matching_attribute(): void
+    {
+        Log::shouldReceive('warning')->once()->with(
+            \Mockery::pattern('/field \[missing\] on \[DfrThing\]/'),
+            ['field' => 'missing', 'type' => 'DfrThing'],
+        );
+
+        $this->thing((new DfrModel())->forceFill(['name' => 'ada']), 'missing');
+    }
+
+    public function test_does_not_warn_for_a_genuinely_null_column_value(): void
+    {
+        Log::shouldReceive('warning')->never();
+
+        $result = $this->thing((new DfrModel())->forceFill(['name' => 'ada', 'age' => null]), 'age');
+
+        $this->assertSame(['age' => null], $result);
+    }
+
+    public function test_does_not_warn_when_an_accessor_resolves_the_field(): void
+    {
+        Log::shouldReceive('warning')->never();
+
+        $this->thing((new DfrModel())->forceFill(['name' => 'ada']), 'shout');
+    }
+
+    public function test_warns_when_an_array_source_has_no_matching_key(): void
+    {
+        Log::shouldReceive('warning')->once()->with(
+            \Mockery::pattern('/field \[missing\] on \[DfrThing\]/'),
+            \Mockery::any(),
+        );
+
+        $this->thing(['name' => 'ada'], 'missing');
+    }
+
+    public function test_does_not_warn_for_a_genuinely_null_array_value(): void
+    {
+        Log::shouldReceive('warning')->never();
+
+        $this->thing(['name' => 'ada', 'age' => null], 'age');
+    }
+
+    public function test_does_not_warn_when_explicitly_disabled_even_in_debug_mode(): void
+    {
+        config(['laragraph.log_unresolved_fields' => false]);
+        Log::shouldReceive('warning')->never();
+
+        $this->thing((new DfrModel())->forceFill(['name' => 'ada']), 'missing');
+    }
+
+    public function test_warns_when_explicitly_enabled_outside_debug_mode(): void
+    {
+        config(['app.debug' => false, 'laragraph.log_unresolved_fields' => true]);
+        Log::shouldReceive('warning')->once();
+
+        $this->thing((new DfrModel())->forceFill(['name' => 'ada']), 'missing');
+    }
+
+    public function test_does_not_warn_outside_debug_mode_by_default(): void
+    {
+        config(['app.debug' => false]);
+        Log::shouldReceive('warning')->never();
+
+        $this->thing((new DfrModel())->forceFill(['name' => 'ada']), 'missing');
     }
 }

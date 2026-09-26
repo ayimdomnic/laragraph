@@ -378,3 +378,8 @@ Type instances are created once per schema build and reused, so `Laragraph::type
 | `resolveType()` signature errors | It takes three parameters: `(mixed $value, mixed $context, ResolveInfo $info)`. |
 
 `php artisan laragraph:validate` catches most of these at deploy time — see [deployment](14-deployment.md).
+The camelCase/snake_case one is different: the schema still builds and the query still succeeds,
+just with a silently wrong `null`. Set `'log_unresolved_fields' => true` (or leave it `null`, which
+follows `app.debug`) and Laragraph logs a warning — `logging.channel` — the moment a field resolves
+to `null` only because nothing matched, rather than a real null value or an accessor. See
+[Configuration reference](15-configuration.md#log_unresolved_fields).
