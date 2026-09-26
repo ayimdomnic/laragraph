@@ -24,7 +24,10 @@ abstract class GraphQLTestCase extends TestCase
 }
 ```
 
-A test then reads like the request it makes:
+A test then reads like the request it makes. `$this->member`, `$this->admin` and `$this->acme`
+(an organization) below aren't magic — `GraphQLTestCase::setUp()` (not shown above) creates them
+once per test, an admin and a member in the same organization, exactly like any other Laravel
+`RefreshDatabase` fixture setup:
 
 ```php
 public function test_members_see_their_own_email_but_not_other_peoples(): void

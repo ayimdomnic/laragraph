@@ -159,8 +159,12 @@ cache normalization), but Relay's cache does.
 ```php
 use Ayimdomnic\Laragraph\Relay\GlobalId;
 
-// config/laragraph.php
-'query' => ['node' => \Ayimdomnic\Laragraph\Relay\NodeQuery::class],
+// config/laragraph.php — nested under the schema's own query array, like any other field
+'schemas' => [
+    'default' => [
+        'query' => ['node' => \Ayimdomnic\Laragraph\Relay\NodeQuery::class],
+    ],
+],
 ```
 
 Make a type refetchable by overriding `resolveNode()` — it's given the *local* id already decoded
