@@ -1,0 +1,245 @@
+"A JWT for the `Authorization: Bearer` header, and the user it belongs to."
+type LoginPayload {
+  token: String!
+
+  "Seconds until the token expires."
+  expiresIn: Int!
+
+  user: User!
+}
+
+"An object with a globally unique ID."
+interface Node {
+  id: ID!
+}
+
+"A team that users belong to and publish posts in."
+type Organization implements Node {
+  id: ID!
+  name: String!
+  slug: String!
+  city: String
+  country: String
+  description: String
+  settings: JSON
+  owner: User
+  members: [User!]!
+  memberCount: Int!
+
+  "Published posts only."
+  posts: [Post!]!
+}
+
+"The content of a new post."
+input PostInput {
+  title: String!
+  body: String!
+
+  "Publish immediately (notifies `postPublished` subscribers)."
+  publish: Boolean = false
+}
+
+"An article written by a user for their organization."
+type Post implements Node {
+  id: ID!
+  title: String!
+  body: String!
+  excerpt(length: Int = 120): String!
+  summary: String @deprecated(reason: "Use `excerpt` instead.")
+  status: PostStatus!
+  publishedAt: DateTime
+  author: User!
+  organization: Organization!
+}
+
+"Anything `search` can find."
+union SearchResult = User | Post | Organization
+
+"A person who belongs to an organization."
+type User implements Node {
+  id: ID!
+  name: String!
+
+  "Visible to the user and their organization admins; null for everyone else."
+  email: String
+
+  role: UserRole!
+  avatarUrl: String
+  createdAt: DateTime
+  organization: Organization
+
+  "Posts by this user that the viewer may read."
+  posts: [Post!]!
+}
+
+"A datetime string in ISO-8601 format: YYYY-MM-DDTHH:mm:ssZ"
+scalar DateTime
+
+"An arbitrary JSON value, including objects, arrays, scalars, and null."
+scalar JSON
+
+"A file uploaded via the GraphQL multipart request spec."
+scalar Upload
+
+"What a user may do inside their organization."
+enum UserRole {
+  "Manages the organization: sees every member and every post."
+  Admin
+
+  "Writes and publishes their own posts."
+  Member
+}
+
+"Where a post is in its lifecycle."
+enum PostStatus {
+  "Only visible to its author and organization admins."
+  Draft
+
+  "Visible to everyone."
+  Published
+}
+
+type Query {
+  currentUser: User @deprecated(reason: "Use `me` instead.")
+
+  "The authenticated user, or null."
+  me: User
+
+  organization(id: ID, slug: String): Organization
+  organizations(
+    "Return the first N items."
+    first: Int
+
+    "Return items after this cursor."
+    after: String
+
+    "Return the last N items."
+    last: Int
+
+    "Return items before this cursor."
+    before: String
+  ): OrganizationConnection
+  post(id: ID!): Post
+  posts(
+    "Return the first N items."
+    first: Int
+
+    "Return items after this cursor."
+    after: String
+
+    "Return the last N items."
+    last: Int
+
+    "Return items before this cursor."
+    before: String
+
+    status: PostStatus
+    organizationId: ID
+  ): PostConnection
+  search(term: String!, limit: Int = 10): [SearchResult!]!
+  user(id: ID!): User
+  users(
+    "Return the first N items."
+    first: Int
+
+    "Return items after this cursor."
+    after: String
+
+    "Return the last N items."
+    last: Int
+
+    "Return items before this cursor."
+    before: String
+
+    "Only users with this role."
+    role: UserRole
+  ): UserConnection
+  node(id: ID!): Node
+}
+
+"A paginated list of OrganizationConnection edges."
+type OrganizationConnection {
+  "A list of edges."
+  edges: [OrganizationConnectionEdge]
+
+  "Pagination context."
+  pageInfo: PageInfo!
+}
+
+"An edge in a OrganizationConnectionEdge connection."
+type OrganizationConnectionEdge {
+  "The item at the end of the edge."
+  node: Organization
+
+  "An opaque cursor used for cursor-based pagination."
+  cursor: String!
+}
+
+"Pagination context from the cursor connection."
+type PageInfo {
+  "Whether there are more items after the current page."
+  hasNextPage: Boolean!
+
+  "Whether there are more items before the current page."
+  hasPreviousPage: Boolean!
+
+  "Cursor of the first item in the current page."
+  startCursor: String
+
+  "Cursor of the last item in the current page."
+  endCursor: String
+
+  "Total number of items in the connection."
+  total: Int
+}
+
+"A paginated list of PostConnection edges."
+type PostConnection {
+  "A list of edges."
+  edges: [PostConnectionEdge]
+
+  "Pagination context."
+  pageInfo: PageInfo!
+}
+
+"An edge in a PostConnectionEdge connection."
+type PostConnectionEdge {
+  "The item at the end of the edge."
+  node: Post
+
+  "An opaque cursor used for cursor-based pagination."
+  cursor: String!
+}
+
+"A paginated list of UserConnection edges."
+type UserConnection {
+  "A list of edges."
+  edges: [UserConnectionEdge]
+
+  "Pagination context."
+  pageInfo: PageInfo!
+}
+
+"An edge in a UserConnectionEdge connection."
+type UserConnectionEdge {
+  "The item at the end of the edge."
+  node: User
+
+  "An opaque cursor used for cursor-based pagination."
+  cursor: String!
+}
+
+type Mutation {
+  createPost(input: PostInput!): Post!
+  deletePost(id: ID!): Boolean!
+  login(email: String!, password: String!): LoginPayload
+  logout: Boolean!
+  publishPost(id: ID!): Post!
+  register(name: String!, email: String!, password: String!, password_confirmation: String!, organizationSlug: String!): LoginPayload
+  updateProfile(name: String, email: String): User!
+  uploadAvatar(file: Upload!): User!
+}
+
+type Subscription {
+  postPublished(organizationId: ID!): Post
+}

@@ -269,6 +269,7 @@ while `app.debug` is on — never in production.
 | `laragraph:make:exception InvalidCredentialsException` | `app/GraphQL/Exceptions/InvalidCredentialsException.php` |
 | `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model — deny-by-default (see below) |
 | `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
+| `laragraph:schema:diff --against=schema.graphql` | CI gate: fails on breaking changes vs. a committed baseline (see [Deployment](docs/14-deployment.md#ci-pipeline)) |
 
 ---
 

@@ -12,6 +12,7 @@ use Ayimdomnic\Laragraph\Console\InputMakeCommand;
 use Ayimdomnic\Laragraph\Console\MutationMakeCommand;
 use Ayimdomnic\Laragraph\Console\QueryMakeCommand;
 use Ayimdomnic\Laragraph\Console\ScaffoldCommand;
+use Ayimdomnic\Laragraph\Console\SchemaDiffCommand;
 use Ayimdomnic\Laragraph\Console\SubscriptionMakeCommand;
 use Ayimdomnic\Laragraph\Console\TypeMakeCommand;
 use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
@@ -122,6 +123,7 @@ class LaragraphServiceProvider extends ServiceProvider
                 ExceptionMakeCommand::class,
                 ScaffoldCommand::class,
                 ExportSchemaCommand::class,
+                SchemaDiffCommand::class,
             ]);
 
             // `php artisan optimize` / `optimize:clear` integration (Laravel 11.27+).
