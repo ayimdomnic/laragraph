@@ -61,7 +61,48 @@ public function call($method, $uri, $parameters = [], $cookies = [], $files = []
 
 (`forgetGuards()` alone is enough for Sanctum tokens.)
 
+## Shippable test helpers
+
+The `graphql()` helper and the `assertJsonPath('errors.0.extensions...')` idioms below are so
+common that Laragraph ships them as a trait plus a handful of `TestResponse` macros — add
+`Ayimdomnic\Laragraph\Testing\MakesGraphQLRequests` to your own test base class instead of
+hand-rolling the helper shown above:
+
+```php
+abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
+{
+    use \Ayimdomnic\Laragraph\Testing\MakesGraphQLRequests;
+
+    // Laragraph doesn't know which auth package you use — override this once.
+    protected function graphqlAuthHeaders(mixed $as): array
+    {
+        return $as === null ? [] : ['Authorization' => 'Bearer ' . JWTAuth::fromUser($as)];
+    }
+}
+```
+
+```php
+$this->graphql('query ($id: ID!) { user(id: $id) { email } }', ['id' => $this->member->id], as: $this->member)
+    ->assertNoGraphQLErrors()
+    ->assertGraphQLData('user.email', $this->member->email);
+```
+
+| Macro | Equivalent to |
+|---|---|
+| `assertGraphQLData($path, $value)` | `assertJsonPath("data.{$path}", $value)` |
+| `assertGraphQLErrors()` / `assertNoGraphQLErrors()` | asserting `errors` is present-and-non-empty / absent-or-empty |
+| `assertGraphQLErrorCategory($category)` | `assertJsonPath('errors.0.extensions.category', $category)` |
+| `assertGraphQLErrorCode($code)` | `assertJsonPath('errors.0.extensions.code', $code)` |
+| `assertGraphQLValidationError($field, $message = null)` | asserting the `validation` category, that `extensions.validation.{$field}` exists, and optionally that it contains `$message` |
+
+This is unrelated to `tests/TestCase.php` in Laragraph's own repository, which only exists to test
+the package itself and is never autoloaded into a consumer application — `MakesGraphQLRequests`
+is the one meant for your app.
+
 ## What to assert
+
+The examples below use `assertJsonPath` directly — reach for the macros above instead when the
+shape matches; they're the same assertions, just named for what they mean.
 
 ### Data
 
