@@ -30,6 +30,7 @@ final readonly class SubscriptionManager
         private SubscriberStoreInterface $store,
         private Laragraph $laragraph,
         private SubscriberSandbox $sandbox,
+        private SsePendingQueue $ssePendingQueue,
     ) {}
 
     /**
@@ -152,11 +153,19 @@ final readonly class SubscriptionManager
      */
     private function dispatch(string $subscriberId, array $payload): void
     {
-        if (config('laragraph.subscriptions.driver', 'broadcast') === 'log') {
+        $driver = config('laragraph.subscriptions.driver', 'broadcast');
+
+        if ($driver === 'log') {
             Log::channel(config('laragraph.logging.channel'))->info('GraphQL subscription update', [
                 'subscriber_id' => $subscriberId,
                 'payload'       => $payload,
             ]);
+
+            return;
+        }
+
+        if ($driver === 'sse') {
+            $this->ssePendingQueue->push($subscriberId, $payload);
 
             return;
         }

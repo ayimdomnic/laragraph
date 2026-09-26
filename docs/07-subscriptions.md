@@ -35,12 +35,13 @@ whenever something happens.
 // config/laragraph.php
 'subscriptions' => [
     'enabled'           => true,
-    'driver'            => 'broadcast',      // or 'log' during development
+    'driver'            => 'broadcast',      // 'broadcast', 'log' (development), or 'sse'
     'cache_store'       => null,             // where subscribers are stored (null: default store)
     'ttl'               => 3600,             // seconds a registration lives
     'channel_prefix'    => 'graphql-subscriber',
     'authorize_channel' => true,             // only the owner may listen (see below)
     'queue' => ['connection' => null, 'queue' => null],   // for broadcastLater()
+    'sse' => ['max_duration' => 30, 'poll_interval_ms' => 500, 'heartbeat_seconds' => 15],
 ],
 ```
 
@@ -218,6 +219,70 @@ From PHP, call `Laragraph::unsubscribe($subscriberId)`.
 
 Registrations also expire after `ttl` seconds, so clients that disappear without unsubscribing
 clean up after themselves. Long-lived clients should re-subscribe before the TTL runs out.
+
+## SSE transport
+
+The `'broadcast'` driver needs Laravel Echo and a broadcaster (Reverb, Pusher, …) on the client
+side. `'sse'` instead serves updates over a plain HTTP **Server-Sent Events** connection — a stock
+`EventSource` (or any graphql-sse-speaking client) is the whole client-side story, no Echo, no
+broadcast server:
+
+```php
+// config/laragraph.php
+'subscriptions' => [
+    'driver' => 'sse',
+    'sse'    => ['max_duration' => 30, 'poll_interval_ms' => 500, 'heartbeat_seconds' => 15],
+],
+```
+
+Registering a subscription returns a `streamUrl` instead of (in addition to) a channel name:
+
+```json
+{
+  "data": { "postPublished": null },
+  "extensions": { "subscription": {
+    "channel": "organization.1.posts",
+    "subscriberId": "9f2c...",
+    "streamUrl": "https://api.example.com/graphql/subscriptions/9f2c.../stream"
+  } }
+}
+```
+
+```js
+const es = new EventSource(streamUrl, { withCredentials: true });
+es.addEventListener('next', (e) => {
+  const { data } = JSON.parse(e.data);
+  console.log(data.postPublished);
+});
+```
+
+`Laragraph::broadcast()`/`broadcastLater()` work exactly as with the `'broadcast'` driver — the
+same per-subscriber re-execution, sandboxed to that subscriber's identity, happens either way. Only
+*delivery* changes: instead of firing a Laravel Broadcasting event, the result is pushed onto that
+subscriber's own queue in the cache, and the open `/stream` connection picks it up on its next
+poll. The stream endpoint enforces the same ownership check as unsubscribing — an unknown
+subscriber id and someone else's both answer `404` with `SUBSCRIPTION_NOT_FOUND`.
+
+**Read this before choosing `'sse'` for anything beyond a handful of subscribers.** Every open SSE
+connection holds one PHP-FPM (or Octane) worker for up to `sse.max_duration` seconds — there is no
+free concurrency the way a dedicated WebSocket server gives you. Concretely:
+
+- **Concurrent-subscriber ceiling ≈ available workers minus headroom for ordinary query/mutation
+  traffic.** A pool sized for typical request/response traffic will not also hold hundreds of open
+  streams.
+- **`sse.max_duration` bounds the damage, it doesn't remove it.** A connection self-closes after
+  this many seconds and the client's `EventSource` reconnects automatically (standard browser
+  behavior — Laragraph doesn't implement reconnection), so a worker is never pinned indefinitely,
+  but it *is* pinned for up to `max_duration` seconds per subscriber, repeatedly.
+- **Use Octane, ideally with Swoole,** if you expect a non-trivial number of concurrent subscribers.
+  Coroutine-based workers can hold many open responses far more cheaply than one process/thread per
+  connection.
+- **Your reverse proxy's read timeout must exceed `max_duration + heartbeat_seconds`,** or it will
+  cut the connection early. `heartbeat_seconds` exists specifically to keep proxies and load
+  balancers from treating an idle-but-open connection as dead.
+
+This driver is for teams who can't run a dedicated broadcaster, or want stock HTTP client support —
+not a wholesale replacement for `'broadcast'` at scale.
 
 ## Developing without a broadcaster
 
