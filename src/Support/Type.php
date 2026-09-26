@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Ayimdomnic\Laragraph\Support;
 
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
+use Ayimdomnic\Laragraph\Relay\GlobalId;
+use Ayimdomnic\Laragraph\Relay\NodeQuery;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use GraphQL\Type\Definition\ObjectType;
 use Illuminate\Database\Eloquent\Model;
@@ -70,6 +72,22 @@ abstract class Type extends ObjectType
      * @return array<string, mixed>
      */
     abstract public function fields(): array;
+
+    /**
+     * Load this type's instance for Relay's `node(id: ID!): Node` root field
+     * (see {@see NodeQuery}), given the local id
+     * decoded from a {@see GlobalId}.
+     *
+     * Not wired to anything by default — override it on a type that
+     * `implements Node` to make it re-fetchable. Bypasses the `Field`
+     * authorize()/policy() pipeline entirely (this isn't a field), so an
+     * override must apply its own visibility check and return null rather
+     * than an object the current viewer shouldn't see.
+     */
+    public function resolveNode(string $id, mixed $context): ?object
+    {
+        return null;
+    }
 
     // -------------------------------------------------------------------------
     // Internals

@@ -146,3 +146,53 @@ public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $i
 
 `per_page` is capped by `max_per_page` here too. There is no built-in type for this shape; define
 an object type with the fields you need (`data: [User!]!`, `total: Int!`, …).
+
+## Relay Node re-fetching
+
+A `Node`-implementing type (`User`, `Post`, `Organization` in the example app — see
+[Types](02-types.md)) is already refetchable by its own single-item query
+(`user(id:)`, `post(id:)`, …). Relay clients specifically also expect a generic root
+`node(id: ID!): Node` field that works across every type from one opaque, globally unique id —
+`Apollo`/`urql` don't need this (they only require `__typename` + `id` to be unique per type for
+cache normalization), but Relay's cache does.
+
+```php
+use Ayimdomnic\Laragraph\Relay\GlobalId;
+
+// config/laragraph.php
+'query' => ['node' => \Ayimdomnic\Laragraph\Relay\NodeQuery::class],
+```
+
+Make a type refetchable by overriding `resolveNode()` — it's given the *local* id already decoded
+from the global id, and must apply its own visibility check (this bypasses the `Field`
+`authorize()`/`policy()` pipeline entirely, since `node` is one shared field, not a
+per-type query):
+
+```php
+// app/GraphQL/Types/PostType.php
+public function resolveNode(string $id, mixed $context): ?object
+{
+    $post = Post::find($id);
+
+    return $post !== null && Gate::allows('view', $post) ? $post : null;
+}
+```
+
+A client obtains a global id with `GlobalId::encode('Post', $post->id)` — typically from a field
+you add for this purpose, or (see below) from the type's own `id` field.
+
+**Laragraph does not change any existing type's `id` field to emit a global id** — that would be a
+breaking change for every current consumer receiving a raw primary key today. `id` stays whatever
+each type's `fields()` already returns. If you want strict Relay compliance (a type's own `id` *is*
+the global id `node()` accepts), encode it yourself:
+
+```php
+protected function resolveIdField(Post $post): string
+{
+    return GlobalId::encode('Post', $post->id);
+}
+```
+
+Doing this on a type already in production is a breaking change for existing clients that treat
+`id` as a raw primary key (e.g. resubmitting it into another query's `id` argument) — decide
+per type, don't do it by default.

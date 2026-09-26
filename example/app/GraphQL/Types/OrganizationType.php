@@ -74,4 +74,10 @@ class OrganizationType extends Type
         return $this->batchRelation(Organization::class, 'posts', $organization, $context)
             ->then(fn (Collection $posts): Collection => $posts->where('status', PostStatus::Published)->values());
     }
+
+    /** Relay `node(id:)` re-fetching — organizations are publicly readable, same as OrganizationQuery. */
+    public function resolveNode(string $id, mixed $context): ?object
+    {
+        return Organization::find($id);
+    }
 }

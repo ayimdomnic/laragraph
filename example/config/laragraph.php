@@ -8,6 +8,7 @@ use App\GraphQL\Admin\AdminStatsType;
 use App\GraphQL\Admin\StatsQuery;
 use App\GraphQL\Validation\MaxRootFieldsRule;
 use Ayimdomnic\Laragraph\Laragraph;
+use Ayimdomnic\Laragraph\Relay\NodeQuery;
 use Ayimdomnic\Laragraph\Scalars\DateTimeType;
 use Ayimdomnic\Laragraph\Scalars\JsonType;
 use Ayimdomnic\Laragraph\Scalars\UploadType;
@@ -103,7 +104,8 @@ return [
         // POST/GET /graphql — everything in app/GraphQL/{Queries,Mutations,Subscriptions}
         // is discovered automatically, so nothing needs listing here.
         'default' => [
-            'query' => [],
+            // node(id: ID!): Node — Relay re-fetching, see docs/06-pagination.md.
+            'query' => ['node' => NodeQuery::class],
             'mutation' => [],
             'subscription' => [],
         ],

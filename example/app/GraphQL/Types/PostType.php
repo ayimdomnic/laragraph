@@ -8,6 +8,7 @@ use App\Models\Post;
 use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\Support\Type;
 use GraphQL\Type\Definition\Type as GType;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class PostType extends Type
@@ -78,5 +79,13 @@ class PostType extends Type
     protected function resolveOrganizationField(Post $post, array $args, mixed $context): mixed
     {
         return $this->batchRelation(Post::class, 'organization', $post, $context);
+    }
+
+    /** Relay `node(id:)` re-fetching — mirrors PostQuery's visibility check: drafts stay hidden. */
+    public function resolveNode(string $id, mixed $context): ?object
+    {
+        $post = Post::find($id);
+
+        return $post !== null && Gate::allows('view', $post) ? $post : null;
     }
 }

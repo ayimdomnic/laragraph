@@ -90,4 +90,10 @@ class UserType extends Type
         return $this->batchRelation(User::class, 'posts', $user, $context)
             ->then(fn (Collection $posts): Collection => $posts->filter(fn ($post): bool => Gate::allows('view', $post))->values());
     }
+
+    /** Relay `node(id:)` re-fetching — any authenticated viewer may look up a user. */
+    public function resolveNode(string $id, mixed $context): ?object
+    {
+        return User::find($id);
+    }
 }

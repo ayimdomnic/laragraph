@@ -342,6 +342,12 @@ return ConnectionType::simplePaginate(\App\Models\User::query(), $args);
 // → { data, total, per_page, current_page, last_page }
 ```
 
+### Node re-fetching
+
+A generic `node(id: ID!): Node` root field for Relay clients — register
+`Ayimdomnic\Laragraph\Relay\NodeQuery`, then override `resolveNode()` on any type
+implementing `Node`. See [Pagination → Relay Node re-fetching](docs/06-pagination.md#relay-node-re-fetching).
+
 ---
 
 ## N+1-Safe Eloquent Relations
