@@ -8,6 +8,7 @@
 | `laragraph:cache` | Writes the discovery manifest to `bootstrap/cache/laragraph.php` |
 | `laragraph:clear` | Removes the manifest |
 | `laragraph:schema:export` | Prints the schema as SDL. `--schema=admin` picks a schema; `--output=schema.graphql` writes to a file. |
+| `laragraph:schema:diff` | Compares the current schema against a committed SDL baseline and classifies changes as breaking or dangerous. `--against=schema.graphql` (required), `--fail-on-dangerous` also fails on non-breaking-but-risky changes. |
 | `about` | Shows Laragraph's configuration (see [Observability](12-observability.md#php-artisan-about)) |
 
 Generators (`laragraph:make:*`, `laragraph:scaffold`) are covered in
@@ -44,14 +45,29 @@ Validation rules, middleware and types are class-name strings and are always saf
 ```yaml
 - run: composer install --prefer-dist --no-progress
 - run: php artisan laragraph:validate
+- run: php artisan laragraph:schema:diff --against=schema.graphql
 - run: php artisan test
-- run: php artisan laragraph:schema:export --output=schema.graphql && git diff --exit-code schema.graphql
 ```
 
-The last step fails when the schema changes without the committed SDL being updated. It makes schema
-changes visible in code review, where breaking changes (removed fields, arguments that became
-non-null) are easy to spot. Front-end code generators can use the committed file instead of
-introspecting a server.
+`laragraph:schema:diff` compares the current schema against a committed SDL baseline
+(`schema.graphql`, produced by `laragraph:schema:export`) and classifies every change using
+webonyx/graphql-php's own `BreakingChangesFinder` — the same classification graphql-js's tooling is
+based on. It **fails the build on any breaking change** (a removed field, an argument that became
+non-null, a removed enum value, …) and prints — but doesn't fail on, unless `--fail-on-dangerous` is
+passed — "dangerous" changes (a value added to an enum, an optional argument added, …) that are
+safe today but worth a second look. Unlike a plain `git diff`, this doesn't require a human to
+recognize which textual diff lines are breaking; it also doesn't fire on a first run with no
+baseline file yet.
+
+When a schema change is intentional, update the baseline in the same PR:
+
+```bash
+php artisan laragraph:schema:export --output=schema.graphql
+git add schema.graphql
+```
+
+The committed SDL doubles as the source front-end code generators diff or introspect against
+instead of a live server.
 
 ## Queues
 

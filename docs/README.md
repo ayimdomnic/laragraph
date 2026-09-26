@@ -31,7 +31,7 @@ this repository — so the samples are known to work.
 11. [Performance & caching](11-performance-and-caching.md) — response cache, discovery cache, Octane
 12. [Observability](12-observability.md) — events, response extensions, tracing, logging
 13. [Testing](13-testing.md) — testing your GraphQL API with PHPUnit
-14. [Deployment](14-deployment.md) — artisan commands, queues, broadcasting, checklists
+14. [Deployment](14-deployment.md) — artisan commands, CI schema-diff gate, queues, broadcasting, checklists
 
 **Reference**
 
