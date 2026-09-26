@@ -77,12 +77,12 @@ class ScaffoldCommand extends Command
             $this->generateMutation($shortName, 'delete');
         }
 
-        if ($this->option('register')) {
-            $this->registerInConfig($shortName);
-        }
+        $registered = $this->option('register') && $this->registerInConfig($shortName);
 
         $this->newLine();
-        $this->components->info("Done! Don't forget to register the generated classes in config/laragraph.php if auto-discovery is disabled.");
+        $this->components->info($registered
+            ? 'Done!'
+            : "Done! Don't forget to register the generated classes in config/laragraph.php if auto-discovery is disabled.");
 
         return self::SUCCESS;
     }
@@ -272,19 +272,123 @@ class ScaffoldCommand extends Command
     // Config registration
     // -------------------------------------------------------------------------
 
-    protected function registerInConfig(string $model): void
+    /**
+     * Insert the generated classes into config/laragraph.php's 'types' and
+     * schemas.default 'query'/'mutation' arrays. Never guesses: any array
+     * whose opening bracket doesn't appear exactly once at the start of its
+     * own line (multiple schemas, a reformatted file, a stale doc-comment
+     * example) is left alone, and the whole file is left untouched — falling
+     * back to the manual tip — the moment any single insertion isn't safe.
+     */
+    protected function registerInConfig(string $model): bool
     {
         $configPath = config_path('laragraph.php');
 
         if (!file_exists($configPath)) {
             $this->components->warn('config/laragraph.php not found — skipping --register.');
-            return;
+            return false;
         }
 
-        // Append entries as a comment block (safe, non-destructive)
-        Str::camel($model);
+        $source = (string) file_get_contents($configPath);
+        $failed = false;
 
-        $this->components->info('Tip: add the generated classes to config/laragraph.php or enable auto-discovery.');
+        $insert = function (string $arrayKey, string $entryKey, string $line) use (&$source, &$failed): void {
+            if ($failed) {
+                return;
+            }
+
+            $result = $this->insertConfigEntry($source, $arrayKey, $entryKey, $line);
+
+            if ($result === null) {
+                $failed = true;
+                return;
+            }
+
+            $source = $result;
+        };
+
+        $insert('types', "'{$model}'", "        '{$model}' => \\App\\GraphQL\\Types\\{$model}Type::class,");
+        $insert('query', "'" . Str::camel($model) . "'", "                '" . Str::camel($model) . "' => \\App\\GraphQL\\Queries\\{$model}Query::class,");
+        $insert('query', "'" . Str::camel(Str::plural($model)) . "'", "                '" . Str::camel(Str::plural($model)) . "' => \\App\\GraphQL\\Queries\\{$model}sQuery::class,");
+
+        if ($this->option('with-crud')) {
+            foreach (['create' => 'Create', 'update' => 'Update', 'delete' => 'Delete'] as $verb => $prefix) {
+                $key   = Str::camel("{$verb}{$model}");
+                $class = "{$prefix}{$model}Mutation";
+                $insert('mutation', "'{$key}'", "                '{$key}' => \\App\\GraphQL\\Mutations\\{$class}::class,");
+            }
+        }
+
+        if ($failed || !$this->isValidPhp($source)) {
+            $this->components->info('Tip: add the generated classes to config/laragraph.php or enable auto-discovery.');
+            return false;
+        }
+
+        file_put_contents($configPath, $source);
+        $this->components->info('Registered the generated classes in config/laragraph.php.');
+
+        return true;
+    }
+
+    /**
+     * Insert `$line` right after `'$arrayKey' => [`'s opening bracket, but
+     * only when that array starts at the beginning of its own line (so a
+     * commented-out example of the same shape, e.g. this file's own "Example:"
+     * doc-block, is never mistaken for the real array) and appears exactly
+     * once in the whole file. Returns null — "not safe to insert" — otherwise,
+     * and returns $source unchanged when $entryKey is already registered.
+     */
+    protected function insertConfigEntry(string $source, string $arrayKey, string $entryKey, string $line): ?string
+    {
+        if (str_contains($source, $entryKey . ' =>')) {
+            return $source;
+        }
+
+        $pattern = '/[\'"]' . preg_quote($arrayKey, '/') . '[\'"]\s*=>\s*\[\r?\n/';
+
+        if (preg_match_all($pattern, $source, $matches, PREG_OFFSET_CAPTURE) < 1) {
+            return null;
+        }
+
+        $candidates = array_values(array_filter($matches[0], function (array $match) use ($source): bool {
+            [, $offset] = $match;
+            $lineStart  = strrpos(substr($source, 0, $offset), "\n");
+            $lineStart  = $lineStart === false ? 0 : $lineStart + 1;
+
+            return trim(substr($source, $lineStart, $offset - $lineStart)) === '';
+        }));
+
+        if (count($candidates) !== 1) {
+            return null;
+        }
+
+        [$match, $offset] = $candidates[0];
+        $insertAt = $offset + strlen($match);
+
+        return substr($source, 0, $insertAt) . $line . "\n" . substr($source, $insertAt);
+    }
+
+    /**
+     * A last safety net before overwriting the consumer's config file: never
+     * write back something that isn't even valid PHP, however unlikely that
+     * is given the careful insertion above.
+     */
+    protected function isValidPhp(string $source): bool
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'laragraph_config_');
+
+        if ($tmp === false) {
+            return false;
+        }
+
+        try {
+            file_put_contents($tmp, $source);
+            exec('php -l ' . escapeshellarg($tmp) . ' 2>&1', $output, $exitCode);
+
+            return $exitCode === 0;
+        } finally {
+            unlink($tmp);
+        }
     }
 
     // -------------------------------------------------------------------------

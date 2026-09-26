@@ -196,7 +196,11 @@ validation, validation before your resolver, and field middleware wraps only the
 `Gate::allows()` for the matching policy ability (`viewAny`, `view`, `create`, `update`,
 `delete`), so nothing is reachable until you write the policy. Options: `--all` (every model in
 `app/Models`), `--with-crud`, `--force` (overwrite existing files). Generated classes are picked
-up by auto-discovery; `--register` only prints a reminder to register them when discovery is off.
+up by auto-discovery automatically; if you've turned discovery off, `--register` writes them into
+`config/laragraph.php`'s `types` and `schemas.default.query`/`mutation` arrays for you. It never
+guesses at an edit it isn't sure about — a second schema, an already-registered alias, or a
+config file shaped differently than the published default all fall back to printing a reminder
+instead of touching the file.
 
 ## Next
 
