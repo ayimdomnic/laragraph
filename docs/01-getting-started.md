@@ -189,6 +189,8 @@ validation, validation before your resolver, and field middleware wraps only the
 | `laragraph:make:query UsersQuery` | `app/GraphQL/Queries/UsersQuery.php` |
 | `laragraph:make:mutation CreateUserMutation` | `app/GraphQL/Mutations/CreateUserMutation.php` |
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
+| `laragraph:make:exception InvalidCredentialsException` | `app/GraphQL/Exceptions/InvalidCredentialsException.php` — see [Error handling & localization](17-error-handling-and-localization.md) |
+| `laragraph:make:loader UserLoader` | `app/GraphQL/Loaders/UserLoader.php` — a custom `BatchResolver`, see [Relations & DataLoaders](05-relations-and-dataloaders.md) |
 | `laragraph:scaffold User --with-crud` | a type, `user`/`users` queries and create/update/delete mutations for a model |
 
 `laragraph:scaffold` reads the model's `$fillable` and `$casts`, leaves out attributes in `$hidden`

@@ -267,6 +267,7 @@ while `app.debug` is on — never in production.
 | `laragraph:make:subscription UserCreatedSubscription` | `app/GraphQL/Subscriptions/UserCreatedSubscription.php` |
 | `laragraph:make:input CreateUserInput` | `app/GraphQL/Types/Inputs/CreateUserInput.php` |
 | `laragraph:make:exception InvalidCredentialsException` | `app/GraphQL/Exceptions/InvalidCredentialsException.php` |
+| `laragraph:make:loader UserLoader` | `app/GraphQL/Loaders/UserLoader.php` — a custom `BatchResolver` (see [docs/05](docs/05-relations-and-dataloaders.md)) |
 | `laragraph:scaffold User --with-crud` | Type, queries and CRUD mutations for a model — deny-by-default (see below) |
 | `laragraph:schema:export --output=schema.graphql` | SDL for client code generation / schema diffing |
 | `laragraph:schema:diff --against=schema.graphql` | CI gate: fails on breaking changes vs. a committed baseline (see [Deployment](docs/14-deployment.md#ci-pipeline)) |

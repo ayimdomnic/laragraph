@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DummyNamespace;
+
+use Ayimdomnic\Laragraph\DataLoader\BatchResolver;
+
+class DummyClass extends BatchResolver
+{
+    /**
+     * @param  array<int|string>  $keys  Unique keys collected by the DataLoader.
+     * @return array<mixed>             One resolved value per key, in the same
+     *                                  order as $keys (null for a missing key).
+     */
+    public function batch(array $keys): array
+    {
+        // Return results keyed the same way $keys were given, e.g.:
+        // return SomeModel::query()->whereIn('id', $keys)->get()->keyBy('id')->toArray();
+        return [];
+    }
+}

@@ -119,4 +119,27 @@ class MakeCommandsTest extends TestCase
         $this->assertStringContainsString("'errors.out_of_stock'", $contents);
         $this->assertStringContainsString("'OUT_OF_STOCK'", $contents);
     }
+
+    // -------------------------------------------------------------------------
+    // laragraph:make:loader
+    // -------------------------------------------------------------------------
+
+    public function test_make_loader_creates_file(): void
+    {
+        $this->artisan('laragraph:make:loader', ['name' => 'UserLoader'])
+             ->assertSuccessful();
+
+        $this->assertFileExists(app_path('GraphQL/Loaders/UserLoader.php'));
+    }
+
+    public function test_make_loader_file_uses_correct_namespace_and_extends_batch_resolver(): void
+    {
+        $this->artisan('laragraph:make:loader', ['name' => 'UserLoader']);
+        $contents = file_get_contents(app_path('GraphQL/Loaders/UserLoader.php'));
+
+        $this->assertStringContainsString('namespace App\\GraphQL\\Loaders', $contents);
+        $this->assertStringContainsString('use Ayimdomnic\\Laragraph\\DataLoader\\BatchResolver;', $contents);
+        $this->assertStringContainsString('class UserLoader extends BatchResolver', $contents);
+        $this->assertStringContainsString('public function batch(array $keys): array', $contents);
+    }
 }
