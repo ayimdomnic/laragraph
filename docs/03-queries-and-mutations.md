@@ -184,6 +184,33 @@ argument:
 Validation on the fields of an object *type*, such as a `Post.excerpt(length:)` argument, is not
 automatic. Check such arguments in the field resolver, or clamp them as `PostType` does.
 
+### Reusing an existing FormRequest
+
+If you already have a `FormRequest` for the same input — say, a REST endpoint and a GraphQL
+mutation that both create the same resource — override `formRequest()` instead of duplicating
+`rules()`/`messages()`/`attributes()`:
+
+```php
+protected function formRequest(): ?string
+{
+    return RegisterRequest::class;
+}
+```
+
+The GraphQL arguments are merged onto the request as its input before `rules()` runs, so a
+`rules()` body that inspects `$this->input()` for conditional rules works unchanged.
+
+**Limitations, by design:**
+
+- **`authorize()` is never called.** A GraphQL field's own `authorize()` / `authorizeWithContext()`
+  already run beforehand — reusing the FormRequest's `authorize()` too would risk silently denying
+  requests it was never written to guard, since it typically assumes a route-bound HTTP request.
+- **`$this->route()` and `$this->user()` are unsupported** inside the reused `rules()`. The instance
+  is built directly (not resolved through the container, to avoid triggering Laravel's normal
+  validate-on-resolve behavior against the wrong request body), so only `$this->input()` /
+  `$this->all()` are populated. Keep route/user-dependent logic out of a `FormRequest` you intend to
+  share this way.
+
 ## Errors
 
 Every error is formatted by `Laragraph::formatError()` (configurable, see below) and gets an
