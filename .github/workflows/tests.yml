@@ -198,3 +198,60 @@ jobs:
         with:
           files: build/coverage.xml
           fail_ci_if_error: false
+
+  # ---------------------------------------------------------------------------
+  # Benchmarks — regression gate against a rolling baseline.
+  #
+  # `.phpbench/` (phpbench's local results store) is cached across runs under
+  # a commit-sha-keyed entry, restored via a prefix match so every run always
+  # gets the most recently stored baseline. Pull requests only ever compare
+  # against it (composer bench:compare, asserting <=15% slower / <=10% more
+  # memory — see composer.json); only pushes to master refresh and re-save it
+  # (composer bench:baseline), so a fork PR can never poison the shared cache.
+  # See benchmarks/README.md for what's benchmarked and why.
+  # ---------------------------------------------------------------------------
+  benchmarks:
+    name: "Benchmarks"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, xml, pdo, pdo_sqlite, json
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Restore the most recent benchmark baseline
+        id: bench-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .phpbench
+          key: phpbench-baseline-${{ github.sha }}
+          restore-keys: |
+            phpbench-baseline-
+
+      - name: Compare against the baseline
+        if: github.event_name == 'pull_request' && steps.bench-cache.outputs.cache-matched-key != ''
+        run: composer bench:compare
+
+      - name: No baseline stored yet — skipping comparison
+        if: github.event_name == 'pull_request' && steps.bench-cache.outputs.cache-matched-key == ''
+        run: echo "::warning::No benchmark baseline cached yet — this will compare on the next PR once master has stored one."
+
+      - name: Refresh the stored baseline
+        if: github.ref == 'refs/heads/master'
+        run: composer bench:baseline
+
+      - name: Save the benchmark baseline
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@v4
+        with:
+          path: .phpbench
+          key: phpbench-baseline-${{ github.sha }}
