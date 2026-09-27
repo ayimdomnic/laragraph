@@ -20,12 +20,16 @@ use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
 use Ayimdomnic\Laragraph\Contracts\BatchProcessorInterface;
 use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
+use Ayimdomnic\Laragraph\Contracts\PersistedQueryResolverInterface;
 use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
 use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
+use Ayimdomnic\Laragraph\Contracts\RequestParserInterface;
+use Ayimdomnic\Laragraph\Contracts\ResponseNegotiatorInterface;
 use Ayimdomnic\Laragraph\Contracts\SchemaBuilderInterface;
 use Ayimdomnic\Laragraph\Contracts\SchemaRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\SsePendingQueueInterface;
 use Ayimdomnic\Laragraph\Contracts\SubscriptionManagerInterface;
+use Ayimdomnic\Laragraph\Contracts\SubscriptionRequestHandlerInterface;
 use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
 use Ayimdomnic\Laragraph\Contracts\TypeRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\ValidationRuleRegistryInterface;
@@ -34,8 +38,11 @@ use Ayimdomnic\Laragraph\Execution\QueryExecutor;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryComplexityState;
 use Ayimdomnic\Laragraph\Http\BatchProcessor;
+use Ayimdomnic\Laragraph\Http\RequestParser;
+use Ayimdomnic\Laragraph\Http\ResponseNegotiator;
 use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
+use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryResolver;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
 use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
@@ -45,6 +52,7 @@ use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriptionRequestHandler;
 use Ayimdomnic\Laragraph\Testing\TestResponseMacros;
 use Ayimdomnic\Laragraph\Tracing\OtelSpanExporter;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
@@ -117,6 +125,10 @@ class LaragraphServiceProvider extends ServiceProvider
 
         $this->app->bind(BatchProcessorInterface::class, BatchProcessor::class);
         $this->app->bind(SubscriptionManagerInterface::class, SubscriptionManager::class);
+        $this->app->bind(RequestParserInterface::class, RequestParser::class);
+        $this->app->bind(ResponseNegotiatorInterface::class, ResponseNegotiator::class);
+        $this->app->bind(PersistedQueryResolverInterface::class, PersistedQueryResolver::class);
+        $this->app->bind(SubscriptionRequestHandlerInterface::class, SubscriptionRequestHandler::class);
 
         $this->app->singleton('laragraph', fn($app): Laragraph => new Laragraph(
             $app,
