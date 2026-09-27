@@ -13,16 +13,34 @@ use App\GraphQL\Types\FakeScaffoldModelType;
 use Ayimdomnic\Laragraph\Console\ScaffoldCommand;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\File;
 
 // ---------------------------------------------------------------------------
 // Fake model for scaffolding — avoids any DB/migration dependency
 // ---------------------------------------------------------------------------
 
+enum FakeScaffoldStatus: string
+{
+    case Draft     = 'draft';
+    case Published = 'published';
+}
+
+class FakeScaffoldAuthor extends Model
+{
+    protected $table = 'fake_scaffold_authors';
+}
+
+class FakeScaffoldComment extends Model
+{
+    protected $table = 'fake_scaffold_comments';
+}
+
 class FakeScaffoldModel extends Model
 {
     protected $table    = 'fake_scaffold_models';
-    protected $fillable = ['name', 'email', 'age', 'is_admin', 'score', 'meta', 'birth_date', 'created_at'];
+    protected $fillable = ['name', 'email', 'age', 'is_admin', 'score', 'meta', 'birth_date', 'created_at', 'status'];
     protected $casts    = [
         'age'        => 'integer',
         'is_admin'   => 'boolean',
@@ -30,7 +48,18 @@ class FakeScaffoldModel extends Model
         'meta'       => 'json',
         'birth_date' => 'date',
         'created_at' => 'datetime',
+        'status'     => FakeScaffoldStatus::class,
     ];
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(FakeScaffoldAuthor::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(FakeScaffoldComment::class);
+    }
 }
 
 /** Model whose constructor throws — exercises the catch(\Throwable) branch in extractFields(). */
@@ -236,6 +265,81 @@ PHP);
         $this->assertStringContainsString("type('JSON')", $content);       // meta => json
         $this->assertStringContainsString("type('Date')", $content);       // birth_date => date
         $this->assertStringContainsString("type('DateTime')", $content);   // created_at => datetime
+    }
+
+    // -------------------------------------------------------------------------
+    // castToGraphQLType — native PHP enum cast
+    // -------------------------------------------------------------------------
+
+    public function test_generated_type_registers_native_enum_cast(): void
+    {
+        $this->artisan('laragraph:scaffold', [
+            'model' => FakeScaffoldModel::class,
+        ])->assertSuccessful();
+
+        $content = file_get_contents(app_path('GraphQL/Types/FakeScaffoldModelType.php'));
+
+        $this->assertStringContainsString("'status' => ['type' => app('laragraph')->type('FakeScaffoldStatus')],", $content);
+    }
+
+    // -------------------------------------------------------------------------
+    // extractRelations — belongsTo + hasMany are wired up automatically
+    // -------------------------------------------------------------------------
+
+    public function test_generated_type_wires_up_a_belongs_to_relation(): void
+    {
+        $this->artisan('laragraph:scaffold', [
+            'model' => FakeScaffoldModel::class,
+        ])->assertSuccessful();
+
+        $content = file_get_contents(app_path('GraphQL/Types/FakeScaffoldModelType.php'));
+
+        $this->assertStringContainsString("'author' => ['type' => app('laragraph')->type('FakeScaffoldAuthor')],", $content);
+        $this->assertStringContainsString('protected function resolveAuthorField(mixed $root, array $args, mixed $context): mixed', $content);
+        $this->assertStringContainsString('return $this->batchRelation(\\' . FakeScaffoldModel::class . "::class, 'author', \$root, \$context);", $content);
+    }
+
+    public function test_generated_type_wires_up_a_has_many_relation_as_a_list(): void
+    {
+        $this->artisan('laragraph:scaffold', [
+            'model' => FakeScaffoldModel::class,
+        ])->assertSuccessful();
+
+        $content = file_get_contents(app_path('GraphQL/Types/FakeScaffoldModelType.php'));
+
+        $this->assertStringContainsString(
+            "'comments' => ['type' => GType::listOf(app('laragraph')->type('FakeScaffoldComment'))],",
+            $content,
+        );
+        $this->assertStringContainsString('protected function resolveCommentsField(mixed $root, array $args, mixed $context): mixed', $content);
+        $this->assertStringContainsString('return $this->batchRelation(\\' . FakeScaffoldModel::class . "::class, 'comments', \$root, \$context);", $content);
+    }
+
+    public function test_scaffold_falls_back_to_no_relations_when_model_throws(): void
+    {
+        $this->artisan('laragraph:scaffold', [
+            'model' => ThrowingScaffoldModel::class,
+        ])->assertSuccessful();
+
+        // Doesn't blow up — the constructor throw is caught, same as extractFields().
+        $this->assertFileExists(app_path('GraphQL/Types/ThrowingScaffoldModelType.php'));
+    }
+
+    public function test_generated_type_with_relations_is_valid_loadable_php(): void
+    {
+        $this->artisan('laragraph:scaffold', [
+            'model' => FakeScaffoldModel::class,
+        ])->assertSuccessful();
+
+        $path = app_path('GraphQL/Types/FakeScaffoldModelType.php');
+        require_once $path;
+
+        // Instantiating doesn't eagerly touch app('laragraph') — 'fields' is a
+        // lazily-invoked closure the underlying ObjectType only calls once the
+        // schema actually needs this type's fields.
+        $type = new FakeScaffoldModelType();
+
+        $this->assertInstanceOf(FakeScaffoldModelType::class, $type);
     }
 
     // -------------------------------------------------------------------------
