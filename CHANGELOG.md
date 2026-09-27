@@ -2,7 +2,7 @@
 
 All notable changes to `ayimdomnic/laragraph` are documented here.
 
-## [Unreleased]
+## [4.2.0](https://github.com/ayimdomnic/laragraph/compare/v4.1.0...v4.2.0) (2026-09-27)
 
 ### Added
 
@@ -12,7 +12,9 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
   persisted-query resolution, subscription registration) — no public API
   changes; `Laragraph`'s facade methods, `config('laragraph.error_formatter'
   /errors_handler')`'s published array-callables, and the HTTP contract are
-  all unchanged
+  all unchanged. Includes an optional `Contracts\LaragraphManager` interface,
+  bound as a container alias for app code that prefers to depend on an
+  abstraction rather than the concrete `Laragraph` class
 * **phpstan:** ship a first-party PHPStan rule for unregistered type names
 * **scaffold:** wire up Eloquent relations and native enum casts in
   `laragraph:scaffold`
