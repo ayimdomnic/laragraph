@@ -2,6 +2,16 @@
 
 All notable changes to `ayimdomnic/laragraph` are documented here.
 
+## [Unreleased]
+
+### Changed
+
+* **deps:** `open-telemetry/api` moves from a required to a suggested dependency — only the
+  optional `laragraph.tracing.driver => 'otel'` needs it; the default `'apollo'` driver needs
+  nothing extra. Enabling the `'otel'` driver without the package installed now throws a clear
+  `MissingOptionalDependencyException` naming the exact `composer require` to run, instead of a
+  raw autoload error.
+
 ## [4.2.0](https://github.com/ayimdomnic/laragraph/compare/v4.1.0...v4.2.0) (2026-09-27)
 
 ### Added

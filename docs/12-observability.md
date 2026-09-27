@@ -155,7 +155,15 @@ details. Enable it in development, or temporarily in staging, not on a public pr
 ### The `otel` driver
 
 Apollo deprecated the Apollo Tracing format years ago in favor of OpenTelemetry; `'otel'` is the
-recommended choice for new projects:
+recommended choice for new projects.
+
+`open-telemetry/api` — the lightweight interfaces-plus-no-op package this driver calls into — is a
+**suggested, not required**, dependency: the default `'apollo'` driver needs none of it, so it
+isn't installed for you automatically. Add it once, then enable the driver:
+
+```bash
+composer require open-telemetry/api
+```
 
 ```php
 'tracing' => [
@@ -165,11 +173,14 @@ recommended choice for new projects:
 ],
 ```
 
+Enabling `'otel'` without installing the package throws a clear
+`MissingOptionalDependencyException` naming the exact `composer require` to run, rather than a raw
+autoload error.
+
 This exports real OpenTelemetry spans instead — one root span per GraphQL operation
 (`graphql.operation.name`/`.type`, `graphql.document`, the schema name as attributes; `Error`
 status when the response has errors), and one child span per resolver
-(`graphql.field.name`/`.path`, `graphql.type.name`, `graphql.field.return_type`). Laragraph depends
-only on `open-telemetry/api` — the lightweight interfaces-plus-no-op package — and calls
+(`graphql.field.name`/`.path`, `graphql.type.name`, `graphql.field.return_type`). Laragraph calls
 `OpenTelemetry\API\Globals::tracerProvider()`; your app wires up its own OTel SDK and exporter the
 standard way, e.g. in a service provider:
 

@@ -26,13 +26,13 @@
         "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
         "illuminate/validation": "^10.0|^11.0|^12.0|^13.0",
-        "open-telemetry/api": "^1.0",
         "overblog/dataloader-php": "^1.0",
         "webonyx/graphql-php": "^15.0"
     },
     "require-dev": {
         "larastan/larastan": "^3.10",
         "laravel/pint": "^1.32",
+        "open-telemetry/api": "^1.0",
         "open-telemetry/sdk": "^1.0",
         "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
         "orchestra/workbench": "^8.0|^9.0|^10.0|^11.0",
@@ -40,6 +40,9 @@
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^10.5|^11.5|^12.5",
         "rector/rector": "^2.6"
+    },
+    "suggest": {
+        "open-telemetry/api": "Required only when laragraph.tracing.driver is set to 'otel'; the default 'apollo' driver needs nothing extra."
     },
     "autoload": {
         "psr-4": {

@@ -18,6 +18,7 @@ use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Events\QueryError;
 use Ayimdomnic\Laragraph\Events\QueryExecuted;
 use Ayimdomnic\Laragraph\Events\QueryExecuting;
+use Ayimdomnic\Laragraph\Exceptions\MissingOptionalDependencyException;
 use Ayimdomnic\Laragraph\Extensions\QueryComplexityExtension;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
@@ -41,6 +42,7 @@ use GraphQL\Validator\Rules\QueryComplexity;
 use GraphQL\Validator\Rules\QueryDepth;
 use GraphQL\Validator\Rules\ValidationRule;
 use Illuminate\Http\Request;
+use OpenTelemetry\API\Globals;
 
 /**
  * The GraphQL query execution engine — extracted from the execution
@@ -142,6 +144,16 @@ final class QueryExecutor implements QueryExecutorInterface
             }
 
             if (config('laragraph.tracing.enabled') && config('laragraph.tracing.driver', 'apollo') === 'otel') {
+                // open-telemetry/api is a suggested, not required, dependency —
+                // only the 'otel' driver needs it. A clear error beats a raw
+                // "Class not found" autoload fatal.
+                if (!class_exists(Globals::class)) {
+                    throw MissingOptionalDependencyException::forPackage(
+                        'open-telemetry/api',
+                        "The 'otel' tracing driver",
+                    );
+                }
+
                 $this->otel->export(
                     $this->tracing,
                     $query,
