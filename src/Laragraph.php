@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph;
 
+use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
+use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
+use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
+use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderPromiseAdapter;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Events\QueryError;
@@ -13,7 +17,6 @@ use Ayimdomnic\Laragraph\Events\SchemaBuilt;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\SchemaException;
-use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryComplexityExtension;
 use Ayimdomnic\Laragraph\Extensions\QueryTimingExtension;
 use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
@@ -26,7 +29,6 @@ use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Support\DefaultFieldResolver;
 use Ayimdomnic\Laragraph\Support\DocumentCache;
 use Ayimdomnic\Laragraph\Support\ErrorLocaleResolver;
-use Ayimdomnic\Laragraph\Tracing\OtelSpanExporter;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Tracing\TracingExtension;
 use Ayimdomnic\Laragraph\Validation\MaxAliasesRule;
@@ -72,9 +74,6 @@ class Laragraph
 
     /** @var array<string, true> Documents that passed the document-only validation rules, see prevalidate(). */
     protected array $validated = [];
-
-    /** This execution's QueryComplexity rule instance, if one ran — see partitionValidationRules(). */
-    protected ?QueryComplexity $lastQueryComplexity = null;
 
     public function __construct(protected readonly Container $container) {}
 
@@ -155,7 +154,7 @@ class Laragraph
         $resolvedSchemaName = $schemaName ?? config('laragraph.default_schema', 'default');
 
         if (config('laragraph.tracing.enabled')) {
-            $this->container->make(TracingCollector::class)->reset();
+            $this->container->make(TracingCollectorInterface::class)->reset();
         }
 
         event(new QueryExecuting($query, $variables, $operationName, $resolvedSchemaName));
@@ -206,8 +205,8 @@ class Laragraph
             }
 
             if (config('laragraph.tracing.enabled') && config('laragraph.tracing.driver', 'apollo') === 'otel') {
-                $this->container->make(OtelSpanExporter::class)->export(
-                    $this->container->make(TracingCollector::class),
+                $this->container->make(OtelSpanExporterInterface::class)->export(
+                    $this->container->make(TracingCollectorInterface::class),
                     $query,
                     $operationName,
                     $resolvedSchemaName,
@@ -273,17 +272,17 @@ class Laragraph
         // The 'otel' driver exports real spans out-of-band (see execute()) instead
         // of adding extensions.tracing to the response body.
         if (config('laragraph.tracing.enabled') && config('laragraph.tracing.driver', 'apollo') !== 'otel') {
-            $ext = new TracingExtension($this->container->make(TracingCollector::class));
+            $ext = new TracingExtension($this->container->make(TracingCollectorInterface::class));
             $extensions[$ext->key()] = $ext->get($context);
         }
 
         if (!empty($config['query_complexity'])) {
-            $ext = new QueryComplexityExtension($this->lastQueryComplexity);
+            $ext = new QueryComplexityExtension($this->container->make(QueryComplexityStateInterface::class));
             $extensions[$ext->key()] = $ext->get($context);
         }
 
         // User-registered custom extensions
-        foreach ($this->container->make(ExtensionRegistry::class)->collect($context) as $key => $data) {
+        foreach ($this->container->make(ExtensionRegistryInterface::class)->collect($context) as $key => $data) {
             $extensions[$key] = $data;
         }
 
@@ -470,7 +469,9 @@ class Laragraph
         // Captured for QueryComplexityExtension — whichever instance actually
         // ends up in $dynamic, built-in or a user override of the same class.
         $complexityRule = $dynamic[QueryComplexity::class] ?? null;
-        $this->lastQueryComplexity = $complexityRule instanceof QueryComplexity ? $complexityRule : null;
+        $this->container->make(QueryComplexityStateInterface::class)->setCurrent(
+            $complexityRule instanceof QueryComplexity ? $complexityRule : null,
+        );
 
         return [array_values($static), array_values($dynamic)];
     }

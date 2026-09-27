@@ -195,6 +195,23 @@ class ResponseExtensionsTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Key order — locked in as a regression net, not because anything here
+    // currently reorders them.
+    // -------------------------------------------------------------------------
+
+    public function test_built_in_extension_keys_appear_in_a_stable_order(): void
+    {
+        $this->app['config']->set('laragraph.extensions.request_id', true);
+        $this->app['config']->set('laragraph.extensions.query_timing', true);
+        $this->app['config']->set('laragraph.extensions.query_complexity', true);
+        $this->app['config']->set('laragraph.security.query_max_complexity', 500);
+
+        $result = $this->graphql('{ rePing }');
+
+        $this->assertSame(['requestId', 'timing', 'queryComplexity'], array_keys($result['extensions']));
+    }
+
+    // -------------------------------------------------------------------------
     // Custom user-registered extension
     // -------------------------------------------------------------------------
 

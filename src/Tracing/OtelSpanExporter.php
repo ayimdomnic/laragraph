@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tracing;
 
+use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
+use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
 use Ayimdomnic\Laragraph\Support\Operation;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanKind;
@@ -27,10 +29,10 @@ use OpenTelemetry\Context\Context;
  * consuming application wires up its own SDK/exporter the standard OTel way.
  * With no SDK configured, every call here is a cheap no-op.
  */
-final class OtelSpanExporter
+final class OtelSpanExporter implements OtelSpanExporterInterface
 {
     public function export(
-        TracingCollector $collector,
+        TracingCollectorInterface $collector,
         string $query,
         ?string $operationName,
         string $schemaName,

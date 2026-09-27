@@ -17,8 +17,13 @@ use Ayimdomnic\Laragraph\Console\SchemaDiffCommand;
 use Ayimdomnic\Laragraph\Console\SubscriptionMakeCommand;
 use Ayimdomnic\Laragraph\Console\TypeMakeCommand;
 use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
+use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
+use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
+use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
+use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
 use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
+use Ayimdomnic\Laragraph\Extensions\QueryComplexityState;
 use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
@@ -28,6 +33,7 @@ use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Testing\TestResponseMacros;
+use Ayimdomnic\Laragraph\Tracing\OtelSpanExporter;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Composer\InstalledVersions;
@@ -54,8 +60,15 @@ class LaragraphServiceProvider extends ServiceProvider
         $this->app->alias('laragraph', Laragraph::class);
 
         $this->app->singleton(ExtensionRegistry::class, fn(): ExtensionRegistry => new ExtensionRegistry());
+        $this->app->alias(ExtensionRegistry::class, ExtensionRegistryInterface::class);
 
         $this->app->singleton(TracingCollector::class, fn(): TracingCollector => new TracingCollector());
+        $this->app->alias(TracingCollector::class, TracingCollectorInterface::class);
+
+        $this->app->singleton(QueryComplexityState::class, fn(): QueryComplexityState => new QueryComplexityState());
+        $this->app->alias(QueryComplexityState::class, QueryComplexityStateInterface::class);
+
+        $this->app->bind(OtelSpanExporterInterface::class, OtelSpanExporter::class);
 
         $this->app->singleton(ValidationRuleRegistry::class, function ($app): ValidationRuleRegistry {
             $registry = new ValidationRuleRegistry();
