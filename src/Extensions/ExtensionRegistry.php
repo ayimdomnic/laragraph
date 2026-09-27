@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Extensions;
 
+use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
 use Ayimdomnic\Laragraph\Laragraph;
 
 /**
@@ -21,7 +22,7 @@ use Ayimdomnic\Laragraph\Laragraph;
  * `laragraph.extensions` in your config and are applied automatically by
  * {@see Laragraph::execute()}.
  */
-final class ExtensionRegistry
+final class ExtensionRegistry implements ExtensionRegistryInterface
 {
     /** @var list<GraphQLExtensionInterface> */
     private array $extensions = [];

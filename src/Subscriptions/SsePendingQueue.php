@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Subscriptions;
 
+use Ayimdomnic\Laragraph\Contracts\SsePendingQueueInterface;
 use Ayimdomnic\Laragraph\Controllers\LaragraphController;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
@@ -23,7 +24,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
  * the moderate concurrency a single subscriber's own queue sees, falling
  * back to an unlocked update on a cache store without lock support.
  */
-final readonly class SsePendingQueue
+final readonly class SsePendingQueue implements SsePendingQueueInterface
 {
     private const PREFIX = 'laragraph_sse_pending:';
 

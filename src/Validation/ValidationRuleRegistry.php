@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Validation;
 
+use Ayimdomnic\Laragraph\Contracts\ValidationRuleRegistryInterface;
 use Ayimdomnic\Laragraph\Laragraph;
 use GraphQL\Validator\Rules\ValidationRule;
 
@@ -22,7 +23,7 @@ use GraphQL\Validator\Rules\ValidationRule;
  *   // Or in a service provider:
  *   Laragraph::addValidationRule(new MyCustomRule());
  */
-class ValidationRuleRegistry
+class ValidationRuleRegistry implements ValidationRuleRegistryInterface
 {
     /** @var array<int, string|ValidationRule> */
     protected array $rules = [];

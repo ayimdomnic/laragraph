@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tracing;
 
+use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
 use Ayimdomnic\Laragraph\Extensions\GraphQLExtensionInterface;
 
 /**
@@ -18,7 +19,7 @@ use Ayimdomnic\Laragraph\Extensions\GraphQLExtensionInterface;
  */
 final readonly class TracingExtension implements GraphQLExtensionInterface
 {
-    public function __construct(private TracingCollector $collector) {}
+    public function __construct(private TracingCollectorInterface $collector) {}
 
     public function key(): string
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tracing;
 
+use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\LaragraphServiceProvider;
@@ -25,7 +26,7 @@ use GraphQL\Type\Definition\ResolveInfo;
  * {@see SchemaBuilder}) that has no access to
  * the per-request context object.
  */
-final class TracingCollector
+final class TracingCollector implements TracingCollectorInterface
 {
     private ?int $startNs = null;
 

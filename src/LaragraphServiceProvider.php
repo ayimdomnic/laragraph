@@ -17,18 +17,46 @@ use Ayimdomnic\Laragraph\Console\SchemaDiffCommand;
 use Ayimdomnic\Laragraph\Console\SubscriptionMakeCommand;
 use Ayimdomnic\Laragraph\Console\TypeMakeCommand;
 use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
+use Ayimdomnic\Laragraph\Contracts\BatchProcessorInterface;
+use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
+use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
+use Ayimdomnic\Laragraph\Contracts\PersistedQueryResolverInterface;
+use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
+use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
+use Ayimdomnic\Laragraph\Contracts\RequestParserInterface;
+use Ayimdomnic\Laragraph\Contracts\ResponseNegotiatorInterface;
+use Ayimdomnic\Laragraph\Contracts\SchemaBuilderInterface;
+use Ayimdomnic\Laragraph\Contracts\SchemaRegistryInterface;
+use Ayimdomnic\Laragraph\Contracts\SsePendingQueueInterface;
+use Ayimdomnic\Laragraph\Contracts\SubscriptionManagerInterface;
+use Ayimdomnic\Laragraph\Contracts\SubscriptionRequestHandlerInterface;
+use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
+use Ayimdomnic\Laragraph\Contracts\TypeRegistryInterface;
+use Ayimdomnic\Laragraph\Contracts\ValidationRuleRegistryInterface;
 use Ayimdomnic\Laragraph\Discovery\Discover;
+use Ayimdomnic\Laragraph\Execution\QueryExecutor;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
+use Ayimdomnic\Laragraph\Extensions\QueryComplexityState;
+use Ayimdomnic\Laragraph\Http\BatchProcessor;
+use Ayimdomnic\Laragraph\Http\RequestParser;
+use Ayimdomnic\Laragraph\Http\ResponseNegotiator;
 use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
+use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryResolver;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
+use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Schema\SchemaRegistry;
 use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
 use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
+use Ayimdomnic\Laragraph\Subscriptions\SubscriptionRequestHandler;
 use Ayimdomnic\Laragraph\Testing\TestResponseMacros;
+use Ayimdomnic\Laragraph\Tracing\OtelSpanExporter;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
+use Ayimdomnic\Laragraph\Types\TypeRegistry;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Composer\InstalledVersions;
 use Illuminate\Broadcasting\BroadcastManager;
@@ -49,13 +77,30 @@ class LaragraphServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/laragraph.php', 'laragraph');
 
-        $this->app->singleton('laragraph', fn($app): Laragraph => new Laragraph($app));
+        $this->app->singleton(TypeRegistry::class, fn($app): TypeRegistry => new TypeRegistry($app));
+        $this->app->alias(TypeRegistry::class, TypeRegistryInterface::class);
 
-        $this->app->alias('laragraph', Laragraph::class);
+        $this->app->singleton(SchemaBuilder::class, fn($app): SchemaBuilder => new SchemaBuilder(
+            $app->make(TypeRegistryInterface::class),
+            $app,
+        ));
+        $this->app->alias(SchemaBuilder::class, SchemaBuilderInterface::class);
+
+        $this->app->singleton(SchemaRegistry::class, fn($app): SchemaRegistry => new SchemaRegistry(
+            $app->make(SchemaBuilderInterface::class),
+        ));
+        $this->app->alias(SchemaRegistry::class, SchemaRegistryInterface::class);
 
         $this->app->singleton(ExtensionRegistry::class, fn(): ExtensionRegistry => new ExtensionRegistry());
+        $this->app->alias(ExtensionRegistry::class, ExtensionRegistryInterface::class);
 
         $this->app->singleton(TracingCollector::class, fn(): TracingCollector => new TracingCollector());
+        $this->app->alias(TracingCollector::class, TracingCollectorInterface::class);
+
+        $this->app->singleton(QueryComplexityState::class, fn(): QueryComplexityState => new QueryComplexityState());
+        $this->app->alias(QueryComplexityState::class, QueryComplexityStateInterface::class);
+
+        $this->app->bind(OtelSpanExporterInterface::class, OtelSpanExporter::class);
 
         $this->app->singleton(ValidationRuleRegistry::class, function ($app): ValidationRuleRegistry {
             $registry = new ValidationRuleRegistry();
@@ -66,6 +111,33 @@ class LaragraphServiceProvider extends ServiceProvider
 
             return $registry;
         });
+        $this->app->alias(ValidationRuleRegistry::class, ValidationRuleRegistryInterface::class);
+
+        $this->app->singleton(QueryExecutor::class, fn($app): QueryExecutor => new QueryExecutor(
+            $app->make(SchemaRegistryInterface::class),
+            $app->make(ExtensionRegistryInterface::class),
+            $app->make(ValidationRuleRegistryInterface::class),
+            $app->make(TracingCollectorInterface::class),
+            $app->make(OtelSpanExporterInterface::class),
+            $app->make(QueryComplexityStateInterface::class),
+        ));
+        $this->app->alias(QueryExecutor::class, QueryExecutorInterface::class);
+
+        $this->app->bind(BatchProcessorInterface::class, BatchProcessor::class);
+        $this->app->bind(SubscriptionManagerInterface::class, SubscriptionManager::class);
+        $this->app->bind(RequestParserInterface::class, RequestParser::class);
+        $this->app->bind(ResponseNegotiatorInterface::class, ResponseNegotiator::class);
+        $this->app->bind(PersistedQueryResolverInterface::class, PersistedQueryResolver::class);
+        $this->app->bind(SubscriptionRequestHandlerInterface::class, SubscriptionRequestHandler::class);
+
+        $this->app->singleton('laragraph', fn($app): Laragraph => new Laragraph(
+            $app,
+            $app->make(SchemaRegistryInterface::class),
+            $app->make(TypeRegistryInterface::class),
+            $app->make(QueryExecutorInterface::class),
+        ));
+
+        $this->app->alias('laragraph', Laragraph::class);
 
         $this->app->singleton(PersistedQueryStoreInterface::class, function ($app): ArrayPersistedQueryStore|CachePersistedQueryStore {
             $driver = config('laragraph.persisted_queries.store', 'cache');
@@ -90,6 +162,7 @@ class LaragraphServiceProvider extends ServiceProvider
         $this->app->singleton(SsePendingQueue::class, fn($app): SsePendingQueue => new SsePendingQueue(
             $app['cache']->store(config('laragraph.subscriptions.cache_store')),
         ));
+        $this->app->alias(SsePendingQueue::class, SsePendingQueueInterface::class);
     }
 
     /**

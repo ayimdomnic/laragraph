@@ -4,20 +4,21 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Http;
 
+use Ayimdomnic\Laragraph\Contracts\BatchProcessorInterface;
+use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
-use Ayimdomnic\Laragraph\Laragraph;
 
 /**
  * Processes a batch of GraphQL operations against a single schema.
  *
  * Enforces the `laragraph.batching.enabled` toggle and the
  * `laragraph.batching.max_operations` ceiling before dispatching
- * each operation to {@see Laragraph::execute()}.
+ * each operation to {@see QueryExecutorInterface::execute()}.
  */
-class BatchProcessor
+class BatchProcessor implements BatchProcessorInterface
 {
-    public function __construct(protected readonly Laragraph $laragraph) {}
+    public function __construct(protected readonly QueryExecutorInterface $queryExecutor) {}
 
     /**
      * Execute a batch of GraphQL operations and return an indexed array of results.
@@ -47,7 +48,7 @@ class BatchProcessor
             throw new BatchLimitExceededException($max);
         }
 
-        $executor ??= fn(array $op): array => $this->laragraph->execute(
+        $executor ??= fn(array $op): array => $this->queryExecutor->execute(
             query: (string) ($op['query'] ?? ''),
             context: $context,
             variables: is_array($op['variables'] ?? null) ? $op['variables'] : [],

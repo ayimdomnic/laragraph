@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Extensions;
 
+use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
 use GraphQL\Validator\Rules\QueryComplexity;
 
 /**
@@ -28,7 +29,7 @@ use GraphQL\Validator\Rules\QueryComplexity;
  */
 final readonly class QueryComplexityExtension implements GraphQLExtensionInterface
 {
-    public function __construct(private ?QueryComplexity $rule) {}
+    public function __construct(private QueryComplexityStateInterface $state) {}
 
     public function key(): string
     {
@@ -40,13 +41,15 @@ final readonly class QueryComplexityExtension implements GraphQLExtensionInterfa
      */
     public function get(array $context = []): array
     {
-        if (!$this->rule instanceof QueryComplexity) {
+        $rule = $this->state->current();
+
+        if (!$rule instanceof QueryComplexity) {
             return [];
         }
 
         return [
-            'cost'    => $this->rule->getQueryComplexity(),
-            'maxCost' => $this->rule->getMaxQueryComplexity(),
+            'cost'    => $rule->getQueryComplexity(),
+            'maxCost' => $rule->getMaxQueryComplexity(),
         ];
     }
 }

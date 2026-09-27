@@ -66,7 +66,10 @@ final class EloquentRelationLoader extends BatchResolver
         }
 
         // One query for every parent that does not already have the relation loaded.
-        (new Collection(array_values($parents)))->loadMissing($this->relation);
+        // loadMissing() only needs to iterate the parents, not index them
+        // sequentially, so building the Collection from $parents directly
+        // avoids an extra array_values() copy on every batch().
+        Collection::make($parents)->loadMissing($this->relation);
 
         $relation = $this->relation;
 

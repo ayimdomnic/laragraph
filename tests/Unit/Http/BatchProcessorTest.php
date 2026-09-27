@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Unit\Http;
 
+use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Http\BatchProcessor;
-use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Tests\TestCase;
 
 class BatchProcessorTest extends TestCase
@@ -22,9 +22,9 @@ class BatchProcessorTest extends TestCase
     // Helpers
     // -------------------------------------------------------------------------
 
-    private function mockLaragraph(): Laragraph
+    private function mockLaragraph(): QueryExecutorInterface
     {
-        return \Mockery::mock(Laragraph::class);
+        return \Mockery::mock(QueryExecutorInterface::class);
     }
 
     // -------------------------------------------------------------------------

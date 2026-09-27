@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
+use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
 use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\Laragraph as LaragraphManager;
 use Ayimdomnic\Laragraph\Support\Query;
@@ -64,7 +65,7 @@ class ValidationCacheTest extends TestCase
 
     private function validatedCount(): int
     {
-        return count((fn() => $this->validated)->call(app('laragraph')));
+        return count((fn() => $this->validated)->call(app(QueryExecutorInterface::class)));
     }
 
     public function test_a_valid_document_is_validated_once_per_worker(): void

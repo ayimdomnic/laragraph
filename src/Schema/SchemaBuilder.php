@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Schema;
 
+use Ayimdomnic\Laragraph\Contracts\SchemaBuilderInterface;
+use Ayimdomnic\Laragraph\Contracts\TypeRegistryInterface;
 use Ayimdomnic\Laragraph\Discovery\Discover;
-use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Support\Field;
 use Ayimdomnic\Laragraph\Support\Mutation;
 use Ayimdomnic\Laragraph\Support\Query;
@@ -22,10 +23,10 @@ use Illuminate\Contracts\Container\Container;
 /**
  * Builds a GraphQL\Type\Schema from a Laragraph schema configuration array.
  */
-class SchemaBuilder
+class SchemaBuilder implements SchemaBuilderInterface
 {
     public function __construct(
-        protected readonly Laragraph $manager,
+        protected readonly TypeRegistryInterface $types,
         protected readonly Container $container,
     ) {}
 
@@ -72,7 +73,7 @@ class SchemaBuilder
             }
 
             if (isset($ownAliases[$name])) {
-                $type = $this->manager->type($name);
+                $type = $this->types->type($name);
 
                 if ($type instanceof NamedType && $type->name() === $name) {
                     return $type;
@@ -221,12 +222,12 @@ class SchemaBuilder
 
         foreach ($discoveredTypes as $alias => $class) {
             if (!isset($explicit[$class])) {
-                $aliases[] = $this->manager->addType($class, $alias);
+                $aliases[] = $this->types->addType($class, $alias);
             }
         }
 
         foreach ($typeClasses as $alias => $class) {
-            $aliases[] = $this->manager->addType($class, is_string($alias) ? $alias : null);
+            $aliases[] = $this->types->addType($class, is_string($alias) ? $alias : null);
         }
 
         return array_values(array_unique($aliases));
@@ -241,7 +242,7 @@ class SchemaBuilder
      */
     protected function scalarOverrides(?array $aliases = null): array
     {
-        $aliases   = array_fill_keys($aliases ?? array_keys($this->manager->getTypes()), true);
+        $aliases   = array_fill_keys($aliases ?? array_keys($this->types->getTypes()), true);
         $overrides = [];
 
         foreach (Type::builtInScalars() as $name => $builtIn) {
@@ -249,7 +250,7 @@ class SchemaBuilder
                 continue;
             }
 
-            $type = $this->manager->type($name);
+            $type = $this->types->type($name);
 
             if ($type instanceof ScalarType && $type->name === $name && $type !== $builtIn) {
                 $overrides[] = $type;
@@ -266,8 +267,8 @@ class SchemaBuilder
     protected function resolveAllTypeInstances(?array $aliases = null): array
     {
         return array_map(
-            fn(string $name): Type => $this->manager->type($name),
-            $aliases ?? array_keys($this->manager->getTypes()),
+            fn(string $name): Type => $this->types->type($name),
+            $aliases ?? array_keys($this->types->getTypes()),
         );
     }
 }
