@@ -7,6 +7,7 @@ namespace Tests\Octane;
 use App\Enums\UserRole;
 use App\Models\Organization;
 use App\Models\User;
+use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
 use Ayimdomnic\Laragraph\Events\SchemaBuilt;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionMessage;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
@@ -119,7 +120,7 @@ class OctaneTest extends TestCase
     {
         $this->handle([['{ me { id } }'], ['{ me { id } }'], ['{ me { id } }']]);
 
-        $validated = (fn (): array => $this->validated)->call($this->app->make('laragraph'));
+        $validated = (fn (): array => $this->validated)->call($this->app->make(QueryExecutorInterface::class));
         $this->assertCount(1, $validated);
     }
 

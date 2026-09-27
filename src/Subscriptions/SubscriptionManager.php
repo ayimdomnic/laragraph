@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Subscriptions;
 
+use Ayimdomnic\Laragraph\Contracts\QueryExecutorInterface;
+use Ayimdomnic\Laragraph\Contracts\SsePendingQueueInterface;
 use Ayimdomnic\Laragraph\Contracts\SubscriptionManagerInterface;
 use Ayimdomnic\Laragraph\Controllers\LaragraphController;
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
-use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Support\Subscription;
 use GraphQL\Error\DebugFlag;
 use GraphQL\Executor\ExecutionResult;
@@ -29,9 +30,9 @@ final readonly class SubscriptionManager implements SubscriptionManagerInterface
 {
     public function __construct(
         private SubscriberStoreInterface $store,
-        private Laragraph $laragraph,
+        private QueryExecutorInterface $executor,
         private SubscriberSandbox $sandbox,
-        private SsePendingQueue $ssePendingQueue,
+        private SsePendingQueueInterface $ssePendingQueue,
     ) {}
 
     /**
@@ -123,7 +124,7 @@ final readonly class SubscriptionManager implements SubscriptionManagerInterface
         $count = 0;
 
         foreach ($this->store->subscribers($channel) as $subscriberId => $record) {
-            $result = $this->sandbox->run($record['auth'] ?? null, fn(GraphQLContext $context): ExecutionResult => $this->laragraph->executeQuery(
+            $result = $this->sandbox->run($record['auth'] ?? null, fn(GraphQLContext $context): ExecutionResult => $this->executor->executeQuery(
                 query: $record['query'],
                 context: $context,
                 variables: $record['variables'],
