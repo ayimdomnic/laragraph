@@ -14,6 +14,39 @@ Laragraph gives Laravel developers a clean, expressive, **code-first** API for b
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Why Laragraph?](#why-laragraph)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Native PHP Enums](#native-php-enums)
+- [GraphiQL](#graphiql)
+- [Artisan Generators](#artisan-generators)
+- [Deploying](#deploying)
+- [Pagination](#pagination)
+- [N+1-Safe Eloquent Relations](#n1-safe-eloquent-relations)
+- [Authorization](#authorization)
+- [Validation](#validation)
+- [Error Handling & Localization](#error-handling--localization)
+- [Built-in Scalars](#built-in-scalars)
+- [Multiple Schemas](#multiple-schemas)
+- [Security](#security)
+- [GraphQL over HTTP](#graphql-over-http)
+- [Response Cache](#response-cache)
+- [Persisted Queries](#persisted-queries)
+- [Batched Queries](#batched-queries)
+- [File Uploads](#file-uploads)
+- [Facade](#facade)
+- [Subscriptions](#subscriptions)
+- [Tracing](#tracing)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
 ## Features
 
 | Capability | Status |
@@ -783,7 +816,11 @@ enforces 100% line coverage, and fails on any PHP deprecation.
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome!
+Contributions, issues, and feature requests are welcome! See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the local dev loop and the quality
+gate every PR needs to pass, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+for community expectations. Found a security issue? See
+[SECURITY.md](SECURITY.md) instead of opening a public issue.
 
 ---
 

@@ -12,14 +12,14 @@ this repository — so the samples are known to work.
 
 **Start here**
 
-1. [Getting started](01-getting-started.md) — install, your first type, query and mutation, and how requests flow
+1. [Getting started](01-getting-started.md) — install, your first type, query and mutation, how requests flow, and scaffolding a type/queries/mutations (with relations and enum casts) from an Eloquent model
 2. [Types](02-types.md) — object, input, enum (including native PHP enums), interface and union types, scalars, and how types are registered
-3. [Queries & mutations](03-queries-and-mutations.md) — fields, arguments, resolvers, the context, validation, errors, deprecation
+3. [Queries & mutations](03-queries-and-mutations.md) — fields, arguments, resolvers, the context, validation (including reusing an existing FormRequest), errors, deprecation
 
 **Building a real API**
 
 4. [Authentication & authorization](04-authentication-and-authorization.md) — guards, `authorize()`, policies, field-level privacy
-5. [Relations & DataLoaders](05-relations-and-dataloaders.md) — solving N+1 with `batchRelation()` and custom loaders
+5. [Relations & DataLoaders](05-relations-and-dataloaders.md) — solving N+1 with `batchRelation()` and custom loaders (generate one with `laragraph:make:loader`)
 6. [Pagination](06-pagination.md) — Relay cursor connections, simple pagination, and Node re-fetching
 7. [Subscriptions](07-subscriptions.md) — real-time updates over Laravel Broadcasting, or plain HTTP SSE
 8. [The HTTP API](08-http-api.md) — GraphQL over HTTP, file uploads, batching, persisted queries, error codes
@@ -30,7 +30,7 @@ this repository — so the samples are known to work.
 10. [Security](10-security.md) — defaults, limits, and a hardening checklist
 11. [Performance & caching](11-performance-and-caching.md) — response cache, discovery cache, Octane
 12. [Observability](12-observability.md) — events, response extensions, tracing, logging
-13. [Testing](13-testing.md) — testing your GraphQL API with PHPUnit, plus shippable test helpers
+13. [Testing](13-testing.md) — testing your GraphQL API with PHPUnit, shippable test helpers, and a first-party PHPStan rule for unregistered type names
 14. [Deployment](14-deployment.md) — artisan commands, CI schema-diff gate, queues, broadcasting, checklists
 
 **Reference**
