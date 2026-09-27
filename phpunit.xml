@@ -13,6 +13,9 @@
     <testsuite name="Performance">
       <directory>tests/Performance</directory>
     </testsuite>
+    <testsuite name="PHPStan">
+      <directory>tests/PHPStan</directory>
+    </testsuite>
   </testsuites>
   <source>
     <include>

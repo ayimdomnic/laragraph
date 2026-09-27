@@ -61,6 +61,11 @@
             "aliases": {
                 "Laragraph": "Ayimdomnic\\Laragraph\\Facades\\Laragraph"
             }
+        },
+        "phpstan": {
+            "includes": [
+                "phpstan-extension.neon"
+            ]
         }
     },
     "minimum-stability": "dev",

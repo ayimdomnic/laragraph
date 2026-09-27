@@ -240,3 +240,29 @@ public function test_the_schema_has_not_changed_unexpectedly(): void
 
 Regenerate the snapshot on purpose with
 `php artisan laragraph:schema:export --output=schema.graphql` when the change is intended.
+
+## Static analysis
+
+Laragraph ships a PHPStan rule that catches a typo'd type name in `Laragraph::type('...')` /
+`app('laragraph')->type('...')` — the kind of mistake that otherwise only surfaces at request time,
+on whichever field happens to reference it.
+
+**Install:** if you have [`phpstan/extension-installer`](https://github.com/phpstan/extension-installer),
+nothing to do — it's discovered automatically. Otherwise add it manually to your `phpstan.neon`:
+
+```neon
+includes:
+    - vendor/ayimdomnic/laragraph/phpstan-extension.neon
+```
+
+**How it works, and its one blind spot:** the rule can't safely bootstrap your application inside
+PHPStan's process just to ask it which type names are registered, so it builds a best-effort set
+from static/textual sources instead — `config('laragraph.types')` (and every per-schema `types`
+array), plus every class under your discovery directory (`app/GraphQL/Types` by default), matched
+either by its class basename with a trailing `Type` stripped (`UserType` → `User`) or by a `NAME`
+constant. A type named only through its runtime `->name` property — no `NAME` constant, no
+matching basename — is invisible to this and will be flagged as a false positive. The fix is the
+same either way: add a `NAME` constant to that type.
+
+A dynamic argument (a variable, a concatenation) is always skipped silently — the rule only ever
+checks a literal string, so it never guesses.
