@@ -20,4 +20,5 @@ class {{ MODEL }}Type extends Type
 {{ FIELDS }}
         ];
     }
+{{ RELATION_METHODS }}
 }

@@ -6,6 +6,8 @@ namespace Ayimdomnic\Laragraph\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -67,7 +69,7 @@ class ScaffoldCommand extends Command
         $this->components->info("Scaffolding GraphQL for [{$shortName}]…");
 
         // Never expose attributes the model hides from serialisation (passwords, tokens, …).
-        $this->generateType($shortName, array_diff_key($fields, array_flip($this->hiddenAttributes($modelClass))));
+        $this->generateType($shortName, $modelClass, array_diff_key($fields, array_flip($this->hiddenAttributes($modelClass))));
         $this->generateQuery($shortName, 'single');
         $this->generateQuery($shortName, 'list');
 
@@ -116,9 +118,10 @@ class ScaffoldCommand extends Command
     // -------------------------------------------------------------------------
 
     /**
+     * @param class-string $modelClass
      * @param array<string, string> $fields
      */
-    protected function generateType(string $model, array $fields): void
+    protected function generateType(string $model, string $modelClass, array $fields): void
     {
         $path = app_path("GraphQL/Types/{$model}Type.php");
         $this->ensureDirectory(dirname($path));
@@ -127,12 +130,52 @@ class ScaffoldCommand extends Command
             ->map(fn($type, $name): string => "            '{$name}' => ['type' => {$type}],")
             ->implode("\n");
 
+        $relations = $this->extractRelations($modelClass);
+
+        $relationFieldLines = collect($relations)
+            ->map(function (array $relation, string $name): string {
+                $relatedType = "app('laragraph')->type('" . class_basename($relation['relatedClass']) . "')";
+
+                if ($this->isManyRelation($relation['relationType'])) {
+                    $relatedType = "GType::listOf({$relatedType})";
+                }
+
+                return "            '{$name}' => ['type' => {$relatedType}],";
+            })
+            ->implode("\n");
+
+        $relationMethods = collect($relations)
+            ->keys()
+            ->map(fn(string $name): string => $this->relationResolverMethod($modelClass, $name))
+            ->implode('');
+
         $this->writeFile($path, $this->render('type', [
-            'NAMESPACE'   => 'App\\GraphQL\\Types',
-            'MODEL'       => $model,
-            'MODEL_LOWER' => Str::lower($model),
-            'FIELDS'      => $fieldLines,
+            'NAMESPACE'        => 'App\\GraphQL\\Types',
+            'MODEL'            => $model,
+            'MODEL_LOWER'      => Str::lower($model),
+            'FIELDS'           => collect([$fieldLines, $relationFieldLines])->filter()->implode("\n"),
+            'RELATION_METHODS' => $relationMethods,
         ]));
+    }
+
+    /**
+     * @param class-string $modelClass
+     */
+    private function relationResolverMethod(string $modelClass, string $relation): string
+    {
+        $method = 'resolve' . ucfirst($relation) . 'Field';
+
+        return sprintf(
+            '
+    protected function %s(mixed $root, array $args, mixed $context): mixed
+    {
+        return $this->batchRelation(\%s::class, \'%s\', $root, $context);
+    }
+',
+            $method,
+            $modelClass,
+            $relation,
+        );
     }
 
     protected function generateQuery(string $model, string $variant): void
@@ -257,6 +300,10 @@ class ScaffoldCommand extends Command
 
     protected function castToGraphQLType(string $cast): string
     {
+        if (enum_exists($cast)) {
+            return "app('laragraph')->type('" . class_basename($cast) . "')";
+        }
+
         return match (true) {
             in_array($cast, ['int', 'integer'], true)                              => 'GType::int()',
             in_array($cast, ['float', 'double'], true), str_starts_with($cast, 'decimal:') => 'GType::float()',
@@ -266,6 +313,116 @@ class ScaffoldCommand extends Command
             in_array($cast, ['array', 'json', 'object', 'collection'], true)       => "app('laragraph')->type('JSON')",
             default                                                                 => 'GType::string()',
         };
+    }
+
+    /**
+     * Extract Eloquent relation methods via reflection — a locally scoped
+     * subset of Illuminate\Database\Eloquent\ModelInspector's own detection
+     * (an internal class, not part of any public contract): public,
+     * zero-required-param, non-static, non-abstract methods not declared on
+     * Model itself, whose declared return type is a Relation subclass or
+     * whose source references one of Eloquent's relation-builder methods,
+     * then actually invoked and checked `instanceof Relation`.
+     *
+     * `morphTo()` relations are skipped — the related model can't be known
+     * without an actual row to read the morph type from.
+     *
+     * @param class-string $modelClass
+     * @return array<string, array{relatedClass: class-string<Model>, relationType: string}>
+     */
+    protected function extractRelations(string $modelClass): array
+    {
+        $relations = [];
+
+        try {
+            /** @var Model $instance */
+            $instance   = new $modelClass();
+            $reflection = new \ReflectionClass($instance);
+
+            foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                if ($method->isStatic()
+                    || $method->isAbstract()
+                    || $method->getDeclaringClass()->getName() === Model::class
+                    || $method->getNumberOfParameters() > 0
+                ) {
+                    continue;
+                }
+
+                if (!$this->declaresRelationReturnType($method) && !$this->methodBodyBuildsRelation($method)) {
+                    continue;
+                }
+
+                try {
+                    $relation = $method->invoke($instance);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                if (!$relation instanceof Relation || $relation instanceof MorphTo) {
+                    continue;
+                }
+
+                $relations[$method->getName()] = [
+                    'relatedClass' => $relation->getRelated()::class,
+                    'relationType' => class_basename($relation),
+                ];
+            }
+        } catch (\Throwable) {
+            // Model could not be instantiated — no relations detected.
+        }
+
+        return $relations;
+    }
+
+    private function declaresRelationReturnType(\ReflectionMethod $method): bool
+    {
+        $returnType = $method->getReturnType();
+
+        return $returnType instanceof \ReflectionNamedType
+            && !$returnType->isBuiltin()
+            && is_subclass_of($returnType->getName(), Relation::class);
+    }
+
+    /**
+     * Fallback for a relation method with no declared return type: scan its
+     * source for a call to one of Eloquent's relation-builder methods.
+     */
+    private function methodBodyBuildsRelation(\ReflectionMethod $method): bool
+    {
+        $filename = $method->getFileName();
+
+        if ($filename === false) {
+            return false;
+        }
+
+        $file = new \SplFileObject($filename);
+        $file->seek($method->getStartLine() - 1);
+
+        $code = '';
+        while ($file->key() < $method->getEndLine()) {
+            $line = $file->current();
+            $code .= is_string($line) ? trim($line) : '';
+            $file->next();
+        }
+
+        $relationBuilders = [
+            'hasMany', 'hasManyThrough', 'hasOneThrough', 'belongsToMany',
+            'hasOne', 'belongsTo', 'morphOne', 'morphTo', 'morphMany',
+            'morphToMany', 'morphedByMany',
+        ];
+
+        foreach ($relationBuilders as $builder) {
+            if (str_contains($code, '$this->' . $builder . '(')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isManyRelation(string $relationType): bool
+    {
+        return in_array($relationType, ['HasMany', 'HasManyThrough', 'BelongsToMany', 'MorphMany', 'MorphToMany', 'MorphedByMany'], true);
     }
 
     // -------------------------------------------------------------------------

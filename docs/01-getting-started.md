@@ -204,6 +204,16 @@ guesses at an edit it isn't sure about — a second schema, an already-registere
 config file shaped differently than the published default all fall back to printing a reminder
 instead of touching the file.
 
+It also wires up the model's own relations: any `belongsTo`/`hasOne`/`hasMany`/`belongsToMany`/
+`morphOne`/`morphMany`/`morphToMany`/`morphedByMany`/`hasOneThrough`/`hasManyThrough` method gets a
+field (a list for the `*Many` relations) plus a `resolve{Relation}Field()` calling
+`batchRelation()` — see [Relations & DataLoaders](05-relations-and-dataloaders.md) — pointing at
+`app('laragraph')->type('RelatedModel')`, so register that type too (scaffold it, or point
+`--register`/discovery at it) before the generated file is queried. `morphTo()` relations are
+skipped, since the related model can't be known without an actual row. A native PHP enum cast is
+registered the same way — `app('laragraph')->type('EnumBasename')` — so it needs to already be (or
+become) a registered `laragraph.types` entry, same as any other custom scalar/enum.
+
 ## Next
 
 - Learn the building blocks in [Types](02-types.md) and [Queries & mutations](03-queries-and-mutations.md).
