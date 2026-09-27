@@ -20,7 +20,10 @@ use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
 use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
 use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
+use Ayimdomnic\Laragraph\Contracts\SchemaBuilderInterface;
+use Ayimdomnic\Laragraph\Contracts\SchemaRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
+use Ayimdomnic\Laragraph\Contracts\TypeRegistryInterface;
 use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Extensions\ExtensionRegistry;
 use Ayimdomnic\Laragraph\Extensions\QueryComplexityState;
@@ -28,6 +31,8 @@ use Ayimdomnic\Laragraph\PersistedQuery\ArrayPersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\CachePersistedQueryStore;
 use Ayimdomnic\Laragraph\PersistedQuery\PersistedQueryStoreInterface;
 use Ayimdomnic\Laragraph\Scalars\Database\DatabasePreset;
+use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Schema\SchemaRegistry;
 use Ayimdomnic\Laragraph\Subscriptions\CacheSubscriberStore;
 use Ayimdomnic\Laragraph\Subscriptions\SsePendingQueue;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriberChannel;
@@ -35,6 +40,7 @@ use Ayimdomnic\Laragraph\Subscriptions\SubscriberStoreInterface;
 use Ayimdomnic\Laragraph\Testing\TestResponseMacros;
 use Ayimdomnic\Laragraph\Tracing\OtelSpanExporter;
 use Ayimdomnic\Laragraph\Tracing\TracingCollector;
+use Ayimdomnic\Laragraph\Types\TypeRegistry;
 use Ayimdomnic\Laragraph\Validation\ValidationRuleRegistry;
 use Composer\InstalledVersions;
 use Illuminate\Broadcasting\BroadcastManager;
@@ -55,7 +61,25 @@ class LaragraphServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/laragraph.php', 'laragraph');
 
-        $this->app->singleton('laragraph', fn($app): Laragraph => new Laragraph($app));
+        $this->app->singleton(TypeRegistry::class, fn($app): TypeRegistry => new TypeRegistry($app));
+        $this->app->alias(TypeRegistry::class, TypeRegistryInterface::class);
+
+        $this->app->singleton(SchemaBuilder::class, fn($app): SchemaBuilder => new SchemaBuilder(
+            $app->make(TypeRegistryInterface::class),
+            $app,
+        ));
+        $this->app->alias(SchemaBuilder::class, SchemaBuilderInterface::class);
+
+        $this->app->singleton(SchemaRegistry::class, fn($app): SchemaRegistry => new SchemaRegistry(
+            $app->make(SchemaBuilderInterface::class),
+        ));
+        $this->app->alias(SchemaRegistry::class, SchemaRegistryInterface::class);
+
+        $this->app->singleton('laragraph', fn($app): Laragraph => new Laragraph(
+            $app,
+            $app->make(SchemaRegistryInterface::class),
+            $app->make(TypeRegistryInterface::class),
+        ));
 
         $this->app->alias('laragraph', Laragraph::class);
 

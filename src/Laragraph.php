@@ -7,13 +7,14 @@ namespace Ayimdomnic\Laragraph;
 use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
 use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
+use Ayimdomnic\Laragraph\Contracts\SchemaRegistryInterface;
 use Ayimdomnic\Laragraph\Contracts\TracingCollectorInterface;
+use Ayimdomnic\Laragraph\Contracts\TypeRegistryInterface;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderPromiseAdapter;
 use Ayimdomnic\Laragraph\DataLoader\DataLoaderRegistry;
 use Ayimdomnic\Laragraph\Events\QueryError;
 use Ayimdomnic\Laragraph\Events\QueryExecuted;
 use Ayimdomnic\Laragraph\Events\QueryExecuting;
-use Ayimdomnic\Laragraph\Events\SchemaBuilt;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Exceptions\SchemaException;
@@ -23,7 +24,6 @@ use Ayimdomnic\Laragraph\Extensions\RequestIdExtension;
 use Ayimdomnic\Laragraph\Http\BatchProcessor;
 use Ayimdomnic\Laragraph\Http\GraphQLContext;
 use Ayimdomnic\Laragraph\Performance\ResponseCache;
-use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
 use Ayimdomnic\Laragraph\Subscriptions\BroadcastSubscriptionUpdates;
 use Ayimdomnic\Laragraph\Subscriptions\SubscriptionManager;
 use Ayimdomnic\Laragraph\Support\DefaultFieldResolver;
@@ -38,8 +38,6 @@ use GraphQL\Error\Error;
 use GraphQL\Executor\ExecutionResult;
 use GraphQL\GraphQL;
 use GraphQL\Language\AST\DocumentNode;
-use GraphQL\Type\Definition\NamedType;
-use GraphQL\Type\Definition\PhpEnumType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Validator\DocumentValidator;
@@ -58,24 +56,17 @@ use Illuminate\Support\Arr;
  */
 class Laragraph
 {
-    /** @var array<string, Schema> Built schema cache keyed by schema name. */
-    protected array $schemas = [];
-
-    /** @var array<string, string> Type class map: alias => FQCN. */
-    protected array $types = [];
-
-    /** @var array<string, Type> Resolved type instances keyed by alias. */
-    protected array $typesInstances = [];
-
-    protected ?SchemaBuilder $schemaBuilder = null;
-
     /** How many validated documents a worker remembers (a key is ~60 bytes). */
     public const VALIDATED_DOCUMENTS = 1000;
 
     /** @var array<string, true> Documents that passed the document-only validation rules, see prevalidate(). */
     protected array $validated = [];
 
-    public function __construct(protected readonly Container $container) {}
+    public function __construct(
+        protected readonly Container $container,
+        protected readonly SchemaRegistryInterface $schemaRegistry,
+        protected readonly TypeRegistryInterface $typeRegistry,
+    ) {}
 
     // -------------------------------------------------------------------------
     // Schema resolution
@@ -88,27 +79,7 @@ class Laragraph
      */
     public function schema(?string $name = null): Schema
     {
-        $name ??= config('laragraph.default_schema', 'default');
-
-        if (isset($this->schemas[$name])) {
-            return $this->schemas[$name];
-        }
-
-        $schemaConfig = config("laragraph.schemas.{$name}");
-
-        if ($schemaConfig === null) {
-            throw new SchemaException("Schema [{$name}] not found in laragraph configuration.");
-        }
-
-        // Merge global types into every schema build
-        $schemaConfig['types'] = array_merge(
-            config('laragraph.types', []),
-            $schemaConfig['types'] ?? [],
-        );
-
-        $schema = $this->schemas[$name] = $this->getSchemaBuilder()->build($schemaConfig);
-        event(new SchemaBuilt($name, $schema));
-        return $schema;
+        return $this->schemaRegistry->schema($name);
     }
 
     /**
@@ -534,25 +505,7 @@ class Laragraph
      */
     public function addType(string|Type $class, ?string $alias = null): string
     {
-        if ($class instanceof Type) {
-            if ($alias === null) {
-                if (!$class instanceof NamedType) {
-                    throw new \InvalidArgumentException('An alias is required when registering a type that is not a NamedType.');
-                }
-
-                $alias = $class->name();
-            }
-
-            $this->typesInstances[$alias] = $class;
-
-            return $alias;
-        }
-
-        $alias ??= $this->resolveTypeName($class);
-        $this->types[$alias] = $class;
-        unset($this->typesInstances[$alias]); // invalidate cached instance
-
-        return $alias;
+        return $this->typeRegistry->addType($class, $alias);
     }
 
     /**
@@ -562,52 +515,15 @@ class Laragraph
      */
     public function type(string $name, bool $fresh = false): Type
     {
-        if (!$fresh && isset($this->typesInstances[$name])) {
-            return $this->typesInstances[$name];
-        }
-
-        if (!isset($this->types[$name])) {
-            throw new \InvalidArgumentException(
-                "Type [{$name}] is not registered. Add it to laragraph.types in your config.",
-            );
-        }
-
-        $class = $this->types[$name];
-        $type  = enum_exists($class)
-            ? new PhpEnumType($class, $name)
-            : $this->container->make($class);
-
-        $this->typesInstances[$name] = $type;
-
-        return $type;
+        return $this->typeRegistry->type($name, $fresh);
     }
 
     /**
      * Resolve a registered type by its GraphQL name rather than its alias.
-     *
-     * Aliases usually match the GraphQL name, but need not (e.g. an alias of
-     * `UserInput` for an input type named `CreateUserInput`). The schema's
-     * type loader is always asked by GraphQL name, so it goes through here.
      */
     public function typeByName(string $graphqlName): ?Type
     {
-        if ($this->hasType($graphqlName)) {
-            $type = $this->type($graphqlName);
-
-            if ($type instanceof NamedType && $type->name() === $graphqlName) {
-                return $type;
-            }
-        }
-
-        foreach (array_unique([...array_keys($this->types), ...array_keys($this->typesInstances)]) as $alias) {
-            $type = $this->type((string) $alias);
-
-            if ($type instanceof NamedType && $type->name() === $graphqlName) {
-                return $type;
-            }
-        }
-
-        return null;
+        return $this->typeRegistry->typeByName($graphqlName);
     }
 
     /** Return all registered type class aliases.
@@ -616,13 +532,13 @@ class Laragraph
      */
     public function getTypes(): array
     {
-        return $this->types;
+        return $this->typeRegistry->getTypes();
     }
 
     /** Check whether a type name is registered. */
     public function hasType(string $name): bool
     {
-        return isset($this->types[$name]) || isset($this->typesInstances[$name]);
+        return $this->typeRegistry->hasType($name);
     }
 
     // -------------------------------------------------------------------------
@@ -688,13 +604,6 @@ class Laragraph
     // Internals
     // -------------------------------------------------------------------------
 
-    protected function getSchemaBuilder(): SchemaBuilder
-    {
-        $this->schemaBuilder ??= new SchemaBuilder($this, $this->container);
-
-        return $this->schemaBuilder;
-    }
-
     /**
      * Prepare the execution context and attach a fresh DataLoaderRegistry.
      *
@@ -722,26 +631,5 @@ class Laragraph
         }
 
         return $context;
-    }
-
-    protected function resolveTypeName(string $class): string
-    {
-        // Native PHP enums are exposed under their short class name.
-        if (enum_exists($class)) {
-            return class_basename($class);
-        }
-
-        // Try to get the name without instantiating (cheaper)
-        if (defined("{$class}::NAME")) {
-            return $class::NAME;
-        }
-
-        $instance = $this->container->make($class);
-
-        if (property_exists($instance, 'name')) {
-            return $instance->name;
-        }
-
-        return class_basename($class);
     }
 }
