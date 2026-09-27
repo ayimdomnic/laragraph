@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Benchmarks;
 
+use Ayimdomnic\Laragraph\Execution\QueryExecutor;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\LaragraphServiceProvider;
+use Ayimdomnic\Laragraph\Schema\SchemaBuilder;
+use Ayimdomnic\Laragraph\Schema\SchemaRegistry;
 use Ayimdomnic\Laragraph\Support\DocumentCache;
 use Ayimdomnic\Laragraph\Tests\Support\Blog\Blog;
 use Ayimdomnic\Laragraph\Tests\Support\SyntheticSchema;
+use Ayimdomnic\Laragraph\Types\TypeRegistry;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Facade;
 use Orchestra\Testbench\Foundation\Application as Testbench;
@@ -51,16 +55,30 @@ abstract class BenchCase
     /**
      * A fresh Laragraph, as a PHP-FPM request would have: no schema, no
      * types, no parsed or validated documents.
+     *
+     * Laragraph itself is a thin facade — its schema/type/document caches
+     * live in the singleton collaborators the container hands it
+     * (TypeRegistry, SchemaBuilder, SchemaRegistry, QueryExecutor), so
+     * forgetting just Laragraph's own singleton isn't enough; every one of
+     * those has to be forgotten too so the container rebuilds the whole
+     * graph from scratch, exactly like a fresh worker would.
      */
     protected function freshLaragraph(): Laragraph
     {
-        $laragraph = new Laragraph($this->app);
+        foreach ([
+            'laragraph',
+            TypeRegistry::class,
+            SchemaBuilder::class,
+            SchemaRegistry::class,
+            QueryExecutor::class,
+        ] as $abstract) {
+            $this->app->forgetInstance($abstract);
+        }
 
-        $this->app->instance('laragraph', $laragraph);
         Facade::clearResolvedInstance('laragraph');
         DocumentCache::flush();
 
-        return $laragraph;
+        return $this->app->make('laragraph');
     }
 
     /**

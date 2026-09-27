@@ -4,6 +4,19 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+* **ci:** run PHPBench on every pull request against a rolling baseline cached across runs,
+  failing the build on a >15% time or >10% memory regression.
+
+### Fixed
+
+* **benchmarks:** `BenchCase::freshLaragraph()` still constructed `Laragraph` with its pre-v4.2.0,
+  one-argument constructor — broken since the SOLID refactor split its schema/type/document caches
+  out into separate singleton collaborators. Fixed to forget and let the container rebuild the
+  whole collaborator graph instead of hand-constructing `Laragraph` directly; caught by wiring
+  PHPBench into CI, which had never run these benchmarks before.
+
 ### Changed
 
 * **deps:** `open-telemetry/api` moves from a required to a suggested dependency — only the

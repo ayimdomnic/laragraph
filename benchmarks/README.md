@@ -83,6 +83,14 @@ subject is noisy (a high `rstdev`), run it alone with more iterations before dra
 vendor/bin/phpbench run --filter=benchPaginatedList --iterations=20 --ref=baseline --report=laragraph
 ```
 
+### CI
+
+A `benchmarks` job runs `bench:compare` on every pull request, against a baseline cached across
+runs (restored via `actions/cache`, keyed by commit SHA with a prefix match so a run always gets
+the most recently stored one). Only pushes to `master` refresh and re-save that baseline
+(`bench:baseline`) — a pull request only ever compares, never overwrites the shared cache, so a
+fork PR can't poison it for everyone else. See `.github/workflows/tests.yml`.
+
 ### Adding a benchmark
 
 Add a `bench*` method to the class for its area, or a new `*Bench` class extending `BenchCase`,
