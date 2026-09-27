@@ -12,6 +12,7 @@ use Ayimdomnic\Laragraph\Middleware\FieldMiddlewareInterface;
 use Ayimdomnic\Laragraph\Middleware\FieldMiddlewarePipeline;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -115,7 +116,13 @@ abstract class Field
      */
     public function rules(array $args = []): array
     {
-        return [];
+        $formRequest = $this->formRequest();
+
+        if ($formRequest === null) {
+            return [];
+        }
+
+        return $this->callFormRequest($formRequest, 'rules', $args);
     }
 
     /**
@@ -125,7 +132,13 @@ abstract class Field
      */
     public function messages(): array
     {
-        return [];
+        $formRequest = $this->formRequest();
+
+        if ($formRequest === null) {
+            return [];
+        }
+
+        return $this->callFormRequest($formRequest, 'messages');
     }
 
     /**
@@ -135,7 +148,78 @@ abstract class Field
      */
     public function attributes(): array
     {
-        return [];
+        $formRequest = $this->formRequest();
+
+        if ($formRequest === null) {
+            return [];
+        }
+
+        return $this->callFormRequest($formRequest, 'attributes');
+    }
+
+    /**
+     * Reuse an existing FormRequest's `rules()` / `messages()` / `attributes()`
+     * instead of defining them on the field directly. Return null (default) to
+     * keep defining those methods here.
+     *
+     * Only these three methods are reused — {@see authorize()} is never called
+     * on the FormRequest, since it typically inspects `$this->user()` or
+     * `$this->route()`, neither of which apply to a GraphQL field. Keep
+     * authorization on the field's own `authorize()` / `authorizeWithContext()`.
+     *
+     * For the same reason, `$this->route()` and `$this->user()` are
+     * unsupported inside the reused methods — only `$this->input()` /
+     * `$this->all()` are populated, from this field's GraphQL arguments:
+     *
+     * ```php
+     * protected function formRequest(): ?string
+     * {
+     *     return RegisterRequest::class;
+     * }
+     * ```
+     *
+     * @return class-string<FormRequest>|null
+     */
+    protected function formRequest(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Call a FormRequest method without resolving it through the container.
+     *
+     * Laravel's `FormRequestServiceProvider` hooks container resolution of
+     * every `FormRequest` to copy in the current HTTP request, then
+     * immediately calls `authorize()` and validates it — against the raw
+     * GraphQL request body, not this field's arguments, and before we ever
+     * get a chance to call `rules()` ourselves. Building the instance with
+     * `new` instead of `app()->make()` sidesteps that hook entirely; only
+     * `setContainer()` is applied afterwards, so a `rules()`/`messages()`/
+     * `attributes()` body may still resolve container bindings if it needs
+     * to.
+     *
+     * @param class-string<FormRequest> $formRequest
+     * @param array<string, mixed> $args
+     * @return array<string, mixed>
+     */
+    private function callFormRequest(string $formRequest, string $method, array $args = []): array
+    {
+        $request = new $formRequest();
+        $request->setContainer(app());
+
+        if ($args !== []) {
+            $request->merge($args);
+        }
+
+        if ($method === 'rules') {
+            return method_exists($request, 'rules') ? (array) app()->call([$request, 'rules']) : [];
+        }
+
+        return match ($method) {
+            'messages'   => (array) app()->call($request->messages(...)),
+            'attributes' => (array) app()->call($request->attributes(...)),
+            default      => [],
+        };
     }
 
     /**
