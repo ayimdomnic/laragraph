@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Tests\Feature;
 
+use Ayimdomnic\Laragraph\Contracts\LaragraphManager;
 use Ayimdomnic\Laragraph\Exceptions\GraphQLException;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\LaragraphServiceProvider;
@@ -360,6 +361,15 @@ class ValidationAndErrorTest extends TestCase
 
         $this->assertContains('laragraph', $provides);
         $this->assertContains(Laragraph::class, $provides);
+        $this->assertContains(LaragraphManager::class, $provides);
+    }
+
+    public function test_laragraph_manager_interface_resolves_to_the_same_singleton(): void
+    {
+        $manager = $this->app->make(LaragraphManager::class);
+
+        $this->assertInstanceOf(Laragraph::class, $manager);
+        $this->assertSame($this->app->make('laragraph'), $manager);
     }
 
     // -------------------------------------------------------------------------

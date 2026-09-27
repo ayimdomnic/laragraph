@@ -19,6 +19,7 @@ use Ayimdomnic\Laragraph\Console\TypeMakeCommand;
 use Ayimdomnic\Laragraph\Console\ValidateSchemaCommand;
 use Ayimdomnic\Laragraph\Contracts\BatchProcessorInterface;
 use Ayimdomnic\Laragraph\Contracts\ExtensionRegistryInterface;
+use Ayimdomnic\Laragraph\Contracts\LaragraphManager;
 use Ayimdomnic\Laragraph\Contracts\OtelSpanExporterInterface;
 use Ayimdomnic\Laragraph\Contracts\PersistedQueryResolverInterface;
 use Ayimdomnic\Laragraph\Contracts\QueryComplexityStateInterface;
@@ -138,6 +139,7 @@ class LaragraphServiceProvider extends ServiceProvider
         ));
 
         $this->app->alias('laragraph', Laragraph::class);
+        $this->app->alias('laragraph', LaragraphManager::class);
 
         $this->app->singleton(PersistedQueryStoreInterface::class, function ($app): ArrayPersistedQueryStore|CachePersistedQueryStore {
             $driver = config('laragraph.persisted_queries.store', 'cache');
@@ -304,7 +306,7 @@ class LaragraphServiceProvider extends ServiceProvider
      */
     public function provides(): array
     {
-        return ['laragraph', Laragraph::class];
+        return ['laragraph', Laragraph::class, LaragraphManager::class];
     }
 
     /**
