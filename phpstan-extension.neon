@@ -1,0 +1,3 @@
+rules:
+    - Ayimdomnic\Laragraph\PHPStan\UnregisteredTypeNameRule
+    - Ayimdomnic\Laragraph\PHPStan\UnregisteredTypeNameMethodCallRule
