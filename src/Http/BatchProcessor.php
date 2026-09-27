@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Http;
 
+use Ayimdomnic\Laragraph\Contracts\BatchProcessorInterface;
 use Ayimdomnic\Laragraph\Exceptions\BatchingDisabledException;
 use Ayimdomnic\Laragraph\Exceptions\BatchLimitExceededException;
 use Ayimdomnic\Laragraph\Laragraph;
@@ -15,7 +16,7 @@ use Ayimdomnic\Laragraph\Laragraph;
  * `laragraph.batching.max_operations` ceiling before dispatching
  * each operation to {@see Laragraph::execute()}.
  */
-class BatchProcessor
+class BatchProcessor implements BatchProcessorInterface
 {
     public function __construct(protected readonly Laragraph $laragraph) {}
 

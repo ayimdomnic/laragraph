@@ -61,8 +61,7 @@ abstract class Subscription extends Field
     public function toArray(): array
     {
         return array_merge(parent::toArray(), [
-            'subscribe' => fn(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed
-                => $this->subscribe($root, $args, $context, $info),
+            'subscribe' => $this->subscribe(...),
         ]);
     }
 

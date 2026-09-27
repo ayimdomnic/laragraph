@@ -50,7 +50,7 @@ abstract class UnionType extends GraphQLUnionType
             $this->attributes,
             [
                 'types'       => $this->types(...),
-                'resolveType' => fn(mixed $value, mixed $context, ResolveInfo $info): mixed => $this->resolveType($value, $context, $info),
+                'resolveType' => $this->resolveType(...),
             ],
         );
 

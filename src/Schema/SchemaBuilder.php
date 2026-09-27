@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Schema;
 
+use Ayimdomnic\Laragraph\Contracts\SchemaBuilderInterface;
 use Ayimdomnic\Laragraph\Discovery\Discover;
 use Ayimdomnic\Laragraph\Laragraph;
 use Ayimdomnic\Laragraph\Support\Field;
@@ -22,7 +23,7 @@ use Illuminate\Contracts\Container\Container;
 /**
  * Builds a GraphQL\Type\Schema from a Laragraph schema configuration array.
  */
-class SchemaBuilder
+class SchemaBuilder implements SchemaBuilderInterface
 {
     public function __construct(
         protected readonly Laragraph $manager,
