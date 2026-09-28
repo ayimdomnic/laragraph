@@ -14,6 +14,7 @@ use Ayimdomnic\Laragraph\Exceptions\RequestException;
 use Ayimdomnic\Laragraph\Support\Operation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Executes a GraphQL query / mutation over HTTP.
@@ -32,9 +33,10 @@ final readonly class ExecuteQueryAction
         private SubscriptionRequestHandlerInterface $subscriptions,
         private BatchProcessorInterface $batches,
         private QueryExecutorInterface $executor,
+        private StreamSubscriptionOperationAction $sseSubscription,
     ) {}
 
-    public function handle(Request $request, string $schemaName = 'default'): JsonResponse
+    public function handle(Request $request, string $schemaName = 'default'): JsonResponse|StreamedResponse
     {
         try {
             if (config("laragraph.schemas.{$schemaName}") === null) {
@@ -43,7 +45,9 @@ final readonly class ExecuteQueryAction
 
             $parsed = $this->parser->parse($request);
 
-            // Batched queries: a JSON list of operations.
+            // Batched queries: a JSON list of operations. A single SSE stream
+            // can't sensibly carry N independent subscriptions' frames, so
+            // graphql-sse compliance only ever applies to a single operation.
             if ($parsed !== [] && array_is_list($parsed)) {
                 array_walk($parsed, $this->parser->assertOperation(...));
 
@@ -67,12 +71,52 @@ final readonly class ExecuteQueryAction
 
             $this->parser->assertOperation($parsed);
 
+            if ($this->wantsGraphqlSse($parsed, $request)) {
+                return $this->sseSubscription->handle(
+                    (string) ($parsed['query'] ?? ''),
+                    $this->parser->castVariables($parsed['variables'] ?? null),
+                    isset($parsed['operationName']) ? (string) $parsed['operationName'] : null,
+                    $schemaName,
+                    $request,
+                );
+            }
+
             $result = $this->executeOne($parsed, $request, $schemaName);
         } catch (RequestException $e) {
             return $this->negotiator->negotiate($request, $e->toResponse(), $e->status, $e->headers);
         }
 
         return $this->negotiator->negotiate($request, $result);
+    }
+
+    /**
+     * Whether this request should get a graphql-sse-compliant stream
+     * instead of the pre-existing "register, then poll a separate
+     * `streamUrl`" flow — only when the client explicitly asks for it
+     * (`Accept: text/event-stream`), the driver actually supports it, and
+     * the operation is (by its own text) a subscription. Persisted-query
+     * references (`queryId` with no inline `query`) aren't recognised here
+     * — detecting a subscription requires resolving the query text first,
+     * which only `executeOne()` does; those fall back to the pre-existing
+     * flow, which resolves persisted queries before this check would apply.
+     *
+     * @param array<string, mixed> $parsed
+     */
+    private function wantsGraphqlSse(array $parsed, Request $request): bool
+    {
+        $query = (string) ($parsed['query'] ?? '');
+
+        if ($query === '' || config('laragraph.subscriptions.driver', 'broadcast') !== 'sse') {
+            return false;
+        }
+
+        $operationName = isset($parsed['operationName']) ? (string) $parsed['operationName'] : null;
+
+        if (!$this->subscriptions->isSubscriptionOperation($query, $operationName)) {
+            return false;
+        }
+
+        return str_contains(strtolower((string) $request->header('Accept', '')), 'text/event-stream');
     }
 
     /**

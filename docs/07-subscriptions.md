@@ -284,6 +284,57 @@ free concurrency the way a dedicated WebSocket server gives you. Concretely:
 This driver is for teams who can't run a dedicated broadcaster, or want stock HTTP client support —
 not a wholesale replacement for `'broadcast'` at scale.
 
+### graphql-sse client compliance
+
+The `streamUrl` flow above is Laragraph's own bespoke shape: register with a normal POST, get back
+a channel/subscriberId/streamUrl, then open a second connection to that URL. A stock `EventSource`
+happily consumes it, as shown, but a client built against the actual
+[graphql-sse](https://github.com/enisdenjo/graphql-sse) protocol expects something narrower — one
+request, sent straight to the GraphQL endpoint with `Accept: text/event-stream`, that itself
+becomes the long-lived stream. There's no `streamUrl` or `subscriberId` in that model at all; the
+client just opens the connection and reads `next`/`complete` frames from it.
+
+Laragraph supports both, on the same endpoint, chosen purely by content negotiation: send
+`Accept: text/event-stream` on the request that carries the subscription operation, and you get the
+compliant single-connection stream instead of the JSON envelope:
+
+```js
+import { createClient } from 'graphql-sse';
+
+const client = createClient({
+  url: 'https://api.example.com/graphql',
+  headers: { Authorization: `Bearer ${token}` },
+});
+
+const dispose = client.subscribe(
+  { query: 'subscription { postPublished(organizationId: "1") { title } }' },
+  {
+    next: (result) => console.log(result.data?.postPublished),
+    error: (err) => console.error(err),
+    complete: () => console.log('done'),
+  },
+);
+```
+
+This requires `laragraph.subscriptions.driver` set to `'sse'`, exactly as above — the `Accept`
+header only chooses which shape a subscription's *own* driver-appropriate response takes, it
+doesn't enable SSE itself. A request without that header gets today's exact `streamUrl` behavior,
+unchanged; a normal query or mutation is unaffected by the header either way. Batched requests
+(a JSON array of operations) are never eligible for the compliant stream — one SSE connection can't
+sensibly carry N independent subscriptions' frames — and always get the pre-existing behavior.
+
+Two scope boundaries worth knowing before relying on this:
+
+- **Only the spec's "distinct connections" mode is implemented**, not its "single connection" mode
+  (a reservation token shared by multiple multiplexed operations via `PUT`/`DELETE`). Most
+  `graphql-sse` client usage — including the snippet above — defaults to distinct connections, so
+  this covers the common case, not the whole spec.
+- **Every reconnect re-registers.** Unlike a stateful multiplexed connection, each new HTTP request
+  is a brand-new subscriber entry — there's no resuming a prior subscription's position. A clean,
+  client-initiated disconnect unsubscribes immediately; an unclean one (network drop, tab close)
+  still expires via `subscriptions.ttl` as before. Either way, the client's next connection attempt
+  is a fresh `register()`, not a resume.
+
 ## Developing without a broadcaster
 
 Set `'driver' => 'log'` and every update is written to the log (`logging.channel`) instead of
