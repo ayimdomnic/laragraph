@@ -6,10 +6,11 @@
 [![PHP Version](https://img.shields.io/badge/php-%5E8.2-blue)](https://www.php.net)
 [![Laravel Version](https://img.shields.io/badge/laravel-10%20|%2011%20|%2012%20|%2013-orange)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-laragraph--docs.vercel.app-blue)](https://laragraph-docs.vercel.app)
 
 Laragraph gives Laravel developers a clean, expressive, **code-first** API for building GraphQL services — powered by [webonyx/graphql-php](https://github.com/webonyx/graphql-php).
 
-📖 **[Read the developer guide](docs/README.md)**: a step-by-step explanation of every feature, from your first query to production.
+📖 **[Read the developer guide](https://laragraph-docs.vercel.app)**: a step-by-step explanation of every feature, from your first query to production.
 🧪 **[Explore the example app](example/README.md)**: a complete API that uses every feature, with a test for each one.
 
 ---
