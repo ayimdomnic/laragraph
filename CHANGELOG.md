@@ -6,6 +6,8 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
 
 ### Added
 
+* **docs:** publish the developer guide as a browsable, searchable VitePress site (`docs/` is now
+  also a static-site source), ready to connect to Vercel/Netlify/Cloudflare Pages.
 * **ci:** run PHPBench on every pull request against a rolling baseline cached across runs,
   failing the build on a >15% time or >10% memory regression.
 
