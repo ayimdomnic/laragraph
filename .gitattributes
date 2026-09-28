@@ -28,3 +28,7 @@
 /.releaserc.json      export-ignore
 /package.json         export-ignore
 /package-lock.json    export-ignore
+/benchmarks           export-ignore
+/phpbench.json        export-ignore
+/vercel.json          export-ignore
+/.vercelignore        export-ignore
