@@ -10,6 +10,14 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
   also a static-site source), ready to connect to Vercel/Netlify/Cloudflare Pages.
 * **ci:** run PHPBench on every pull request against a rolling baseline cached across runs,
   failing the build on a >15% time or >10% memory regression.
+* **subscriptions:** the `'sse'` driver is now [graphql-sse](https://github.com/enisdenjo/graphql-sse)
+  spec-compliant (distinct connections mode) — send `Accept: text/event-stream` on a subscription
+  operation and the same request that would otherwise register-and-return-a-`streamUrl` instead
+  becomes the long-lived stream directly, matching what stock `graphql-sse` clients expect. The
+  pre-existing `streamUrl` flow is unchanged for requests that don't send that header. See
+  [`docs/07-subscriptions.md`](docs/07-subscriptions.md#graphql-sse-client-compliance) for the
+  client example and the two documented scope boundaries (distinct-connections-mode only, every
+  reconnect re-registers).
 
 ### Fixed
 

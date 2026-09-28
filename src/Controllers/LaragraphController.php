@@ -7,6 +7,7 @@ namespace Ayimdomnic\Laragraph\Controllers;
 use Ayimdomnic\Laragraph\Http\Actions\ExecuteQueryAction;
 use Ayimdomnic\Laragraph\Http\Actions\RenderGraphiqlAction;
 use Ayimdomnic\Laragraph\Http\Actions\StreamSubscriptionAction;
+use Ayimdomnic\Laragraph\Http\Actions\StreamSubscriptionOperationAction;
 use Ayimdomnic\Laragraph\Http\Actions\UnsubscribeAction;
 use Ayimdomnic\Laragraph\Http\ResponseNegotiator;
 use Illuminate\Http\JsonResponse;
@@ -39,8 +40,13 @@ class LaragraphController extends BaseController
      * `Accept: application/graphql-response+json` receive that media type and
      * a 4xx status whenever the request fails before execution; others get
      * `application/json` with the traditional always-200 behaviour.
+     *
+     * A subscription operation sent with `Accept: text/event-stream` (and
+     * `laragraph.subscriptions.driver` set to `'sse'`) instead gets a
+     * graphql-sse-compliant stream directly on this same connection — see
+     * {@see StreamSubscriptionOperationAction}.
      */
-    public function query(Request $request, string $schemaName = 'default'): JsonResponse
+    public function query(Request $request, string $schemaName = 'default'): JsonResponse|StreamedResponse
     {
         return $this->executeQueryAction->handle($request, $schemaName);
     }
