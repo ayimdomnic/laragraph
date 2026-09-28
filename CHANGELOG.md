@@ -4,6 +4,8 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
 
 ## [Unreleased]
 
+## [4.3.0](https://github.com/ayimdomnic/laragraph/compare/v4.2.0...v4.3.0) (2026-09-28)
+
 ### Added
 
 * **docs:** publish the developer guide as a browsable, searchable VitePress site (`docs/` is now
@@ -34,6 +36,12 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
   nothing extra. Enabling the `'otel'` driver without the package installed now throws a clear
   `MissingOptionalDependencyException` naming the exact `composer require` to run, instead of a
   raw autoload error.
+* **packaging:** `benchmarks/`, `phpbench.json` and the Vercel config no longer ship in the Packagist
+  dist archive (they were missing from `.gitattributes` `export-ignore`; the example app, tests and
+  CI config were already excluded). A new `PackageExportTest` fails if any dev-only path stops
+  being excluded, or if `phpstan-extension.neon` — which consumers do need — is excluded by mistake.
+* **docs:** the README's developer-guide link and a new badge point at the published site,
+  <https://laragraph-docs.vercel.app>.
 
 ## [4.2.0](https://github.com/ayimdomnic/laragraph/compare/v4.1.0...v4.2.0) (2026-09-27)
 
