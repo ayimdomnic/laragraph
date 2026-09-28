@@ -8,11 +8,11 @@
     "packages": [
         {
             "name": "ayimdomnic/laragraph",
-            "version": "dev-master",
+            "version": "dev-docs/vitepress-site",
             "dist": {
                 "type": "path",
                 "url": "..",
-                "reference": "4980c3e8b9d2a4a3afee476861434b186bfd923a"
+                "reference": "7c280026e3cf5472cab9a0c57f812275d7d6c949"
             },
             "require": {
                 "ext-json": "*",
@@ -22,7 +22,6 @@
                 "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
                 "illuminate/validation": "^10.0|^11.0|^12.0|^13.0",
-                "open-telemetry/api": "^1.0",
                 "overblog/dataloader-php": "^1.0",
                 "php": "^8.2",
                 "webonyx/graphql-php": "^15.0"
@@ -30,6 +29,7 @@
             "require-dev": {
                 "larastan/larastan": "^3.10",
                 "laravel/pint": "^1.32",
+                "open-telemetry/api": "^1.0",
                 "open-telemetry/sdk": "^1.0",
                 "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
                 "orchestra/workbench": "^8.0|^9.0|^10.0|^11.0",
@@ -37,6 +37,9 @@
                 "phpstan/phpstan": "^2.2",
                 "phpunit/phpunit": "^10.5|^11.5|^12.5",
                 "rector/rector": "^2.6"
+            },
+            "suggest": {
+                "open-telemetry/api": "Required only when laragraph.tracing.driver is set to 'otel'; the default 'apollo' driver needs nothing extra."
             },
             "type": "library",
             "extra": {
@@ -2426,16 +2429,16 @@
         },
         {
             "name": "nesbot/carbon",
-            "version": "3.14.0",
+            "version": "3.14.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/CarbonPHP/carbon.git",
-                "reference": "0023eaa2c9110e47446dd512a263c69c40cd41f2"
+                "reference": "34e9109535165bf1d7ff17a610492372ae73a896"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/0023eaa2c9110e47446dd512a263c69c40cd41f2",
-                "reference": "0023eaa2c9110e47446dd512a263c69c40cd41f2",
+                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/34e9109535165bf1d7ff17a610492372ae73a896",
+                "reference": "34e9109535165bf1d7ff17a610492372ae73a896",
                 "shasum": ""
             },
             "require": {
@@ -2527,7 +2530,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-12T20:45:19+00:00"
+            "time": "2026-09-27T12:07:26+00:00"
         },
         {
             "name": "nette/schema",
@@ -2830,135 +2833,6 @@
                 }
             ],
             "time": "2026-02-16T23:10:27+00:00"
-        },
-        {
-            "name": "open-telemetry/api",
-            "version": "1.10.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/opentelemetry-php/api.git",
-                "reference": "7c029c4a6fd457094a20569bf98f93d95e9a7559"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/opentelemetry-php/api/zipball/7c029c4a6fd457094a20569bf98f93d95e9a7559",
-                "reference": "7c029c4a6fd457094a20569bf98f93d95e9a7559",
-                "shasum": ""
-            },
-            "require": {
-                "open-telemetry/context": "^1.4",
-                "php": "^8.1",
-                "psr/log": "^1.1|^2.0|^3.0",
-                "symfony/polyfill-php82": "^1.26"
-            },
-            "conflict": {
-                "open-telemetry/sdk": "<=1.11"
-            },
-            "type": "library",
-            "extra": {
-                "spi": {
-                    "OpenTelemetry\\API\\Instrumentation\\AutoInstrumentation\\HookManagerInterface": [
-                        "OpenTelemetry\\API\\Instrumentation\\AutoInstrumentation\\ExtensionHookManager"
-                    ]
-                },
-                "branch-alias": {
-                    "dev-main": "1.8.x-dev"
-                }
-            },
-            "autoload": {
-                "files": [
-                    "Trace/functions.php"
-                ],
-                "psr-4": {
-                    "OpenTelemetry\\API\\": "."
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "opentelemetry-php contributors",
-                    "homepage": "https://github.com/open-telemetry/opentelemetry-php/graphs/contributors"
-                }
-            ],
-            "description": "API for OpenTelemetry PHP.",
-            "keywords": [
-                "Metrics",
-                "api",
-                "apm",
-                "logging",
-                "opentelemetry",
-                "otel",
-                "tracing"
-            ],
-            "support": {
-                "chat": "https://app.slack.com/client/T08PSQ7BQ/C01NFPCV44V",
-                "docs": "https://opentelemetry.io/docs/languages/php",
-                "issues": "https://github.com/open-telemetry/opentelemetry-php/issues",
-                "source": "https://github.com/open-telemetry/opentelemetry-php"
-            },
-            "time": "2026-07-06T12:28:04+00:00"
-        },
-        {
-            "name": "open-telemetry/context",
-            "version": "1.5.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/opentelemetry-php/context.git",
-                "reference": "3c414b246e0dabb7d6145404e6a5e4536ca18d07"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/opentelemetry-php/context/zipball/3c414b246e0dabb7d6145404e6a5e4536ca18d07",
-                "reference": "3c414b246e0dabb7d6145404e6a5e4536ca18d07",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.1",
-                "symfony/polyfill-php82": "^1.26"
-            },
-            "suggest": {
-                "ext-ffi": "To allow context switching in Fibers"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-main": "1.0.x-dev"
-                }
-            },
-            "autoload": {
-                "files": [
-                    "fiber/initialize_fiber_handler.php"
-                ],
-                "psr-4": {
-                    "OpenTelemetry\\Context\\": "."
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "Apache-2.0"
-            ],
-            "authors": [
-                {
-                    "name": "opentelemetry-php contributors",
-                    "homepage": "https://github.com/open-telemetry/opentelemetry-php/graphs/contributors"
-                }
-            ],
-            "description": "Context implementation for OpenTelemetry PHP.",
-            "keywords": [
-                "Context",
-                "opentelemetry",
-                "otel"
-            ],
-            "support": {
-                "chat": "https://app.slack.com/client/T08PSQ7BQ/C01NFPCV44V",
-                "docs": "https://opentelemetry.io/docs/languages/php",
-                "issues": "https://github.com/open-telemetry/opentelemetry-php/issues",
-                "source": "https://github.com/open-telemetry/opentelemetry-php"
-            },
-            "time": "2025-10-19T06:44:33+00:00"
         },
         {
             "name": "overblog/dataloader-php",
