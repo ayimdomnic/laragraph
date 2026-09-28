@@ -250,7 +250,7 @@ on whichever field happens to reference it.
 **Install:** if you have [`phpstan/extension-installer`](https://github.com/phpstan/extension-installer),
 nothing to do — it's discovered automatically. Otherwise add it manually to your `phpstan.neon`:
 
-```neon
+```yaml
 includes:
     - vendor/ayimdomnic/laragraph/phpstan-extension.neon
 ```

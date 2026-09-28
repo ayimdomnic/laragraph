@@ -81,6 +81,23 @@ follow an established convention (a base class + a `laragraph:make:*`
 generator + a discovery entry in `config/laragraph.php`) that's worth
 matching rather than reinventing.
 
+## Building the docs site locally
+
+`docs/` is also a [VitePress](https://vitepress.dev) site — the same markdown files that render
+on GitHub, with navigation, search and a homepage layered on top. Requires Node.js:
+
+```bash
+npm install
+npm run docs:dev       # live-reloading local preview
+npm run docs:build     # static build, output in docs/.vitepress/dist
+npm run docs:preview   # serve that build locally
+```
+
+`vercel.json` at the repo root is already configured (build command, output directory) — connect
+this repository in the [Vercel](https://vercel.com) or [Netlify](https://netlify.com) dashboard
+and it deploys with no further setup. Their own git integrations publish directly from GitHub and
+don't go through GitHub Actions at all, so this works independently of anything else in CI.
+
 ## Security issues
 
 Please don't open a public issue for a suspected vulnerability — see
