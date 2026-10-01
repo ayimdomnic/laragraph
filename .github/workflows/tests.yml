@@ -230,7 +230,7 @@ jobs:
 
       - name: Restore the most recent benchmark baseline
         id: bench-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .phpbench
           key: phpbench-baseline-${{ github.sha }}
@@ -251,7 +251,7 @@ jobs:
 
       - name: Save the benchmark baseline
         if: github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .phpbench
           key: phpbench-baseline-${{ github.sha }}
