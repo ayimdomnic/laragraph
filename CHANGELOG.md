@@ -5,6 +5,35 @@ All notable changes to `ayimdomnic/laragraph` are documented here.
 
 ## [4.4.0](https://github.com/ayimdomnic/laragraph/compare/v4.3.0...v4.4.0) (2026-10-20)
 
+### Added
+
+* **auth:** declarative field-level visibility on object types. A new `canSee` field key (and
+  `guard()` / `canSee()` base-class helpers) resolves a rule to a boolean and, on denial, redacts the
+  field to `null` — never an authorization error — so a forbidden field is indistinguishable from a
+  nonexistent one to the client. Three rule shapes: a Gate ability string, an `[ability, subject]`
+  array, or a `fn ($parent, $args, $ctx)` closure. Guests are denied without consulting the Gate,
+  unknown abilities fail closed and warn once per request, list/connection fields are checked once
+  against the parent, guarded `batchRelation()` children still batch into a single query, and
+  introspection still lists guarded fields. See
+  [`docs/04-authentication-and-authorization.md`](docs/04-authentication-and-authorization.md).
+* **graphiql:** the IDE now attaches the current session automatically when you are logged in, and in
+  development (`APP_DEBUG=true`) offers a Sanctum-backed role/token picker to exercise the API as
+  another user. In production the picker is hidden and a safety banner is shown. It keeps honouring
+  `graphiql.enabled`. See [`docs/08-http-api.md`](docs/08-http-api.md).
+* **console:** `laragraph:scaffold` resolves mass-assignable columns from both the traditional
+  `protected $fillable` property and Laravel 11+'s `#[Fillable([...])]` class attribute (the property
+  wins when both are declared). Reading columns from class metadata rather than an instance also makes
+  scaffolding work for models whose constructor throws. New `Support\FillableResolver` centralises this.
+* **docs:** the site now serves versioned documentation — a header **Version** dropdown switches
+  between latest and each archived 4.x release (`docs/versions/<x.y.z>/`), with per-version sidebars
+  and search scoped to latest. `npm run docs:snapshot <x.y.z>` archives the live guide when cutting a
+  release.
+
+### Testing
+
+* Raised PHPUnit's `memory_limit` to 512M in `phpunit.xml`; the huge-document tests could exhaust the
+  128M CLI default late in a full-suite run.
+
 ## [Unreleased]
 
 ## [4.3.0](https://github.com/ayimdomnic/laragraph/compare/v4.2.0...v4.3.0) (2026-09-28)
