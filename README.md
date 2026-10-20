@@ -311,7 +311,10 @@ while `app.debug` is on — never in production.
 Scaffolded code is **deny-by-default**: every generated query and mutation calls
 `Gate::allows()` for the matching policy ability (`viewAny`, `view`, `create`, `update`,
 `delete`), so nothing is reachable until you write a policy, and attributes in the model's
-`$hidden` list (passwords, tokens) are never added to the generated type.
+`$hidden` list (passwords, tokens) are never added to the generated type. Columns are read
+from the model's `protected $fillable` property **or** Laravel 11+'s `#[Fillable([...])]`
+attribute — the property wins when both are declared — so models scaffolded from either
+style produce identical output.
 
 ---
 
