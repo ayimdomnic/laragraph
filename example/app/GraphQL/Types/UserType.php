@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * OBJECT TYPE — shows per-field resolvers, native enums, custom scalars,
- * interfaces and N+1-safe relations.
+ * OBJECT TYPE — shows declarative field visibility (`canSee`), per-field
+ * resolvers, native enums, custom scalars, interfaces and N+1-safe relations.
  */
 class UserType extends Type
 {
@@ -37,9 +37,12 @@ class UserType extends Type
             'id' => GType::nonNull(GType::id()),
             'name' => GType::nonNull(GType::string()),
 
-            // Private: only the user themselves and their organization's admins see it.
+            // Declarative field-level visibility: viewers who fail
+            // UserPolicy::viewEmail() see null — never an error — whichever
+            // query reaches this type.
             'email' => [
                 'type' => GType::string(),
+                'canSee' => 'viewEmail',
                 'description' => 'Visible to the user and their organization admins; null for everyone else.',
             ],
 
@@ -58,12 +61,8 @@ class UserType extends Type
 
     // -------------------------------------------------------------------------
     // Per-field resolvers: resolve{FieldName}Field() is wired up automatically.
+    // `email` has none — its `canSee` rule gates the default attribute lookup.
     // -------------------------------------------------------------------------
-
-    protected function resolveEmailField(User $user): ?string
-    {
-        return Gate::allows('view', $user) ? $user->email : null;
-    }
 
     protected function resolveAvatarUrlField(User $user): ?string
     {

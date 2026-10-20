@@ -58,7 +58,7 @@ Details worth knowing:
 
 The example asserts that a query for organizations → members, member counts, posts → authors
 always runs **6 queries**, whether there are 2 organizations or 12
-([`BatchingNPlusOneTest`](../example/tests/Feature/GraphQL/BatchingNPlusOneTest.php)).
+([`BatchingNPlusOneTest`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Feature/GraphQL/BatchingNPlusOneTest.php)).
 
 `laragraph:scaffold` generates this for you: every relation method it finds on the model gets a
 field and a `resolve{Relation}Field()` calling `batchRelation()` already, so a scaffolded type only

@@ -55,6 +55,7 @@ const GROUPS: { text: string; pages: [string, string][] }[] = [
       ['15-configuration', '15. Configuration reference'],
       ['16-upgrading', '16. Upgrading'],
       ['17-error-handling-and-localization', '17. Error handling & localization'],
+      ['18-example-application', '18. The example application'],
     ],
   },
 ];

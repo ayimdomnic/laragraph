@@ -78,7 +78,7 @@ query ($after: String) {
 
 Start without `after`, then pass the previous page's `pageInfo.endCursor` until `hasNextPage` is
 `false`. The example walks 25 posts ten at a time this way and checks that it sees each one exactly once
-([`PaginationTest`](../example/tests/Feature/GraphQL/PaginationTest.php)).
+([`PaginationTest`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Feature/GraphQL/PaginationTest.php)).
 
 ### Paging backwards
 

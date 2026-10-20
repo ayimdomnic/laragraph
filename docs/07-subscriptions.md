@@ -363,5 +363,5 @@ Event::assertDispatched(SubscriptionMessage::class, fn ($message) =>
     && $message->payload['data']['postPublished']['title'] === 'Hello');
 ```
 
-See [`SubscriptionsTest`](../example/tests/Feature/GraphQL/SubscriptionsTest.php) for the
+See [`SubscriptionsTest`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Feature/GraphQL/SubscriptionsTest.php) for the
 complete set, including authorization, visibility per subscriber and unsubscribing.

@@ -37,8 +37,14 @@ class OrganizationType extends Type
             'country' => GType::string(),
             'description' => GType::string(),
 
-            // The JSON scalar passes arbitrary structured data through.
-            'settings' => Laragraph::type('JSON'),
+            // The JSON scalar passes arbitrary structured data through. The
+            // closure shape of canSee keeps this internal config visible only
+            // to members of the organization — redacted (null) for everyone
+            // else, including guests.
+            'settings' => [
+                'type' => Laragraph::type('JSON'),
+                'canSee' => fn (Organization $org, array $args, mixed $ctx): bool => $ctx->user()?->organization_id === $org->id,
+            ],
 
             'owner' => Laragraph::type('User'),
             'members' => GType::nonNull(GType::listOf(GType::nonNull(Laragraph::type('User')))),
