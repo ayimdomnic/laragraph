@@ -1,8 +1,7 @@
 {
   "branches": [
     "master",
-    "main",
-    { "name": "feature/modernize-laragraph", "prerelease": false }
+    "main"
   ],
   "plugins": [
     [
