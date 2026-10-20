@@ -22,6 +22,9 @@ Route::group($routeConfig, function (): void {
     $default  = (string) config('laragraph.default_schema', 'default');
     $graphiql = (bool) (config('laragraph.graphiql.enabled') ?? config('app.debug'));
 
+    // null = automatic: never registered under APP_ENV=production.
+    $authPicker = (bool) (config('laragraph.graphiql.auth_picker') ?? config('app.env', 'production') !== 'production');
+
     // Each schema's own `method` and `middleware` settings apply to its endpoint(s).
     $schemaMethods    = static fn(string $name): array => (array) ($schemas[$name]['method'] ?? $methods);
     $schemaMiddleware = static fn(string $name): array => (array) ($schemas[$name]['middleware'] ?? []);
@@ -38,6 +41,14 @@ Route::group($routeConfig, function (): void {
         Route::get('/graphiql', [LaragraphController::class, 'graphiql'])
             ->middleware((array) config('laragraph.graphiql.middleware', []))
             ->name('laragraph.graphiql');
+    }
+
+    // Dev-only token feed for the GraphiQL role picker; the action re-checks
+    // the environment, so a stale route still refuses to serve in production.
+    if ($graphiql && $authPicker) {
+        Route::get('/graphiql/dev-tokens', [LaragraphController::class, 'devTokens'])
+            ->middleware((array) config('laragraph.graphiql.middleware', []))
+            ->name('laragraph.graphiql.dev-tokens');
     }
 
     // Cancel a subscription: DELETE /graphql/subscriptions/{subscriberId}

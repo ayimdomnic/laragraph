@@ -157,7 +157,9 @@ curl -s localhost:8000/graphql \
 { "data": { "users": [ { "id": "1", "name": "Ada" } ] } }
 ```
 
-Or open `/graphql/graphiql` in a browser while `APP_DEBUG=true`.
+Or open `/graphql/graphiql` in a browser while `APP_DEBUG=true`. It rides your app session
+automatically, and outside `production` offers a development role/token picker — see
+[HTTP API → GraphiQL](08-http-api.md#graphiql).
 
 ## How a request flows
 

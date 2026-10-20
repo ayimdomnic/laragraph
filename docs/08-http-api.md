@@ -250,3 +250,47 @@ it explicitly and protect it:
 
 GraphiQL needs introspection to show the schema, and introspection is also
 [disabled outside debug](10-security.md#introspection) by default.
+
+### Automatic auth
+
+Because the IDE is served from the same origin as the endpoint, it rides the framework's own
+cookie auth: when you are logged into the application (a session cookie is present), queries are
+already authenticated — no header to paste. The header editor stays enabled for when you want to
+send a bearer token or override a header by hand, and the active headers are mirrored into it so
+you can always see what a request will carry.
+
+### Role / token picker (development only)
+
+Outside `production` the IDE shows an **"Act as"** picker so you can switch identity — and thus
+field-level authorization — between roles without juggling browser tabs and pasted tokens. It
+defaults to *"Current session"* (labelled with the logged-in user, so you know who you're testing
+as without a `me { id }` query), and lists each configured test user.
+
+```php
+'graphiql' => [
+    'auth_picker' => null, // auto: on whenever APP_ENV is not production
+    'test_users'  => [
+        'member'    => 'member@example.test',
+        'moderator' => 'moderator@example.test',
+        'admin'     => 'admin@example.test',
+    ],
+],
+```
+
+Tokens are minted by a development-only endpoint at `/{prefix}/graphiql/dev-tokens`:
+
+- It is registered only when the picker is on (default: `APP_ENV` not `production`).
+- It returns a Sanctum token for each seeded `test_users` entry that exists. Install Sanctum and
+  give your user model the `HasApiTokens` trait; without it the picker still works for
+  session-cookie auth but the role entries carry no token.
+- It **refuses to run under `APP_ENV=production`**, returning `404` even if a stale route somehow
+  survives a cached-config deploy.
+
+Your selection is remembered in `localStorage`, so reopening the IDE keeps the last identity.
+
+### Production safety banner
+
+If `graphiql.enabled` serves the IDE while `APP_ENV=production`, the page shows a red banner
+naming the risk and how to close it (`enabled => false`, or leave it `null` with `APP_DEBUG=false`).
+The banner is a reminder, not an access control — still guard the route with `middleware` if you
+opt in.
