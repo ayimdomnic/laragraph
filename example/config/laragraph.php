@@ -347,10 +347,16 @@ return [
     | query_timing — Adds `extensions.timing.execution_ms`; wall-clock time of
     |                Laragraph::execute() in milliseconds.
     |
+    | query_complexity — Adds `extensions.queryComplexity.{cost,maxCost}`, so
+    |                clients can see how close a query came to
+    |                security.query_max_complexity. `cost` is null when the
+    |                query failed before the cost walk ran.
+    |
     */
     'extensions' => [
         'request_id' => true,
         'query_timing' => true,
+        'query_complexity' => true,
     ],
 
     /*

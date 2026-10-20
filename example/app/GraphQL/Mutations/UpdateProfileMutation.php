@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\GraphQL\Mutations;
 
+use App\Http\Requests\UpdateProfileRequest;
 use Ayimdomnic\Laragraph\Facades\Laragraph;
 use Ayimdomnic\Laragraph\Support\Mutation;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
-use Illuminate\Validation\Rule;
 
 /**
  * `updateProfile` — users can only ever change *their own* profile: the
@@ -34,12 +34,15 @@ class UpdateProfileMutation extends Mutation
         return $context->user() !== null;
     }
 
-    public function rules(array $args = []): array
+    /**
+     * FormRequest reuse — rules() / messages() / attributes() come from the
+     * same App\Http\Requests\UpdateProfileRequest a REST endpoint would use.
+     * Authorization stays on this field (authorize() below); the FormRequest's
+     * authorize() is deliberately never called.
+     */
+    protected function formRequest(): ?string
     {
-        return [
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore(auth()->id())],
-        ];
+        return UpdateProfileRequest::class;
     }
 
     public function resolve(mixed $root, array $args, mixed $context, ResolveInfo $info): mixed

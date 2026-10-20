@@ -54,7 +54,9 @@ class CachingAndObservabilityTest extends GraphQLTestCase
 
         $response->assertJsonPath('extensions.requestId.id', 'trace-123')
             ->assertJsonPath('extensions.apiVersion.version', '2026-09')
-            ->assertJsonStructure(['extensions' => ['timing' => ['execution_ms']]]);
+            ->assertJsonStructure(['extensions' => ['timing' => ['execution_ms']]])
+            ->assertJsonStructure(['extensions' => ['queryComplexity' => ['cost', 'maxCost']]])
+            ->assertJsonPath('extensions.queryComplexity.maxCost', 500);
     }
 
     public function test_tracing_reports_resolver_timings(): void
