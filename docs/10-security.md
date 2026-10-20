@@ -160,6 +160,16 @@ Most GraphQL data leaks are authorization bugs, not query-cost problems. Follow 
 authorize every mutation, filter every list, protect sensitive fields on the *type*, and never
 trust ids from arguments for "my" data.
 
+Sensitive columns are redacted with a declarative `canSee` rule on the type field, so the check is
+structural instead of a resolver you might forget — a failed check returns `null` (never an error
+that would confirm the value exists), and an ability backed by no policy fails closed:
+
+```php
+'phone' => ['type' => Type::string(), 'canSee' => 'viewPhone'],
+```
+
+See [Field-level privacy on types](04-authentication-and-authorization.md#field-level-privacy-on-types).
+
 ## Rate limiting
 
 - **Per field:** `ThrottleMiddleware` on sensitive fields such as login, password reset and
