@@ -21,7 +21,7 @@ const docsRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..'); // docs
 // Curated page order + display text, grouped exactly as the sidebar sections.
 const GROUPS: { text: string; pages: [string, string][] }[] = [
   {
-    text: 'Start here',
+    text: 'Start Here',
     pages: [
       ['01-getting-started', '1. Getting started'],
       ['02-types', '2. Types'],
@@ -29,7 +29,7 @@ const GROUPS: { text: string; pages: [string, string][] }[] = [
     ],
   },
   {
-    text: 'Building a real API',
+    text: 'Building a Real API',
     pages: [
       ['04-authentication-and-authorization', '4. Authentication & authorization'],
       ['05-relations-and-dataloaders', '5. Relations & DataLoaders'],
@@ -40,13 +40,13 @@ const GROUPS: { text: string; pages: [string, string][] }[] = [
     ],
   },
   {
-    text: 'Running it in production',
+    text: 'Running It in Production',
     pages: [
       ['10-security', '10. Security'],
       ['11-performance-and-caching', '11. Performance & caching'],
       ['12-observability', '12. Observability'],
       ['13-testing', '13. Testing'],
-      ['14-deployment', '14. Deployment'],
+      ['14-deployment', '14. Deployment'],    
     ],
   },
   {
