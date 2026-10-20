@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Controllers;
 
+use Ayimdomnic\Laragraph\Http\Actions\DevTokensAction;
 use Ayimdomnic\Laragraph\Http\Actions\ExecuteQueryAction;
 use Ayimdomnic\Laragraph\Http\Actions\RenderGraphiqlAction;
 use Ayimdomnic\Laragraph\Http\Actions\StreamSubscriptionAction;
@@ -31,6 +32,7 @@ class LaragraphController extends BaseController
         protected readonly UnsubscribeAction $unsubscribeAction,
         protected readonly StreamSubscriptionAction $streamSubscriptionAction,
         protected readonly RenderGraphiqlAction $renderGraphiqlAction,
+        protected readonly DevTokensAction $devTokensAction,
     ) {}
 
     /**
@@ -78,5 +80,16 @@ class LaragraphController extends BaseController
     public function graphiql(Request $request, string $schemaName = 'default'): Response
     {
         return $this->renderGraphiqlAction->handle($schemaName);
+    }
+
+    /**
+     * Tokens for the configured GraphiQL test users. Development-only: the
+     * route is registered when app.env is not 'production', and the action
+     * re-checks the environment, answering 404 under APP_ENV=production even
+     * if the route somehow exists.
+     */
+    public function devTokens(): JsonResponse
+    {
+        return $this->devTokensAction->handle();
     }
 }

@@ -457,11 +457,30 @@ return [
     |   in production. Set true to always serve it (then protect it with
     |   'middleware', e.g. ['auth', 'can:viewGraphiql']) or false to never.
     |
+    | auth_picker — null (default) shows the in-IDE role/token picker and
+    |   registers the development-only token endpoint at
+    |   /{prefix}/graphiql/dev-tokens whenever app.env is not 'production'.
+    |   The endpoint refuses to serve tokens even if the route is somehow
+    |   registered under APP_ENV=production. Set true/false to force.
+    |
+    | test_users — role label => user identifier (e-mail by default) map the
+    |   picker offers. Each identifier is resolved through the default auth
+    |   provider's model; users that don't exist are simply omitted. Tokens
+    |   are Sanctum personal access tokens, so the model must use the
+    |   HasApiTokens trait — without Sanctum installed the picker falls back
+    |   to session-cookie ("current user") auth only.
+    |
     */
     'graphiql' => [
-        'enabled'    => null,
-        'middleware' => [],
-        'title'      => 'Laragraph — GraphiQL',
+        'enabled'     => null,
+        'middleware'  => [],
+        'title'       => 'Laragraph — GraphiQL',
+        'auth_picker' => null,
+        'test_users'  => [
+            'member'    => 'member@example.test',
+            'moderator' => 'moderator@example.test',
+            'admin'     => 'admin@example.test',
+        ],
     ],
 
     /*

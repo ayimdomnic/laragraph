@@ -282,12 +282,28 @@ auto-discovered — including subdirectories such as `app/GraphQL/Types/Billing/
 Built-in browser IDE at `/graphql/graphiql`. By default (`'enabled' => null`) it is only served
 while `app.debug` is on — never in production.
 
+Because it shares the endpoint's origin, it picks up your application session automatically: log
+in to your app, open the IDE, and queries are already authenticated — no token to paste.
+
+Outside `production` a development **role/token picker** ("Act as") lets you switch identity across
+roles (member / moderator / admin) to test field-level authorization without juggling tabs. Tokens
+come from a dev-only endpoint (`/{prefix}/graphiql/dev-tokens`, Sanctum-based) that never serves
+under `APP_ENV=production`; if the IDE *is* served in production it shows a red safety banner.
+
 ```php
 'graphiql' => [
-    'enabled'    => true,                           // always serve it…
-    'middleware' => ['auth', 'can:viewGraphiql'],   // …but only to trusted users
+    'enabled'     => true,                           // always serve it…
+    'middleware'  => ['auth', 'can:viewGraphiql'],   // …but only to trusted users
+    'auth_picker' => null,                           // auto: on unless APP_ENV=production
+    'test_users'  => [
+        'member'    => 'member@example.test',
+        'moderator' => 'moderator@example.test',
+        'admin'     => 'admin@example.test',
+    ],
 ],
 ```
+
+See [HTTP API → GraphiQL](docs/08-http-api.md#graphiql) for the full walkthrough.
 
 ---
 

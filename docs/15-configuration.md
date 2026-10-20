@@ -289,9 +289,15 @@ Accept a JSON list of operations per request. `max_operations` of `0` removes th
 
 ```php
 'graphiql' => [
-    'enabled'    => null,
-    'middleware' => [],
-    'title'      => 'Laragraph — GraphiQL',
+    'enabled'     => null,
+    'middleware'  => [],
+    'title'       => 'Laragraph — GraphiQL',
+    'auth_picker' => null,
+    'test_users'  => [
+        'member'    => 'member@example.test',
+        'moderator' => 'moderator@example.test',
+        'admin'     => 'admin@example.test',
+    ],
 ],
 ```
 
@@ -300,6 +306,8 @@ Accept a JSON list of operations per request. `max_operations` of `0` removes th
 | `enabled` | `null` = served only while `app.debug` is on; `true` = always; `false` = never |
 | `middleware` | Route middleware for the GraphiQL page, e.g. `['web', 'auth', 'can:viewGraphiql']` |
 | `title` | Page title |
+| `auth_picker` | `null` = the in-IDE role/token picker shows whenever `app.env` is not `production`; `true`/`false` force it. The picker's dev-only token endpoint (`/{prefix}/graphiql/dev-tokens`) is only registered when this is on, and refuses to serve under `APP_ENV=production` even if a stale route survives. See [HTTP API → GraphiQL](08-http-api.md#graphiql). |
+| `test_users` | `role label => identifier` map offered by the picker. Identifiers are looked up on the default auth provider's model (by its `getAuthIdentifierName()` column, `email` in practice); missing users are skipped. Tokens come from Sanctum's `HasApiTokens`, so without Sanctum installed the picker offers session-cookie auth only. |
 
 ## `tracing`
 
