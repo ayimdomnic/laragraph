@@ -40,6 +40,21 @@ class QueryComplexityExtensionTest extends TestCase
         $this->assertSame(42, $data['cost']);
     }
 
+    public function test_reports_null_cost_when_the_rule_never_walked_a_document(): void
+    {
+        // A real rule constructed but never visited (parse failure or earlier
+        // validation error) leaves webonyx's typed cost property unset;
+        // reading it used to fatal with "must not be accessed before
+        // initialization" and turn any invalid query into a 500.
+        $state = new QueryComplexityState();
+        $state->setCurrent(new QueryComplexity(500));
+
+        $data = (new QueryComplexityExtension($state))->get();
+
+        $this->assertNull($data['cost']);
+        $this->assertSame(500, $data['maxCost']);
+    }
+
     protected function tearDown(): void
     {
         \Mockery::close();

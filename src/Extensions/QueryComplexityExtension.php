@@ -15,7 +15,9 @@ use GraphQL\Validator\Rules\QueryComplexity;
  *
  * Populated even when the query was rejected for exceeding the limit (per
  * {@see QueryComplexity::getQueryComplexity()}'s own contract), so a client
- * can see exactly how far over budget a rejected query was.
+ * can see exactly how far over budget a rejected query was. When the query
+ * died before the cost walk ran at all (parse or earlier validation
+ * failure), `cost` reports as `null` rather than fataling or faking a `0`.
  *
  * Enable via config:
  * ```php
@@ -37,7 +39,7 @@ final readonly class QueryComplexityExtension implements GraphQLExtensionInterfa
     }
 
     /**
-     * @return array{cost: int, maxCost: int}|array{}
+     * @return array{cost: int|null, maxCost: int}|array{}
      */
     public function get(array $context = []): array
     {
@@ -47,8 +49,19 @@ final readonly class QueryComplexityExtension implements GraphQLExtensionInterfa
             return [];
         }
 
+        // Webonyx only initialises the running cost inside getVisitor() — a
+        // rule that never walked a document (parse failure, or validation
+        // aborted before this rule ran) would fatal with "must not be
+        // accessed before initialization". Unknown cost reports as null,
+        // not as 0, so clients can tell "not computed" from "free".
+        try {
+            $cost = $rule->getQueryComplexity();
+        } catch (\Error) {
+            $cost = null;
+        }
+
         return [
-            'cost'    => $rule->getQueryComplexity(),
+            'cost'    => $cost,
             'maxCost' => $rule->getMaxQueryComplexity(),
         ];
     }
