@@ -1,5 +1,74 @@
 # 16. Upgrading
 
+## How to upgrade
+
+Laragraph follows [semantic versioning](https://semver.org). **Patch and minor releases never break
+your code** — a routine upgrade is just:
+
+```bash
+composer update ayimdomnic/laragraph   # or widen the constraint in composer.json
+php artisan laragraph:clear            # rebuild the cached schema / discovery manifest
+php artisan laragraph:validate         # build every schema and fail on validation errors
+```
+
+Put `laragraph:validate` (and optionally `laragraph:schema:diff`) in CI so a schema problem is caught
+before it deploys. After a **major** release, read its section below first: some default *behaviours*
+change what clients see even when the PHP API stays source-compatible, and you may want to restore the
+old setting through `config/laragraph.php`. Republish the config to see every new key:
+
+```bash
+php artisan vendor:publish --tag=laragraph-config --force   # back up your edits first
+php artisan laragraph:schema:export --output=schema.graphql # optional: pin your current schema
+php artisan laragraph:schema:diff --against=schema.graphql  # optional: CI gate for breaking changes
+```
+
+Browsing an older version's guide? Use the **Version** menu in the header — the docs for 4.0.0 and
+later are archived alongside each release.
+
+## From 4.3 to 4.4
+
+**No breaking changes — everything is additive, so you can upgrade with no code edits.** Three new
+capabilities, each opt-in:
+
+### Field-level visibility (`canSee`)
+
+Object types gain a `canSee` field key (and `guard()` / `canSee()` base-class helpers) for
+declarative per-field authorization:
+
+```php
+protected function fields(): array
+{
+    return [
+        'email' => ['type' => Type::string(), 'canSee' => 'view-email'],            // Gate ability
+        'phone' => ['type' => Type::string(), 'canSee' => ['view-phone', $this]],   // ability + subject
+        'cost'  => ['type' => Type::float(),  'canSee' => fn ($parent, $args, $ctx) => $parent->isPublic()],
+    ];
+}
+```
+
+A denied field resolves to `null` — silent redaction, never an authorization error — so "forbidden"
+and "does not exist" are indistinguishable to a client. Guests are denied without touching the Gate,
+unknown abilities fail closed and warn once per request, list/connection fields are checked once
+against the parent, and guarded `batchRelation()` children still batch into a single query. Introspection
+still lists guarded fields. See
+[Authentication & authorization → Field-level privacy](04-authentication-and-authorization.md).
+
+### GraphiQL auto-auth and dev-only role/token picker
+
+When you open the GraphiQL IDE while logged in, it now attaches your session automatically. Under
+`APP_DEBUG=true` it also offers a role/token picker backed by Sanctum dev-tokens, so you can exercise
+the API as another user without hand-editing headers. In production the picker is hidden and a safety
+banner is shown. No configuration required — it keeps honouring `graphiql.enabled`. See
+[The HTTP API](08-http-api.md).
+
+### `#[Fillable]` attribute when scaffolding
+
+`laragraph:scaffold` now resolves a model's mass-assignable columns from **both** the traditional
+`protected $fillable` property and Laravel 11+'s `#[Fillable([...])]` class attribute, so models using
+the attribute style generate identical types and input fields. When both are declared, the property
+wins. Because columns are read from class metadata rather than an instance, scaffolding also works for
+models whose constructor throws. See [Getting started](01-getting-started.md).
+
 ## From 3.1 to the next release
 
 This release modernises the package for PHP 8.2–8.5 and Laravel 10–13, and makes its defaults
