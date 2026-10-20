@@ -74,6 +74,32 @@ class ThrowingScaffoldModel extends Model
 }
 
 // ---------------------------------------------------------------------------
+// Fixtures for issue #54 — fillable columns declared via the #[Fillable]
+// attribute instead of (or alongside) the traditional property.
+// ---------------------------------------------------------------------------
+
+#[\Illuminate\Database\Eloquent\Attributes\Fillable(['name', 'email', 'age'])]
+class AttrFillableScaffoldModel extends Model
+{
+    protected $table = 'attr_fillable_scaffold_models';
+    protected $casts = ['age' => 'integer'];
+}
+
+class PropFillableScaffoldModel extends Model
+{
+    protected $table = 'prop_fillable_scaffold_models';
+    protected $fillable = ['name', 'email', 'age'];
+    protected $casts = ['age' => 'integer'];
+}
+
+#[\Illuminate\Database\Eloquent\Attributes\Fillable(['from_attribute'])]
+class BothFillableScaffoldModel extends Model
+{
+    protected $table = 'both_fillable_scaffold_models';
+    protected $fillable = ['from_property'];
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -502,5 +528,64 @@ PHP);
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/stub \[nonexistent.stub\] not found/');
         $method->invoke($command, 'nonexistent', []);
+    }
+
+    // -------------------------------------------------------------------------
+    // Issue #54 — #[Fillable] attribute support
+    // -------------------------------------------------------------------------
+
+    public function test_scaffold_from_attribute_model_produces_same_fields_as_property_model(): void
+    {
+        if (! class_exists(\Illuminate\Database\Eloquent\Attributes\Fillable::class)) {
+            $this->markTestSkipped('#[Fillable] requires Laravel 11+.');
+        }
+
+        $this->artisan('laragraph:scaffold', ['model' => PropFillableScaffoldModel::class])->assertSuccessful();
+        $this->artisan('laragraph:scaffold', ['model' => AttrFillableScaffoldModel::class])->assertSuccessful();
+
+        $fieldLines = static function (string $path): array {
+            preg_match_all("/^\\s+'.*' => \\['type' =>.*$/m", (string) file_get_contents($path), $matches);
+
+            return $matches[0];
+        };
+
+        $propLines = $fieldLines(app_path('GraphQL/Types/PropFillableScaffoldModelType.php'));
+        $attrLines = $fieldLines(app_path('GraphQL/Types/AttrFillableScaffoldModelType.php'));
+
+        $this->assertNotEmpty($propLines);
+        $this->assertSame($propLines, $attrLines);
+        $this->assertStringContainsString("'age' => ['type' => GType::int()]", implode("\n", $attrLines));
+    }
+
+    public function test_scaffold_with_crud_generates_mutations_for_attribute_model(): void
+    {
+        if (! class_exists(\Illuminate\Database\Eloquent\Attributes\Fillable::class)) {
+            $this->markTestSkipped('#[Fillable] requires Laravel 11+.');
+        }
+
+        $this->artisan('laragraph:scaffold', [
+            'model'       => AttrFillableScaffoldModel::class,
+            '--with-crud' => true,
+        ])->assertSuccessful();
+
+        $mutation = (string) file_get_contents(app_path('GraphQL/Mutations/CreateAttrFillableScaffoldModelMutation.php'));
+
+        $this->assertStringContainsString("'name' => ['type' => GType::string()],", $mutation);
+        $this->assertStringContainsString("'email' => ['type' => GType::string()],", $mutation);
+        $this->assertStringContainsString("'age' => ['type' => GType::int()],", $mutation);
+    }
+
+    public function test_scaffold_prefers_fillable_property_when_both_are_declared(): void
+    {
+        if (! class_exists(\Illuminate\Database\Eloquent\Attributes\Fillable::class)) {
+            $this->markTestSkipped('#[Fillable] requires Laravel 11+.');
+        }
+
+        $this->artisan('laragraph:scaffold', ['model' => BothFillableScaffoldModel::class])->assertSuccessful();
+
+        $content = (string) file_get_contents(app_path('GraphQL/Types/BothFillableScaffoldModelType.php'));
+
+        $this->assertStringContainsString("'from_property' => ['type' => GType::string()]", $content);
+        $this->assertStringNotContainsString('from_attribute', $content);
     }
 }

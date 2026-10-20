@@ -195,7 +195,9 @@ validation, validation before your resolver, and field middleware wraps only the
 | `laragraph:make:loader UserLoader` | `app/GraphQL/Loaders/UserLoader.php` — a custom `BatchResolver`, see [Relations & DataLoaders](05-relations-and-dataloaders.md) |
 | `laragraph:scaffold User --with-crud` | a type, `user`/`users` queries and create/update/delete mutations for a model |
 
-`laragraph:scaffold` reads the model's `$fillable` and `$casts`, leaves out attributes in `$hidden`
+`laragraph:scaffold` reads the model's fillable columns — declared either via `protected $fillable`
+or Laravel 11+'s `#[Fillable([...])]` attribute (the property wins when both exist) — together with
+`$casts`, leaves out attributes in `$hidden`
 (passwords, tokens) and generates **deny-by-default** operations: each one calls
 `Gate::allows()` for the matching policy ability (`viewAny`, `view`, `create`, `update`,
 `delete`), so nothing is reachable until you write the policy. Options: `--all` (every model in

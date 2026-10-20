@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ayimdomnic\Laragraph\Console;
 
+use Ayimdomnic\Laragraph\Support\FillableResolver;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -256,7 +257,8 @@ class ScaffoldCommand extends Command
     }
 
     /**
-     * Extract field definitions from an Eloquent model's $fillable + $casts.
+     * Extract field definitions from an Eloquent model's fillable columns
+     * (declared via `$fillable` or the `#[Fillable]` attribute) + `$casts`.
      *
      * @return array<string, string>  field name => GraphQL type expression
      */
@@ -264,19 +266,24 @@ class ScaffoldCommand extends Command
     {
         $fields = ['id' => 'GType::nonNull(GType::id())'];
 
+        // Resolved from class metadata only — no instantiation — so both the
+        // property and the #[Fillable] attribute are honoured, and models
+        // whose constructor has dependencies still introspect correctly.
+        $fillable = FillableResolver::for($modelClass);
+
         try {
             /** @var Model $instance */
             $instance = new $modelClass();
-            $fillable = $instance->getFillable();
             $casts    = $instance->getCasts();
-
-            foreach ($fillable as $field) {
-                $cast = $casts[$field] ?? 'string';
-                $fields[$field] = $this->castToGraphQLType($cast);
-            }
         } catch (\Throwable) {
-            // Model could not be instantiated — return id only and let the
-            // developer fill in the remaining fields manually.
+            // Model could not be instantiated — casts are unknown, so every
+            // fillable column is scaffolded as a string.
+            $casts = [];
+        }
+
+        foreach ($fillable as $field) {
+            $cast = $casts[$field] ?? 'string';
+            $fields[$field] = $this->castToGraphQLType($cast);
         }
 
         return $fields;
