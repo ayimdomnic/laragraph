@@ -197,6 +197,12 @@ protected function formRequest(): ?string
 }
 ```
 
+The example application does exactly this: `UpdateProfileMutation` reuses
+[`App\Http\Requests\UpdateProfileRequest`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/Http/Requests/UpdateProfileRequest.php)
+through this hook — one ruleset shared with any REST endpoint — and
+`ValidationTest::test_rules_can_come_from_a_reused_form_request()` proves its `unique`/`ignore`
+rules still run per field.
+
 The GraphQL arguments are merged onto the request as its input before `rules()` runs, so a
 `rules()` body that inspects `$this->input()` for conditional rules works unchanged.
 

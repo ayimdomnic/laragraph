@@ -88,7 +88,9 @@ off by default:
   [`security.query_max_complexity`](10-security.md#complexity) — empty (`{}`) when that limit isn't
   configured. Still populated when the query is rejected for exceeding the limit, so a client can
   see exactly how far over budget it was, the same idea as GitHub's or Shopify's GraphQL APIs
-  exposing a rate-limit cost for clients to self-throttle against.
+  exposing a rate-limit cost for clients to self-throttle against. When the query fails *before*
+  the cost is ever computed (a parse or earlier validation error), `cost` is `null` — never a
+  fake `0`.
 
 ### Custom extensions
 
