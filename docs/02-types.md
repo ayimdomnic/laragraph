@@ -5,11 +5,11 @@ you a base class for each kind of named type.
 
 | Kind | Base class | Example in the example app |
 |---|---|---|
-| Object | `Ayimdomnic\Laragraph\Support\Type` | [`UserType`](../example/app/GraphQL/Types/UserType.php), [`PostType`](../example/app/GraphQL/Types/PostType.php) |
-| Input object | `Ayimdomnic\Laragraph\Support\InputType` | [`PostInputType`](../example/app/GraphQL/Types/PostInputType.php) |
-| Enum | a native PHP `enum`, or `Ayimdomnic\Laragraph\Support\EnumType` | [`UserRole`](../example/app/Enums/UserRole.php) |
-| Interface | `Ayimdomnic\Laragraph\Support\InterfaceType` | [`NodeType`](../example/app/GraphQL/Types/NodeType.php) |
-| Union | `Ayimdomnic\Laragraph\Support\UnionType` | [`SearchResultType`](../example/app/GraphQL/Types/SearchResultType.php) |
+| Object | `Ayimdomnic\Laragraph\Support\Type` | [`UserType`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Types/UserType.php), [`PostType`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Types/PostType.php) |
+| Input object | `Ayimdomnic\Laragraph\Support\InputType` | [`PostInputType`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Types/PostInputType.php) |
+| Enum | a native PHP `enum`, or `Ayimdomnic\Laragraph\Support\EnumType` | [`UserRole`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/Enums/UserRole.php) |
+| Interface | `Ayimdomnic\Laragraph\Support\InterfaceType` | [`NodeType`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Types/NodeType.php) |
+| Union | `Ayimdomnic\Laragraph\Support\UnionType` | [`SearchResultType`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Types/SearchResultType.php) |
 | Scalar | `Ayimdomnic\Laragraph\Support\ScalarType` | built-ins: `DateTime`, `Date`, `JSON`, `Upload` |
 
 ## Object types

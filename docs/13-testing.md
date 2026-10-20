@@ -2,7 +2,7 @@
 
 Test your API **over HTTP, the way clients use it**. That exercises routing, middleware,
 authentication, parsing, validation, authorization and serialisation together. The example's
-56 tests in [`tests/Feature/GraphQL`](../example/tests/Feature/GraphQL) are all written this way.
+56 tests in [`tests/Feature/GraphQL`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Feature/GraphQL) are all written this way.
 
 ## A base test case
 

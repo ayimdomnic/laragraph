@@ -63,7 +63,7 @@ A type that's registered only for the admin schema is **invisible** on every oth
 `__type(name: "AdminStats")` returns `null` on `/graphql`, and a query naming it fails
 validation. Laragraph resolves type names against each schema's own type map, not against the
 shared registry. The example asserts this in
-[`SecurityTest`](../example/tests/Feature/GraphQL/SecurityTest.php).
+[`SecurityTest`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Feature/GraphQL/SecurityTest.php).
 
 Reference schema-only types only from that schema's own fields. `Laragraph::type('AdminStats')`
 inside a *public* type would pull it into the public schema through that field.

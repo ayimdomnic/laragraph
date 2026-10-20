@@ -5,7 +5,7 @@ plain PHP classes, and everything else — validation, authorization, pagination
 subscriptions, caching — uses the Laravel features you already know.
 
 This guide explains every feature, why it exists and how to use it safely. Almost every code
-sample comes from the [example application](../example/README.md), whose test suite runs against
+sample comes from the [example application](18-example-application.md), whose test suite runs against
 this repository — so the samples are known to work.
 
 ## Contents
@@ -38,6 +38,7 @@ this repository — so the samples are known to work.
 15. [Configuration reference](15-configuration.md) — every option in `config/laragraph.php`
 16. [Upgrading](16-upgrading.md) — behaviour changes between releases
 17. [Error handling & localization](17-error-handling-and-localization.md) — `GraphQLException`, error codes, and translating messages per request
+18. [The example application](18-example-application.md) — a team-blog API exercising every feature, with a feature-to-file map
 
 ## Conventions used in this guide
 
@@ -46,4 +47,6 @@ this repository — so the samples are known to work.
 - `Type` in field definitions is webonyx's `GraphQL\Type\Definition\Type`. Laragraph's own base
   class for object types is also called `Type` (`Ayimdomnic\Laragraph\Support\Type`), so type
   classes usually import webonyx's as `GType`.
-- "The example" means the application in [`example/`](../example).
+- "The example" means the application in
+  [`example/`](https://github.com/ayimdomnic/laragraph/tree/master/example) — see
+  [The example application](18-example-application.md) for a tour.

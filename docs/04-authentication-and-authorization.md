@@ -199,9 +199,13 @@ from everyone except the user themselves and their organization's admins:
 public function fields(): array
 {
     return [
-        'id'    => ['type' => Type::nonNull(Type::id())],
-        'name'  => Type::string(),
-        'email' => ['type' => Type::string(), 'canSee' => 'viewEmail'],
+        'id'   => GType::nonNull(GType::id()),
+        'name' => GType::nonNull(GType::string()),
+
+        'email' => [
+            'type' => GType::string(),
+            'canSee' => 'viewEmail',  // UserPolicy::viewEmail($viewer, $target)
+        ],
     ];
 }
 ```
@@ -213,6 +217,11 @@ public function fields(): array
 | `'canSee' => 'viewEmail'` | `Gate::allows('viewEmail', $parent)` — the parent object is the subject. |
 | `'canSee' => ['viewBilling', fn ($parent) => $parent->payment]` | Same, but the second element resolves the subject to authorize against — for abilities that target a related model. A non-callable second element is used as the subject directly. |
 | `'canSee' => fn ($parent, $args, $ctx) => $ctx->user()?->is($parent)` | A closure decides; anything truthy passes. |
+
+The example exercises two of the three shapes: `UserType` gates `email` with the `'viewEmail'`
+ability, and `OrganizationType` gates the internal `settings` JSON with a closure that admits only
+members of that organization — guests and outsiders get `null` while the organization itself stays
+publicly readable.
 
 The semantics are deliberately fail-closed:
 

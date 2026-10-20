@@ -189,7 +189,7 @@ across requests. Never keep per-request state (the current user, request data, a
 results) in their properties or inject it into their constructors. Use `$context` or local
 variables instead.
 
-The example app's [`OctaneTest`](../example/tests/Octane/OctaneTest.php) runs requests through a
+The example app's [`OctaneTest`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Octane/OctaneTest.php) runs requests through a
 real Octane worker. It checks that the schema is compiled once, that each request sees only its
 own user, and that subscription updates run as the subscriber.
 

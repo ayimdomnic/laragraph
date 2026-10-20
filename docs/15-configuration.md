@@ -2,7 +2,7 @@
 
 Publish the file with `php artisan vendor:publish --tag=laragraph-config`. Every key is optional;
 the defaults are shown. For a complete, working configuration, see
-[`example/config/laragraph.php`](../example/config/laragraph.php).
+[`example/config/laragraph.php`](https://github.com/ayimdomnic/laragraph/blob/master/example/config/laragraph.php).
 
 ## `default_schema`
 

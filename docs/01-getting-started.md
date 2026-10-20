@@ -221,4 +221,4 @@ become) a registered `laragraph.types` entry, same as any other custom scalar/en
 ## Next
 
 - Learn the building blocks in [Types](02-types.md) and [Queries & mutations](03-queries-and-mutations.md).
-- Or run the [example application](../example/README.md) and explore it in GraphiQL.
+- Or run the [example application](18-example-application.md) and explore it in GraphiQL.

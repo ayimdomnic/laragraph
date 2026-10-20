@@ -46,9 +46,9 @@ php artisan laragraph:make:exception InvalidCredentialsException
 Creates `app/GraphQL/Exceptions/InvalidCredentialsException.php` extending `GraphQLException`, with
 the translation key and error code derived from the class name (`InvalidCredentialsException` →
 `errors.invalid_credentials` / `INVALID_CREDENTIALS`). The example app's
-[`InvalidCredentialsException`](../example/app/GraphQL/Exceptions/InvalidCredentialsException.php)
+[`InvalidCredentialsException`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Exceptions/InvalidCredentialsException.php)
 is generated output, thrown from
-[`LoginMutation`](../example/app/GraphQL/Mutations/LoginMutation.php):
+[`LoginMutation`](https://github.com/ayimdomnic/laragraph/blob/master/example/app/GraphQL/Mutations/LoginMutation.php):
 
 ```php
 if (! is_string($token)) {
@@ -129,7 +129,7 @@ takes priority over `negotiate_locale` and its return value is still checked aga
   directory (e.g. `lang/vendor/laragraph/fr/errors.php`) with as many or as few keys as you want —
   Laravel falls back to English (or your `app.fallback_locale`) for any key you don't override. The
   example app's
-  [`lang/vendor/laragraph/fr/errors.php`](../example/lang/vendor/laragraph/fr/errors.php)
+  [`lang/vendor/laragraph/fr/errors.php`](https://github.com/ayimdomnic/laragraph/blob/master/example/lang/vendor/laragraph/fr/errors.php)
   demonstrates a partial override.
 
 ### Security: the `supported_locales` allow-list is not optional
@@ -157,7 +157,7 @@ whatever locale is ambient on the queue worker — not the original subscriber's
 ## Testing
 
 The example app's
-[`LocalizationTest`](../example/tests/Feature/GraphQL/LocalizationTest.php) covers the whole path
+[`LocalizationTest`](https://github.com/ayimdomnic/laragraph/blob/master/example/tests/Feature/GraphQL/LocalizationTest.php) covers the whole path
 end-to-end: a translated message via `Accept-Language`, the English default without the header, an
 unsupported language falling back to English, locale restoration after the request, and a vendor
 lang override. Run it with:
