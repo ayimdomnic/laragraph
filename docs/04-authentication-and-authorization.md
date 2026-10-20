@@ -191,27 +191,74 @@ in `authorize()`, where you can load the model (see `PublishPostMutation` and `D
 ## Field-level privacy on types
 
 The hooks above protect **root fields**. Fields of object types have no `authorize()`; protect
-sensitive ones in their resolver instead. The example hides e-mail addresses from everyone except
-the user themselves and their organization's admins:
+them declaratively with a `canSee` rule on the type itself. The example hides e-mail addresses
+from everyone except the user themselves and their organization's admins:
 
 ```php
 // example/app/GraphQL/Types/UserType.php
-protected function resolveEmailField(User $user): ?string
+public function fields(): array
 {
-    return Gate::allows('view', $user) ? $user->email : null;
+    return [
+        'id'    => ['type' => Type::nonNull(Type::id())],
+        'name'  => Type::string(),
+        'email' => ['type' => Type::string(), 'canSee' => 'viewEmail'],
+    ];
 }
 ```
 
-Return `null` (make the field nullable) when the viewer may know that the field exists but not its
-value. Throw `new GraphQL\Error\Error('…')` when the attempt itself should be reported as an error.
+`canSee` accepts three shapes:
 
-The same applies to relations. `User.posts` filters out drafts the viewer may not read
+| Shape | Check performed |
+| --- | --- |
+| `'canSee' => 'viewEmail'` | `Gate::allows('viewEmail', $parent)` — the parent object is the subject. |
+| `'canSee' => ['viewBilling', fn ($parent) => $parent->payment]` | Same, but the second element resolves the subject to authorize against — for abilities that target a related model. A non-callable second element is used as the subject directly. |
+| `'canSee' => fn ($parent, $args, $ctx) => $ctx->user()?->is($parent)` | A closure decides; anything truthy passes. |
+
+The semantics are deliberately fail-closed:
+
+- A failed check **redacts** the field — it resolves to `null`, never an error. A denied value is
+  indistinguishable from an empty one, so "not allowed" and "not set" produce the same response.
+- A guest gets `null`; the Gate isn't consulted at all.
+- An ability that matches no `Gate::define()` and no policy method fails closed and logs one
+  warning per request — a forgotten policy method is visible in your dev logs, invisible to
+  clients.
+- Non-nullable fields follow GraphQL's standard null propagation: the `null` bubbles up to the
+  nearest nullable parent.
+- Checks are memoised per request, so a list field's ability runs once against each parent, and
+  repeated `(ability, subject)` pairs never re-hit the Gate. Guarded `batchRelation()` fields
+  still batch into a single query — and when the parent check *fails*, the relation is never
+  loaded at all.
+- Introspection is unaffected: the field stays in the schema; only its value is redacted.
+
+The same helpers are available when you need more control inside a type:
+
+```php
+// guard(): wrap a resolver in the check (what 'canSee' desugars to)
+'phone' => [
+    'type'    => Type::string(),
+    'resolve' => $this->guard('viewPhone', fn (User $u) => $u->phone),
+],
+
+// canSee(): evaluate a rule imperatively inside a resolve{Name}Field method
+protected function resolvePaidAtField(User $user, array $args, mixed $ctx): ?string
+{
+    return $this->canSee('viewPayments', $user, $args, $ctx) ? $user->paid_at : null;
+}
+```
+
+> **Why redact rather than error?** Returning `"not allowed to view phone"` tells an attacker the
+> field exists and is populated. `null` leaks nothing — the field's existence remains visible in
+> introspection (honest schema), its value doesn't. If the attempt itself should be reported, keep
+> the check in a resolver and throw `new GraphQL\Error\Error('…')` there.
+
+Relations that should *disappear* rather than show empty children are still filtered in their
+resolvers: `User.posts` filters out drafts the viewer may not read
 (see [Relations](05-relations-and-dataloaders.md#post-processing-a-batched-relation)), and `posts`
 uses a query scope, `Post::visibleTo($user)`, so nothing that shouldn't be returned is ever loaded.
 
 > **Rule of thumb:** a type is reachable from many root fields. Whatever a type exposes, it
-> exposes through *every* path that reaches it, so put privacy rules on the type, not only on the
-> query that you expect clients to use.
+> exposes through *every* path that reaches it, so put privacy rules on the type — a `canSee`
+> key — not only on the query that you expect clients to use.
 
 ## Protecting a whole schema
 
@@ -241,7 +288,8 @@ accident.
 
 - [ ] Every mutation has an `authorize()`, `authorizeWithContext()` or `policy()`.
 - [ ] Queries returning private data check access, or filter with a scope such as `visibleTo()`.
-- [ ] Sensitive *type* fields (`email`, `phone`, tokens…) check the viewer in their resolver.
+- [ ] Sensitive *type* fields (`email`, `phone`, tokens…) declare a `canSee` rule or check the
+      viewer in their resolver.
 - [ ] "Not found" and "not allowed" produce the same response for id lookups.
 - [ ] Login and other credential-checking mutations are throttled.
 - [ ] Mutations take the acting user from `$context->user()`, never from an argument.

@@ -59,6 +59,7 @@ Laragraph gives Laravel developers a clean, expressive, **code-first** API for b
 | Custom scalars (DateTime, Date, JSON, Upload) | ✅ |
 | Built-in argument validation (Laravel rules) | ✅ |
 | Per-field authorization | ✅ |
+| Field-level visibility redaction (`canSee`) | ✅ |
 | N+1-safe Eloquent relation batching | ✅ |
 | Relay cursor pagination + simple paginator | ✅ |
 | Batched queries | ✅ |
@@ -473,6 +474,23 @@ public function policyAbility(): string { return 'viewAny'; }
 Policies registered with the Gate go through it (so `Gate::before()` hooks apply); other policy
 classes are called directly, honouring their own `before()`. Guests are denied unless the policy
 method accepts a nullable user.
+
+### Field-level visibility (`canSee`)
+
+The hooks above guard *root fields*. To guard a field on an **object type** — so a viewer allowed to
+fetch a `User` still can't read its `phone` — declare a `canSee` rule instead of hand-writing a
+resolver per sensitive column:
+
+```php
+'phone' => ['type' => Type::string(), 'canSee' => 'viewPhone'],           // Gate ability
+'paidAt' => ['type' => ..., 'canSee' => ['viewBilling', fn ($u) => $u]],  // ability + subject
+'email'  => ['type' => ..., 'canSee' => fn ($u, $args, $ctx) => $ctx->user()?->is($u)], // closure
+```
+
+A failed check **redacts** the value to `null` (never an error, so "forbidden" and "empty" are
+indistinguishable); guests and unknown abilities fail closed. Checks are memoised per request, so a
+list field costs one check against its parent, not one per element.
+See [Field-level privacy on types](docs/04-authentication-and-authorization.md#field-level-privacy-on-types).
 
 ---
 

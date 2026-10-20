@@ -80,13 +80,18 @@ protected function resolveExcerptField(Post $post, array $args): string
 
 protected function resolveEmailField(User $user): ?string
 {
-    // Field-level privacy: see chapter 4.
+    // Field-level privacy usually doesn't need a resolver at all —
+    // declare `'canSee' => 'viewEmail'` instead; see chapter 4.
     return Gate::allows('view', $user) ? $user->email : null;
 }
 ```
 
 These methods may be `protected`. A `resolve` key in the field definition takes precedence over
 a `resolve{Name}Field` method.
+
+For a field that is simply invisible to some viewers, prefer the declarative
+[`canSee`](04-authentication-and-authorization.md#field-level-privacy-on-types) key over a
+hand-written authorization resolver.
 
 Relations need more care — resolving `$post->author` once per post causes the N+1 problem.
 Use `$this->batchRelation()`, covered in [chapter 5](05-relations-and-dataloaders.md).
