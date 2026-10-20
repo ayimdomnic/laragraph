@@ -10,13 +10,13 @@ this repository — so the samples are known to work.
 
 ## Contents
 
-**Start here**
+**Start Here**
 
 1. [Getting started](01-getting-started.md) — install, your first type, query and mutation, how requests flow, and scaffolding a type/queries/mutations (with relations and enum casts) from an Eloquent model
 2. [Types](02-types.md) — object, input, enum (including native PHP enums), interface and union types, scalars, and how types are registered
 3. [Queries & mutations](03-queries-and-mutations.md) — fields, arguments, resolvers, the context, validation (including reusing an existing FormRequest), errors, deprecation
 
-**Building a real API**
+**Building a Real API**
 
 4. [Authentication & authorization](04-authentication-and-authorization.md) — guards, `authorize()`, policies, field-level privacy
 5. [Relations & DataLoaders](05-relations-and-dataloaders.md) — solving N+1 with `batchRelation()` and custom loaders (generate one with `laragraph:make:loader`)
@@ -25,7 +25,7 @@ this repository — so the samples are known to work.
 8. [The HTTP API](08-http-api.md) — GraphQL over HTTP, file uploads, batching, persisted queries, error codes
 9. [Multiple schemas](09-multiple-schemas.md) — separate public and admin APIs
 
-**Running it in production**
+**Running It in Production**
 
 10. [Security](10-security.md) — defaults, limits, and a hardening checklist
 11. [Performance & caching](11-performance-and-caching.md) — response cache, discovery cache, Octane

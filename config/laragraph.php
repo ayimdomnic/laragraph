@@ -336,7 +336,8 @@ return [
     | query_complexity — Adds `extensions.queryComplexity.{cost,maxCost}`, so
     |                clients can see how close a query is to
     |                security.query_max_complexity and self-throttle. Empty
-    |                when that limit isn't configured.
+    |                when that limit isn't configured; `cost` is `null` when
+    |                the query failed before the cost walk could run.
     |
     */
     'extensions' => [

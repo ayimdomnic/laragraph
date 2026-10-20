@@ -46,7 +46,7 @@ const GROUPS: { text: string; pages: [string, string][] }[] = [
       ['11-performance-and-caching', '11. Performance & caching'],
       ['12-observability', '12. Observability'],
       ['13-testing', '13. Testing'],
-      ['14-deployment', '14. Deployment'],    
+      ['14-deployment', '14. Deployment'],
     ],
   },
   {

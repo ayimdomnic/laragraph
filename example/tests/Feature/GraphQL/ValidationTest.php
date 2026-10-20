@@ -37,4 +37,19 @@ class ValidationTest extends GraphQLTestCase
         $this->graphql('{ search(term: "acme", limit: 500) { __typename } }')
             ->assertJsonPath('errors.0.extensions.validation.limit.0', 'The limit field must be between 1 and 25.');
     }
+
+    public function test_rules_can_come_from_a_reused_form_request(): void
+    {
+        // UpdateProfileMutation declares formRequest() → UpdateProfileRequest;
+        // its unique rule must reject taking another user's e-mail…
+        $taken = $this->member->email;
+
+        $this->graphql("mutation { updateProfile(email: \"{$taken}\") { email } }", as: $this->admin)
+            ->assertJsonPath('errors.0.extensions.category', 'validation')
+            ->assertJsonPath('errors.0.extensions.validation.email.0', 'The email has already been taken.');
+
+        // …while the owner passing their *own* e-mail back is allowed (ignore()).
+        $this->graphql("mutation { updateProfile(email: \"{$taken}\") { email } }", as: $this->member)
+            ->assertJsonPath('data.updateProfile.email', $taken);
+    }
 }
