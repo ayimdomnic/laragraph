@@ -2,6 +2,9 @@
 
 All notable changes to `ayimdomnic/laragraph` are documented here.
 
+
+## [4.4.0](https://github.com/ayimdomnic/laragraph/compare/v4.3.0...v4.4.0) (2026-10-20)
+
 ## [Unreleased]
 
 ## [4.3.0](https://github.com/ayimdomnic/laragraph/compare/v4.2.0...v4.3.0) (2026-09-28)
