@@ -3,6 +3,7 @@
   "scripts": {
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
+    "docs:snapshot": "node docs/.vitepress/snapshot.mjs",
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
