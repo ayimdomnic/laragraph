@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\GraphQL;
 
 use App\Enums\PostStatus;
+use App\Models\Organization;
 use App\Models\Post;
+use App\Models\User;
 
 class TypesTest extends GraphQLTestCase
 {
@@ -29,9 +31,32 @@ class TypesTest extends GraphQLTestCase
         $post = Post::factory()->published()->by($this->member)->create(['published_at' => '2026-01-15 09:30:00']);
         $this->acme->update(['settings' => ['timezone' => 'UTC', 'features' => ['blog' => true]]]);
 
-        $this->graphql('query ($id: ID!) { post(id: $id) { publishedAt organization { settings } } }', ['id' => $post->id])
+        // `settings` carries a canSee closure, so it resolves only for a member
+        // of that organization.
+        $this->graphql('query ($id: ID!) { post(id: $id) { publishedAt organization { settings } } }', ['id' => $post->id], $this->member)
             ->assertJsonPath('data.post.publishedAt', '2026-01-15T09:30:00+00:00')
             ->assertJsonPath('data.post.organization.settings', ['timezone' => 'UTC', 'features' => ['blog' => true]]);
+    }
+
+    public function test_the_settings_closure_redacts_for_non_members_and_guests(): void
+    {
+        $this->acme->update(['settings' => ['timezone' => 'UTC']]);
+        $query = 'query ($id: ID!) { organization(id: $id) { name settings } }';
+
+        // The organization is publicly readable, but its internal settings are
+        // not: a guest and an out-of-organization user both get null, no error.
+        $this->graphql($query, ['id' => $this->acme->id])
+            ->assertJsonPath('data.organization.name', 'Acme')
+            ->assertJsonPath('data.organization.settings', null)
+            ->assertJsonMissingPath('errors');
+
+        $outsider = User::factory()->in(Organization::factory()->create())->create();
+        $this->graphql($query, ['id' => $this->acme->id], $outsider)
+            ->assertJsonPath('data.organization.settings', null);
+
+        // A member of the organization sees it.
+        $this->graphql($query, ['id' => $this->acme->id], $this->member)
+            ->assertJsonPath('data.organization.settings', ['timezone' => 'UTC']);
     }
 
     public function test_interface_union_and_inline_fragments(): void

@@ -19,4 +19,13 @@ class UserPolicy
     {
         return $user->is($target) || ($user->isAdmin() && $user->organization_id === $target->organization_id);
     }
+
+    /**
+     * Referenced declaratively by UserType's `'canSee' => 'viewEmail'` rule:
+     * e-mail is redacted (resolves to null) for everyone who fails this check.
+     */
+    public function viewEmail(User $user, User $target): bool
+    {
+        return $this->view($user, $target);
+    }
 }

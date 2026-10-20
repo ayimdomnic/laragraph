@@ -88,4 +88,35 @@ class AuthorizationTest extends GraphQLTestCase
         $this->graphql('mutation { createPost(input: { title: "Hello", body: "Nobody will read this." }) { id } }', as: $loner)
             ->assertJsonPath('errors.0.extensions.category', 'authorization');
     }
+
+    // -------------------------------------------------------------------------
+    // Field-level visibility (Type 'canSee' rules) — see UserType::fields().
+    // -------------------------------------------------------------------------
+
+    public function test_cansee_redacts_on_every_path_that_reaches_the_type(): void
+    {
+        // A member may discover a colleague through `search` (same organization),
+        // but the colleague's e-mail — gated by UserPolicy::viewEmail — is null.
+        $this->graphql('{ search(term: "Ada") { ... on User { name email } } }', as: $this->member)
+            ->assertJsonPath('data.search.0', ['name' => 'Ada Admin', 'email' => null])
+            ->assertJsonMissingPath('errors');
+    }
+
+    public function test_a_denied_field_is_indistinguishable_from_an_unset_one(): void
+    {
+        // Redaction returns null with no error entry — "forbidden" and "empty"
+        // produce byte-identical client responses.
+        $response = $this->graphql('{ search(term: "Ada") { ... on User { email } } }', as: $this->member)->json();
+
+        $this->assertArrayNotHasKey('errors', $response);
+        $this->assertNull($response['data']['search'][0]['email']);
+    }
+
+    public function test_introspection_still_lists_redacted_fields(): void
+    {
+        // canSee hides values, never schema: the field stays honestly declared.
+        $fields = $this->graphql('{ __type(name: "User") { fields { name } } }')->json('data.__type.fields');
+
+        $this->assertContains('email', array_column($fields, 'name'));
+    }
 }
