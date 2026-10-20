@@ -54,7 +54,10 @@
             "Ayimdomnic\\Laragraph\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Ayimdomnic\\Laragraph\\Benchmarks\\": "benchmarks/"
-        }
+        },
+        "exclude-from-classmap": [
+            "tests/PHPStan/data/"
+        ]
     },
     "extra": {
         "laravel": {
